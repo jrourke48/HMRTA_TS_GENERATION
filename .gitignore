@@ -1,0 +1,31 @@
+# Build outputs
+output/*.exe
+output/*.obj
+output/*.o
+*.exe
+*.obj
+*.o
+*.out
+
+# Debug files
+*.pdb
+*.ilk
+
+# IDE/Editor
+.vscode/
+*.vs/
+*.suo
+*.user
+
+# Temporary files
+*.tmp
+*.log
+*.swp
+*~
+
+# gnuplot temporary files
+gnuplot-gnuplot-main/
+
+# Data files (uncomment if you don't want to track these)
+# *.dat
+# *.labels
