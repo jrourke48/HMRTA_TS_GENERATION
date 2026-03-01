@@ -8,6 +8,11 @@
 #include <algorithm>
 #include <cmath>
 #include <fstream>
+#include <unordered_map>
+#include <spot/twa/twagraph.hh>
+#include <spot/twaalgos/hoa.hh>
+#include <spot/twaalgos/dot.hh>
+#include <bddx.h>
 
 
 //grid-based transition system implementation for one robot moving in 2D space
@@ -18,15 +23,15 @@ class AtomicProposition {
 private:
     long id {0};
     std::string name;
-    bool value;
+    bool value {false};
 public:
     AtomicProposition() = default;
     AtomicProposition(long i, std::string n, bool v) : id(i), name(std::move(n)), value(v) {}
     std::string getName() const { return name; }
-    bool getValue() const { return value; }
-    void setValue(bool v) { value = v; }
     long getId() { return id; }
     void setId(long new_id) {id = new_id;}
+    bool getValue() const { return value; }
+    void setValue(bool v) { value = v; }
     bool operator==(const AtomicProposition& other) const {
         return id == other.id;
     }
@@ -82,21 +87,38 @@ public:
     std::unordered_set<State, StateHash> obstacles;
     State current_state;
 
+    // Convert (x,y) to cell ID
+    int cellId(int x, int y) const {
+        return y * grid_width + x;
+    }
+
+    // Extract x from cell ID
+    int cellX(int id) const {
+        return id % grid_width;
+    }
+
+    // Extract y from cell ID  
+    int cellY(int id) const {
+        return id / grid_width;
+    }
+
     // Helper function to extract x coordinate from state props
-    static int getX(const State& s) {
+    int getX(const State& s) const {
         for (const auto& ap : s.props) {
-            if (ap.getName().substr(0, 4) == "col:" && ap.getValue()) {
-                return std::stoi(ap.getName().substr(4));
+            if (ap.getValue()) {
+                int id = std::stoi(ap.getName());
+                return cellX(id);
             }
         }
         return -1; // Invalid state
     }
 
     // Helper function to extract y coordinate from state props
-    static int getY(const State& s) {
+    int getY(const State& s) const {
         for (const auto& ap : s.props) {
-            if (ap.getName().substr(0, 4) == "row:" && ap.getValue()) {
-                return std::stoi(ap.getName().substr(4));
+            if (ap.getValue()) {
+                int id = std::stoi(ap.getName());
+                return cellY(id);
             }
         }
         return -1; // Invalid state
@@ -105,69 +127,57 @@ public:
     // Helper function to create a state from x,y coordinates
     State createState(int x, int y) const {
         State s;
+        int id = cellId(x, y);
+        std::string apName = std::to_string(id);
         for (const auto& ap : atomic_props) {
-            if (ap.getName() == "col:" + std::to_string(x) || ap.getName() == "row:" + std::to_string(y)) {
+            if (ap.getName() == apName) {
                 AtomicProposition ap_copy = ap;
                 ap_copy.setValue(true);
                 s.props.insert(ap_copy);
+                break;
             }
         }
         return s;
     }
 
     // Constructor without initial states assume initial state 0,0
-    TransitionSystem(int width, int height){
-        grid_width = width;
-        grid_height = height;
-        // Generate atomic propositions for rows and columns
-        for(int x = 0; x < width; ++x) {
-            atomic_props.insert(AtomicProposition(x, "col:" + std::to_string(x), false));
-        }
-        for(int y = 0; y < height; ++y) {
-            atomic_props.insert(AtomicProposition(y, "row:" + std::to_string(y), false));
+    TransitionSystem(int width, int height) : grid_width(width), grid_height(height) {
+        // Generate atomic propositions - one per cell
+        for (int y = 0; y < height; ++y) {
+            for (int x = 0; x < width; ++x) {
+                int id = cellId(x, y);
+                atomic_props.insert(AtomicProposition(id, std::to_string(id), false));
+            }
         }
         // Set initial state to (0,0)
         initial_states.insert(createState(0, 0));
         current_state = createState(0, 0);
         // Generate all states
-        for(int x = 0; x < width; ++x) {
-            for(int y = 0; y < height; ++y) {
-                State s;
-                for(const auto& ap : atomic_props) {
-                    if(ap.getName() == "col:" + std::to_string(x) || ap.getName() == "row:" + std::to_string(y)) {
-                        AtomicProposition ap_copy = ap;
-                        ap_copy.setValue(true);
-                        s.props.insert(ap_copy);
-                    }
-                }
-                states.insert(s);
+        for (int y = 0; y < height; ++y) {
+            for (int x = 0; x < width; ++x) {
+                states.insert(createState(x, y));
             }
         }
     }
+
     // Alternative constructor with initial states
     TransitionSystem(int width, int height,
                      const std::unordered_set<State, StateHash>& init_states)
-        : grid_width(width), grid_height(height), initial_states(init_states) {
-        for(int x = 0; x < width; ++x) {
-            atomic_props.insert(AtomicProposition(x, "col:" + std::to_string(x), false));
+        : grid_width(width), grid_height(height) {
+        // Generate atomic propositions - one per cell
+        for (int y = 0; y < height; ++y) {
+            for (int x = 0; x < width; ++x) {
+                int id = cellId(x, y);
+                atomic_props.insert(AtomicProposition(id, std::to_string(id), false));
+            }
         }
-        for(int y = 0; y < height; ++y) {
-            atomic_props.insert(AtomicProposition(y, "row:" + std::to_string(y), false));
-        }
-        // Generate all states
+        // Set initial states
         initial_states = init_states;
         current_state = *initial_states.begin();
-        for(int x = 0; x < width; ++x) {
-            for(int y = 0; y < height; ++y) {
-                State s;
-                for(const auto& ap : atomic_props) {
-                    if(ap.getName() == "col:" + std::to_string(x) || ap.getName() == "row:" + std::to_string(y)) {
-                        AtomicProposition ap_copy = ap;
-                        ap_copy.setValue(true);
-                        s.props.insert(ap_copy);
-                    }
-                }
-                states.insert(s);
+        // Generate all states
+        for (int y = 0; y < height; ++y) {
+            for (int x = 0; x < width; ++x) {
+                states.insert(createState(x, y));
             }
         }
     }
@@ -254,6 +264,51 @@ public:
         }
     }
 
+    //getter for number of atomic propositions
+    int32_t numAPs() const {
+        return static_cast<int32_t>(atomic_props.size());
+    }
+
+    //getter for number of states
+    int32_t numStates() const {
+        return static_cast<int32_t>(states.size());
+    }
+
+    // Get AP names (sorted for consistency)
+    std::vector<std::string> getAPNames() const {
+        std::vector<std::string> names;
+        for (const auto& ap : atomic_props) {
+            names.push_back(ap.getName());
+        }
+        std::sort(names.begin(), names.end());
+        return names;
+    }
+
+    // Get labels (true APs) for a state as a set of strings
+    std::unordered_set<std::string> getLabels(const State& s) const {
+        std::unordered_set<std::string> labels;
+        for (const auto& ap : s.props) {
+            if (ap.getValue()) {
+                labels.insert(ap.getName());
+            }
+        }
+        return labels;
+    }
+
+    // Convert state to integer ID (for Spot automaton)
+    int stateToId(const State& s) const {
+        int x = getX(s);
+        int y = getY(s);
+        return y * grid_width + x;
+    }
+
+    // Convert integer ID back to State
+    State idToState(int id) const {
+        int x = id % grid_width;
+        int y = id / grid_width;
+        return createState(x, y);
+    }
+
     // Label function: return true AP as a string where the position is encoded
     std::string label(const State& s) {
         int x = getX(s);
@@ -275,6 +330,83 @@ public:
             case Action::WAIT: return "WAIT";
         }
         return "UNKNOWN";
+    }
+
+    // Convert to Spot-compatible automaton
+    spot::twa_graph_ptr toSpotAutomaton(const spot::bdd_dict_ptr& dict = nullptr) const {
+        auto useDict = dict ? dict : spot::make_bdd_dict();
+        auto aut = spot::make_twa_graph(useDict);
+
+        // No acceptance condition for TS (all states trivially accept)
+        aut->set_acceptance(0, spot::acc_cond::acc_code::t());
+
+        // Create states (width * height states)
+        int nStates = grid_width * grid_height;
+        aut->new_states(static_cast<unsigned>(nStates));
+
+        // Set initial state
+        if (!initial_states.empty()) {
+            const State& initState = *initial_states.begin();
+            aut->set_init_state(static_cast<unsigned>(stateToId(initState)));
+        }
+
+        // Register atomic propositions and build var map
+        auto apNames = getAPNames();
+        std::unordered_map<std::string, int> apVars;
+        for (const auto& name : apNames) {
+            apVars[name] = aut->register_ap(name);
+        }
+
+        // Helper: convert state labels to BDD
+        auto labelToBdd = [&](const State& s) {
+            auto labels = getLabels(s);
+            bdd cond = bddtrue;
+            for (const auto& name : apNames) {
+                int var = apVars.at(name);
+                cond &= (labels.count(name) > 0) ? bdd_ithvar(var) : bdd_nithvar(var);
+            }
+            return cond;
+        };
+
+        // Add edges for all states
+        for (const auto& s : states) {
+            if (!isValid(s)) continue;
+            unsigned srcId = static_cast<unsigned>(stateToId(s));
+
+            for (const auto& t : successors(s)) {
+                unsigned dstId = static_cast<unsigned>(stateToId(t.next));
+                // Label edges with the labels of the destination state
+                bdd cond = labelToBdd(t.next);
+                aut->new_edge(srcId, dstId, cond);
+            }
+        }
+
+        return aut;
+    }
+
+    // Export automaton to DOT format (for GraphViz visualization)
+    void exportDot(const std::string& filename) const {
+        auto aut = toSpotAutomaton();
+        std::ofstream dotfile(filename);
+        if (!dotfile) {
+            std::cerr << "Failed to open DOT output file: " << filename << "\n";
+            return;
+        }
+        spot::print_dot(dotfile, aut);
+        std::cout << "Exported DOT file: " << filename << "\n";
+        std::cout << "Render with: dot -Tpng " << filename << " -o " 
+                  << filename.substr(0, filename.rfind('.')) << ".png\n";
+    }
+
+    // Export any Spot automaton to DOT format
+    static void exportAutomatonDot(const spot::twa_graph_ptr& aut, const std::string& filename) {
+        std::ofstream dotfile(filename);
+        if (!dotfile) {
+            std::cerr << "Failed to open DOT output file: " << filename << "\n";
+            return;
+        }
+        spot::print_dot(dotfile, aut);
+        std::cout << "Exported DOT file: " << filename << "\n";
     }
 
     // Export nodes and edges for gnuplot visualization
@@ -397,11 +529,20 @@ public:
 // Transition::toString() implementation (after TransitionSystem is defined)
 std::string Transition::toString() const {
     std::ostringstream oss;
-    oss << TransitionSystem::actionToString(action) << " -> "
-        << TransitionSystem::getX(next) << "," << TransitionSystem::getY(next) << ", Cost: " << cost;
+    oss << TransitionSystem::actionToString(action) << " -> cell ";
+    // Get the cell ID from the state's AP
+    for (const auto& ap : next.props) {
+        if (ap.getValue()) {
+            oss << ap.getName();
+            break;
+        }
+    }
+    oss << ", Cost: " << cost;
     return oss.str();
 }
 
+// Only compile main when this file is the main translation unit
+#ifndef GRIDWORLD_TS_NO_MAIN
 // Example usage
 int main() {
     // Create a 4x4 grid
@@ -429,5 +570,14 @@ int main() {
                      "output/atomic_ts_edges.dat",
                      "output/atomic_ts_plot.gp");
 
+    // Export DOT file for GraphViz visualization
+    ts.exportDot("output/transition_system.dot");
+
+    // Convert to Spot-compatible automaton and print in HOA format
+    auto spot_ts = ts.toSpotAutomaton();
+    std::cout << "\n=== Spot-Compatible TS (HOA) ===\n";
+    spot::print_hoa(std::cout, spot_ts);
+
     return 0;
 }
+#endif // GRIDWORLD_TS_NO_MAIN
