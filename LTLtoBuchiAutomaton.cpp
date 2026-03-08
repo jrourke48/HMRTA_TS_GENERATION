@@ -25,7 +25,7 @@ int main()
     std::cout << "========================================\n\n";
 
     // Create a 4x4 grid
-    TransitionSystem ts(4, 4);
+    TransitionSystem ts(2, 2);
 
     std::cout << "Transition System: " << ts.grid_width << "x" << ts.grid_height << " grid\n";
     std::cout << "States: " << ts.numStates() << "\n";
@@ -37,7 +37,7 @@ int main()
     // Each cell has one AP named by its ID: y * width + x
     // For 4x4 grid: cell (2,0) = 0*4 + 2 = 2, cell (3,3) = 3*4 + 3 = 15
     // Formula: Eventually reach cell 8, then next step not 8 until reaching 15
-    std::string input = "F (\"8\" & X (!\"8\" U \"15\"))";
+    std::string input = "GF (\"2\" & X (!\"2\" U \"1\"))";
     
     spot::parsed_formula pf = spot::parse_infix_psl(input);
     if (pf.format_errors(std::cerr))

@@ -16,22 +16,19 @@
 
 
 //grid-based transition system implementation for one robot moving in 2D space
-enum class Action : uint8_t { UP, DOWN, LEFT, RIGHT, UPRIGHT, UPLEFT, DOWNRIGHT, DOWNLEFT, WAIT };
+enum class Action : uint8_t {UP, DOWN, LEFT, RIGHT};
 
 // Atomic Proposition structure
 class AtomicProposition {
 private:
     long id {0};
     std::string name;
-    bool value {false};
 public:
     AtomicProposition() = default;
-    AtomicProposition(long i, std::string n, bool v) : id(i), name(std::move(n)), value(v) {}
+    AtomicProposition(long i, std::string n) : id(i), name(std::move(n)) {}
     std::string getName() const { return name; }
-    long getId() { return id; }
+    long getId() const { return id; }
     void setId(long new_id) {id = new_id;}
-    bool getValue() const { return value; }
-    void setValue(bool v) { value = v; }
     bool operator==(const AtomicProposition& other) const {
         return id == other.id;
     }
@@ -48,7 +45,6 @@ class State {
 public:
     // Set of atomic propositions true in this state
     std::unordered_set<AtomicProposition, AtomicProposition_Hash> props;
-
     bool operator==(const State& other) const {
         return props == other.props;
     }
@@ -104,24 +100,27 @@ public:
 
     // Helper function to extract x coordinate from state props
     int getX(const State& s) const {
-        for (const auto& ap : s.props) {
-            if (ap.getValue()) {
-                int id = std::stoi(ap.getName());
-                return cellX(id);
-            }
+        try {
+            AtomicProposition ap = *(s.props.begin()); // Assuming only one AP is true for a valid state
+            int id = ap.getId();
+            return cellX(id);
+        } catch (const std::exception& e) {
+            std::cerr << "Error extracting coordinates from state: " << e.what() << "\n";
+            return -1; // Invalid state
         }
-        return -1; // Invalid state
     }
+  
 
     // Helper function to extract y coordinate from state props
     int getY(const State& s) const {
-        for (const auto& ap : s.props) {
-            if (ap.getValue()) {
-                int id = std::stoi(ap.getName());
-                return cellY(id);
-            }
+        try {
+            AtomicProposition ap = *(s.props.begin()); // Assuming only one AP is true for a valid state
+            int id = ap.getId();
+            return cellY(id);
+        } catch (const std::exception& e) {
+            std::cerr << "Error extracting coordinates from state: " << e.what() << "\n";
+            return -1; // Invalid state
         }
-        return -1; // Invalid state
     }
 
     // Helper function to create a state from x,y coordinates
@@ -132,7 +131,6 @@ public:
         for (const auto& ap : atomic_props) {
             if (ap.getName() == apName) {
                 AtomicProposition ap_copy = ap;
-                ap_copy.setValue(true);
                 s.props.insert(ap_copy);
                 break;
             }
@@ -143,40 +141,32 @@ public:
     // Constructor without initial states assume initial state 0,0
     TransitionSystem(int width, int height) : grid_width(width), grid_height(height) {
         // Generate atomic propositions - one per cell
-        for (int y = 0; y < height; ++y) {
-            for (int x = 0; x < width; ++x) {
-                int id = cellId(x, y);
-                atomic_props.insert(AtomicProposition(id, std::to_string(id), false));
-            }
-        }
         // Set initial state to (0,0)
         initial_states.insert(createState(0, 0));
         current_state = createState(0, 0);
         // Generate all states
         for (int y = 0; y < height; ++y) {
             for (int x = 0; x < width; ++x) {
+                int id = cellId(x, y);
+                atomic_props.insert(AtomicProposition(id, std::to_string(id)));
                 states.insert(createState(x, y));
             }
         }
     }
 
-    // Alternative constructor with initial states
+    // Alternative constructor with specified initial states
     TransitionSystem(int width, int height,
                      const std::unordered_set<State, StateHash>& init_states)
         : grid_width(width), grid_height(height) {
         // Generate atomic propositions - one per cell
-        for (int y = 0; y < height; ++y) {
-            for (int x = 0; x < width; ++x) {
-                int id = cellId(x, y);
-                atomic_props.insert(AtomicProposition(id, std::to_string(id), false));
-            }
-        }
         // Set initial states
         initial_states = init_states;
         current_state = *initial_states.begin();
         // Generate all states
         for (int y = 0; y < height; ++y) {
             for (int x = 0; x < width; ++x) {
+                int id = cellId(x, y);
+                atomic_props.insert(AtomicProposition(id, std::to_string(id)));
                 states.insert(createState(x, y));
             }
         }
@@ -188,12 +178,15 @@ public:
         int y = getY(s);
         if (x < 0 || x >= grid_width || y < 0 || y >= grid_height)
             return false;
-        return obstacles.find(s) == obstacles.end();
+        return true;
     }
     
+    // Getter for current state
     State getCurrentState() const {
         return current_state;
     }
+
+    // Perform a state transition based on the given action
     void StateTransition(const Action& a) {
         int curr_x = getX(current_state);
         int curr_y = getY(current_state);
@@ -205,11 +198,6 @@ public:
             case Action::DOWN:      new_y -= 1; break;
             case Action::LEFT:      new_x -= 1; break;
             case Action::RIGHT:     new_x += 1; break;
-            case Action::UPRIGHT:   new_x += 1; new_y += 1; break;
-            case Action::UPLEFT:    new_x -= 1; new_y += 1; break;
-            case Action::DOWNRIGHT: new_x += 1; new_y -= 1; break;
-            case Action::DOWNLEFT:  new_x -= 1; new_y -= 1; break;
-            case Action::WAIT:      break;
         }
 
         State next_state = createState(new_x, new_y);
@@ -238,11 +226,6 @@ public:
             {Action::DOWN,      0, -1, 1.0},
             {Action::LEFT,     -1,  0, 1.0},
             {Action::RIGHT,     1,  0, 1.0},
-            {Action::UPRIGHT,   1,  1, std::sqrt(2.0)},
-            {Action::UPLEFT,   -1,  1, std::sqrt(2.0)},
-            {Action::DOWNRIGHT, 1, -1, std::sqrt(2.0)},
-            {Action::DOWNLEFT, -1, -1, std::sqrt(2.0)},
-            {Action::WAIT,      0,  0, 0.5}
         };
 
         int curr_x = getX(s);
@@ -323,11 +306,6 @@ public:
             case Action::DOWN: return "DOWN";
             case Action::LEFT: return "LEFT";
             case Action::RIGHT: return "RIGHT";
-            case Action::UPRIGHT: return "UPRIGHT";
-            case Action::UPLEFT: return "UPLEFT";
-            case Action::DOWNRIGHT: return "DOWNRIGHT";
-            case Action::DOWNLEFT: return "DOWNLEFT";
-            case Action::WAIT: return "WAIT";
         }
         return "UNKNOWN";
     }
