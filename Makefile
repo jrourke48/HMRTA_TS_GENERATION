@@ -12,8 +12,8 @@ OUTDIR = output
 all: LTLtoBuchiAutomaton
 
 # Individual targets
-LTLtoBuchiAutomaton: LTLtoBuchiAutomaton.cpp
-	$(CXX) $(CXXFLAGS) $(INCLUDES) $(LDFLAGS) $< -o $(OUTDIR)/$@.exe $(LIBS)
+LTLtoBuchiAutomaton: LTLtoBuchiAutomaton.cpp Transition_Systems/GridWorldTransitionSystem.cpp
+	$(CXX) $(CXXFLAGS) $(INCLUDES) $(LDFLAGS) $+ -o $(OUTDIR)/$@.exe $(LIBS)
 
 GlobalState: GlobalState.cpp
 	$(CXX) $(CXXFLAGS) $(INCLUDES) $(LDFLAGS) $< -o $(OUTDIR)/$@.exe $(LIBS)
@@ -40,8 +40,15 @@ SpotGridWorldTS: Transition_Systems/SpotGridWorldTS.cpp
 	$(CXX) $(CXXFLAGS) $(INCLUDES) $(LDFLAGS) $< -o $(OUTDIR)/$@.exe $(LIBS)
 
 # Run targets (build and execute)
-run-LTLtoBuchiAutomaton: LTLtoBuchiAutomaton
+run-LTLtoBuchiAutomaton: LTLtoBuchiAutomaton plots-LTLtoBuchiAutomaton
 	./$(OUTDIR)/LTLtoBuchiAutomaton.exe
+
+# Plot generation targets
+plots-LTLtoBuchiAutomaton:
+	dot -Tpng $(OUTDIR)/buchi_automaton.dot -o $(OUTDIR)/buchi_automaton.png
+	dot -Tpng $(OUTDIR)/ts_automaton.dot -o $(OUTDIR)/ts_automaton.png
+	dot -Tpng $(OUTDIR)/product_automaton.dot -o $(OUTDIR)/product_automaton.png
+	@echo "Generated PNG plots in $(OUTDIR)/"
 
 run-GlobalState: GlobalState
 	./$(OUTDIR)/GlobalState.exe
@@ -71,4 +78,4 @@ run-SpotGridWorldTS: SpotGridWorldTS
 clean:
 	rm -f $(OUTDIR)/*.exe
 
-.PHONY: all clean run-LTLtoBuchiAutomaton run-GlobalState run-ParsingandPrintingLTL run-RelablingFormulas run-TestingEquivalance run-BasicTransitionSystem run-GeneralTransitionSystem run-GridWorldTransitionSystem run-SpotGridWorldTS
+.PHONY: all clean run-LTLtoBuchiAutomaton run-GlobalState run-ParsingandPrintingLTL run-RelablingFormulas run-TestingEquivalance run-BasicTransitionSystem run-GeneralTransitionSystem run-GridWorldTransitionSystem run-SpotGridWorldTS plots-LTLtoBuchiAutomaton

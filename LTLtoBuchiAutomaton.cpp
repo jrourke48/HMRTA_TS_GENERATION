@@ -10,10 +10,7 @@
 #include <spot/twa/twaproduct.hh>
 #include <spot/twaalgos/emptiness.hh>
 #include <bddx.h>
-
-// Include the GridWorld TS (disable its main function)
-#define GRIDWORLD_TS_NO_MAIN
-#include "Transition_Systems/GridWorldTransitionSystem.cpp"
+#include "Transition_Systems/GridWorldTransitionSystem.h"
 
 int main()
 {
@@ -24,19 +21,21 @@ int main()
     std::cout << "LTL to Büchi with GridWorld TS\n";
     std::cout << "========================================\n\n";
 
-    // Create a 4x4 grid
+    // Create a 2x2 grid
     TransitionSystem ts(2, 2);
 
     std::cout << "Transition System: " << ts.grid_width << "x" << ts.grid_height << " grid\n";
     std::cout << "States: " << ts.numStates() << "\n";
     std::cout << "Atomic Props: " << ts.numAPs() << "\n\n";
 
+    // //=========================================================================
+    // // 2. Create shared BDD dictionary with all TS APs
+    // //=========================================================================
+    // auto sharedDict = ts.createBDDDictionary();
+
     //=========================================================================
-    // 2. Parse LTL Formula
+    // 3. Parse LTL Formula
     //=========================================================================
-    // Each cell has one AP named by its ID: y * width + x
-    // For 4x4 grid: cell (2,0) = 0*4 + 2 = 2, cell (3,3) = 3*4 + 3 = 15
-    // Formula: Eventually reach cell 8, then next step not 8 until reaching 15
     std::string input = "GF (\"2\" & X (!\"2\" U \"1\"))";
     
     spot::parsed_formula pf = spot::parse_infix_psl(input);
@@ -50,9 +49,9 @@ int main()
     print_latex_psl(std::cout, f) << std::endl;
 
     //=========================================================================
-    // 3. Translate LTL to Büchi Automaton
+    // 4. Translate LTL to Büchi Automaton (using shared dictionary)
     //=========================================================================
-    spot::translator trans;
+    spot::translator trans;  // Pass dict to constructor
     spot::twa_graph_ptr buchiAut = trans.run(f);
     
     std::cout << "\n=== Büchi Automaton ===" << std::endl;
@@ -66,14 +65,16 @@ int main()
     std::cout << "Acceptance sets: " << buchiAut->num_sets() << std::endl;
 
     //=========================================================================
-    // 4. Convert TS to Spot Automaton
-    //=========================================================================
+    // 5. Convert TS to Spot Automaton
+    //========================================================================  
     // Use the Büchi automaton's dictionary so APs match
     spot::twa_graph_ptr tsAut = ts.toSpotAutomaton(buchiAut->get_dict());
     
     std::cout << "\n=== TS Automaton ===" << std::endl;
     std::cout << "States: " << tsAut->num_states() << std::endl;
     std::cout << "Edges: " << tsAut->num_edges() << std::endl;
+    
+    // spot::twa_graph_ptr tsAut  = buchiAut;
 
     //=========================================================================
     // 5. Compute Product Automaton
@@ -125,11 +126,6 @@ int main()
     std::ofstream productDot("output/product_automaton.dot");
     spot::print_dot(productDot, product);
     std::cout << "Exported: output/product_automaton.dot\n";
-
-    std::cout << "\nRender with:\n";
-    std::cout << "  dot -Tpng output/buchi_automaton.dot -o output/buchi_automaton.png\n";
-    std::cout << "  dot -Tpng output/ts_automaton.dot -o output/ts_automaton.png\n";
-    std::cout << "  dot -Tpng output/product_automaton.dot -o output/product_automaton.png\n";
 
     return 0;
 }
