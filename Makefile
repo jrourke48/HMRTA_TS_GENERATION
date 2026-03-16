@@ -15,6 +15,9 @@ all: LTLtoBuchiAutomaton
 LTLtoBuchiAutomaton: LTLtoBuchiAutomaton.cpp Transition_Systems/GridWorldTransitionSystem.cpp
 	$(CXX) $(CXXFLAGS) $(INCLUDES) $(LDFLAGS) $+ -o $(OUTDIR)/$@.exe $(LIBS)
 
+TestingAutomaton: TestingAutomaton.cpp Transition_Systems/GridWorldTransitionSystem.cpp TS.cpp BuchiAutomaton.cpp ProductAutomaton.cpp
+	$(CXX) $(CXXFLAGS) $(INCLUDES) $(LDFLAGS) $+ -o $(OUTDIR)/$@.exe $(LIBS)
+
 GlobalState: GlobalState.cpp
 	$(CXX) $(CXXFLAGS) $(INCLUDES) $(LDFLAGS) $< -o $(OUTDIR)/$@.exe $(LIBS)
 
@@ -42,6 +45,9 @@ SpotGridWorldTS: Transition_Systems/SpotGridWorldTS.cpp
 # Run targets (build and execute)
 run-LTLtoBuchiAutomaton: LTLtoBuchiAutomaton plots-LTLtoBuchiAutomaton
 	./$(OUTDIR)/LTLtoBuchiAutomaton.exe
+
+run-TestingAutomaton: TestingAutomaton plots-TestingAutomaton
+	./$(OUTDIR)/TestingAutomaton.exe
 
 # Plot generation targets
 plots-LTLtoBuchiAutomaton:
