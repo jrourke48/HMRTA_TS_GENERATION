@@ -35,7 +35,7 @@ int main()
     //=========================================================================
     // 2. Convert Grid World TS to new TS Automaton class
     //=========================================================================
-    TS tsAutomaton(gridTS);
+    TS tsAutomaton(&gridTS);
     
     std::cout << "=== TS Automaton (New Class) ===" << std::endl;
     std::cout << "States: " << tsAutomaton.getnumStates() << std::endl;

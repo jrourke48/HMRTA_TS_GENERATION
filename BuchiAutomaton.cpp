@@ -8,48 +8,7 @@ BuchiAutomaton::~BuchiAutomaton() {
     // Clean up dynamically allocated nodes
     // Note: Node pointers should be managed by a smart pointer in a production system
 }
-
-void BuchiAutomaton::add_Node(Node* node) {
-    if (node == nullptr) return;
-    
-    uint32_t nodeId = node->getId();
-    
-    // Add to nodeMap for quick access
-    nodeMap[nodeId] = node;
-    
-    // Increment node count
-    numNodes++;
-}
-
-bool BuchiAutomaton::isAdjacent(uint32_t srcId, uint32_t dstId) const {
-    // Find source node
-    auto it = nodeMap.find(srcId);
-    if (it == nodeMap.end()) return false;
-    
-    Node* srcNode = it->second;
-    
-    // Check if there's an edge from srcNode to dstId
-    return srcNode->isAdjacent(dstId);
-}
-
-void BuchiAutomaton::setAccepting(uint32_t stateId) {
-    // Add to accepting states if not already present
-    auto it = std::find(acceptingStates.begin(), acceptingStates.end(), stateId);
-    if (it == acceptingStates.end()) {
-        acceptingStates.push_back(stateId);
-    }
-}
-
-bool BuchiAutomaton::isAccepting(uint32_t stateId) const {
-    auto it = std::find(acceptingStates.begin(), acceptingStates.end(), stateId);
-    return it != acceptingStates.end();
-}
-
-const std::vector<uint32_t>& BuchiAutomaton::getAcceptingStates() const {
-    return acceptingStates;
-}
-
-void BuchiAutomaton::fromSpotAutomaton(spot::twa_graph_ptr spotAutomaton) {
+BuchiAutomaton::BuchiAutomaton(spot::twa_graph_ptr spotAutomaton) {
     if (!spotAutomaton) return;
     
     // Clear existing data
@@ -87,4 +46,27 @@ void BuchiAutomaton::fromSpotAutomaton(spot::twa_graph_ptr spotAutomaton) {
             setAccepting(i);
         }
     }
+}
+
+void BuchiAutomaton::add_Node(Node* node) {
+    if (node == nullptr) return;
+    
+    uint32_t nodeId = node->getId();
+    
+    // Add to nodeMap for quick access
+    nodeMap[nodeId] = node;
+    
+    // Increment node count
+    numNodes++;
+}
+
+bool BuchiAutomaton::isAdjacent(uint32_t srcId, uint32_t dstId) const {
+    // Find source node
+    auto it = nodeMap.find(srcId);
+    if (it == nodeMap.end()) return false;
+    
+    Node* srcNode = it->second;
+    
+    // Check if there's an edge from srcNode to dstId
+    return srcNode->isAdjacent(dstId);
 }

@@ -145,12 +145,6 @@ public:
     // Convert action to string for display
     static std::string actionToString(Action a);
 
-    // Create a BDD dictionary for sharing between TS and other automata
-    spot::bdd_dict_ptr createBDDDictionary() const;
-    spot::twa_graph_ptr toSpotAutomaton(const spot::bdd_dict_ptr& dict = nullptr) const;
-    // Export automaton to DOT format (for GraphViz visualization)
-    void exportDot(const std::string& filename) const;
-
     // Export any Spot automaton to DOT format
     static void exportAutomatonDot(const spot::twa_graph_ptr& aut, const std::string& filename);
 

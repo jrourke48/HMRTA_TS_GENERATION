@@ -22,7 +22,7 @@ public:
     TS();
     
     // Constructor from GridWorldTransitionSystem
-    TS(TransitionSystem& ts);
+    TS(TransitionSystem* ts);
     
     ~TS() override;
 

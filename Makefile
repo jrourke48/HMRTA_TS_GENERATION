@@ -84,4 +84,4 @@ run-SpotGridWorldTS: SpotGridWorldTS
 clean:
 	rm -f $(OUTDIR)/*.exe
 
-.PHONY: all clean run-LTLtoBuchiAutomaton run-GlobalState run-ParsingandPrintingLTL run-RelablingFormulas run-TestingEquivalance run-BasicTransitionSystem run-GeneralTransitionSystem run-GridWorldTransitionSystem run-SpotGridWorldTS plots-LTLtoBuchiAutomaton
+.PHONY: all clean run-LTLtoBuchiAutomaton run-TestingAutomaton run-GlobalState run-ParsingandPrintingLTL run-RelablingFormulas run-TestingEquivalance run-BasicTransitionSystem run-GeneralTransitionSystem run-GridWorldTransitionSystem run-SpotGridWorldTS plots-LTLtoBuchiAutomaton plots-TestingAutomaton

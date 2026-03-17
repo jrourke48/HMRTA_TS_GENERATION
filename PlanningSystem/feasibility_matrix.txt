@@ -1,0 +1,7 @@
+Feasibility Matrix
+==================
+
+Region/Robot	MainStorage	LoadingDock	GridSection1	GridSection2	RoverZone	ControlCenter
+Robot0	✓	✓	✗	✗	✗	✗
+Robot1	✓	✓	✓	✓	✗	✗
+Robot2	✗	✓	✓	✓	✓	✓

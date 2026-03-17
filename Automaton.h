@@ -1,8 +1,11 @@
+#ifndef AUTOMATON_H
+#define AUTOMATON_H
+
 #include <cstdint>
 #include <vector>
 #include <string>
 #include <map>
-#include <Edge_Node.h>
+#include "Edge_Node.h"
 #include <spot/twaalgos/translate.hh>
 #include <spot/twaalgos/hoa.hh>
 #include <spot/twaalgos/product.hh>
@@ -47,3 +50,5 @@ class Automaton{
             return nodeMap;
         }
 };
+
+#endif // AUTOMATON_H
