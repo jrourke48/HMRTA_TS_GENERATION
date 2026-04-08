@@ -1,0 +1,108 @@
+========== INTEGRATED PLANNING SYSTEM OUTPUT ==========
+
+Robots: 3 | Regions: 6
+LTL Formula: F (p0 & F (p1 & F (p2 & F p3)))
+Pruning Enabled: YES
+
+[1/7] Translating LTL formula to Büchi automaton...
+  LTL Formula: F (p0 & F (p1 & F (p2 & F p3)))
+  Generated formula: F(p0 & F(p1 & F(p2 & F(p3))))
+  ✓ Büchi automaton: 4 states, 9 transitions
+
+[2/7] Creating transition system from regions...
+  TS states: 6
+  Creating TS edges. Regions size: 6
+    Region 0: node found = true
+    Region 1: node found = true
+    Region 2: node found = true
+    Region 3: node found = true
+    Region 4: node found = true
+    Region 5: node found = true
+  TS edges created: 36
+  DEBUG TS automaton edges:
+    State 0 has 6 edges
+    State 1 has 6 edges
+    State 2 has 6 edges
+    State 3 has 6 edges
+    State 4 has 6 edges
+    State 5 has 6 edges
+
+[3/7] Computing capability-aware pruning...
+
+[4/7] Computing weighted Voronoi power diagram...
+[PowerDiagram] Robot weights:
+  Robot 0: w = 2527.46
+  Robot 1: w = 452.48
+  Robot 2: w = 150.995
+  Power diagram computed for 3 robots
+
+[5/7] Computing feasibility mask...
+  Feasibility analysis:
+    Robot 0 feasible for 6 regions
+    Robot 1 feasible for 4 regions
+    Robot 2 feasible for 5 regions
+
+[6/7] Building product automaton T ⊗ B...
+  DEBUG: TS nodes map size: 6
+  DEBUG: Büchi states: 4
+    TS State 0: 6 edges
+      Büchi State 0: 2 edges
+      Büchi State 1: 2 edges
+      Büchi State 2: 2 edges
+      Büchi State 3: 1 edge
+    TS State 1: 6 edges
+      Büchi State 0: 2 edges
+      Büchi State 1: 2 edges
+      Büchi State 2: 2 edges
+      Büchi State 3: 1 edge
+    TS State 2: 6 edges
+      Büchi State 0: 2 edges
+      Büchi State 1: 2 edges
+      Büchi State 2: 2 edges
+      Büchi State 3: 1 edge
+    TS State 3: 6 edges
+      Büchi State 0: 2 edges
+      Büchi State 1: 2 edges
+      Büchi State 2: 2 edges
+      Büchi State 3: 1 edge
+    TS State 4: 6 edges
+      Büchi State 0: 2 edges
+      Büchi State 1: 2 edges
+      Büchi State 2: 2 edges
+      Büchi State 3: 1 edge
+    TS State 5: 6 edges
+      Büchi State 0: 2 edges
+      Büchi State 1: 2 edges
+      Büchi State 2: 2 edges
+      Büchi State 3: 1 edge
+  DEBUG SUMMARY:
+    Total TS edges found: 36
+    Total Büchi edges found: 7
+  ✓ Product states: 24
+  ✓ Product transitions: 252
+
+[7/7] Searching for satisfying plan...
+  BFS search from initial state: (0,0)
+  Explored 24 states
+  [Success] Found plan of length 6
+  Accepting state: (2,3)
+
+========== PLANNING RESULTS ==========
+Status: SUCCESS
+Plan Length: 6 states
+
+Execution Sequence:
+  Step 0: Region 0 (MainStorage)
+  Step 1: Region 1 (LoadingDock)
+  Step 2: Region 2 (GridSection1)
+  Step 3: Region 3 (GridSection2)
+  Step 4: Region 2 (GridSection1)
+  Step 5: Region 0 (MainStorage)
+
+========== SUMMARY ==========
+✓ LTL Formula: F (p0 & F (p1 & F (p2 & F p3)))
+✓ Transition System: 6 states, 36 edges
+✓ Büchi Automaton: 4 states, 9 edges
+✓ Product Automaton: 24 states, 252 edges
+✓ Plan found: 6 steps
+✓ All constraints satisfied
