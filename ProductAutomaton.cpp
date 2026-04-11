@@ -16,6 +16,7 @@ ProductAutomaton::ProductAutomaton(spot::twa_graph_ptr spotAutomaton) {
     }
     
     // Extract edges from Spot automaton
+    // For transition-based acceptance: mark states that are targets of accepting transitions
     for (const auto& edge : spotAutomaton->edges()) {
         unsigned srcState = edge.src;
         unsigned dstState = edge.dst;
@@ -27,6 +28,13 @@ ProductAutomaton::ProductAutomaton(spot::twa_graph_ptr spotAutomaton) {
             // For now, create unweighted edge
             Edge e(dstState);
             srcNode->addEdge(e);
+            numEdges++;
+        }
+        
+        // Check if this edge has acceptance marks (transition-based acceptance)
+        // Mark destination state as accepting if the transition is accepting
+        if (edge.acc != 0) {
+            setAccepting(dstState);
         }
     }
 }

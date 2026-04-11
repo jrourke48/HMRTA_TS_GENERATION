@@ -121,9 +121,11 @@ const std::vector<uint32_t>& TS::getInitialStates() const {
     return initialStates;
 }
 
-spot::twa_graph_ptr TS::toSpotAutomaton() const {
-    // Create a BDD dictionary for the automaton
-    spot::bdd_dict_ptr dict = spot::make_bdd_dict();
+spot::twa_graph_ptr TS::toSpotAutomaton(spot::bdd_dict_ptr dict) const {
+    // Use provided dictionary or create a new one
+    if (!dict) {
+        dict = spot::make_bdd_dict();
+    }
     
     // Create a new Spot automaton with the dictionary
     spot::twa_graph_ptr aut = spot::make_twa_graph(dict);

@@ -48,6 +48,7 @@ public:
         }
         
         // Extract edges from Spot automaton
+        // For Büchi: mark states that are targets of accepting transitions
         for (const auto& edge : spotAutomaton->edges()) {
             unsigned srcState = edge.src;
             unsigned dstState = edge.dst;
@@ -59,12 +60,11 @@ public:
                 srcNode->addEdge(e);
                 numEdges++;
             }
-        }
-        
-        // Mark accepting states (states in Büchi acceptance sets)
-        for (unsigned i = 0; i < numStates; ++i) {
-            if (spotAutomaton->state_is_accepting(i)) {
-                setAccepting(i);
+            
+            // Check if this edge has acceptance marks (transition-based acceptance)
+            // Mark destination state as accepting if the transition is accepting
+            if (edge.acc != 0) {
+                setAccepting(dstState);
             }
         }
     };

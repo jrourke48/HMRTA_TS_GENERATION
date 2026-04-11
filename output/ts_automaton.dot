@@ -1,15 +1,20 @@
 digraph "" {
   rankdir=LR
-  label="Inf(0)\n[Büchi]"
+  label="t\n[all]"
   labelloc="t"
   node [shape="circle"]
   I [label="", style=invis, width=0]
-  I -> 1
+  I -> 0
   0 [label="0"]
-  0 -> 0 [label="!\"2\""]
-  0 -> 1 [label="\"2\""]
+  0 -> 3 [label="1\n{0}"]
+  0 -> 1 [label="1\n{0}"]
   1 [label="1"]
-  1 -> 0 [label="\"1\" & !\"2\"\n{0}"]
-  1 -> 1 [label="!\"1\""]
-  1 -> 1 [label="\"1\" & \"2\"\n{0}"]
+  1 -> 2 [label="1\n{0}"]
+  1 -> 0 [label="1\n{0}"]
+  2 [label="2"]
+  2 -> 1 [label="1\n{0}"]
+  2 -> 3 [label="1\n{0}"]
+  3 [label="3"]
+  3 -> 0 [label="1\n{0}"]
+  3 -> 2 [label="1\n{0}"]
 }

@@ -74,7 +74,8 @@ int main()
     // 5. Compute Product Automaton using new ProductAutomaton class
     //=========================================================================
     // Create product using Spot (for comparison and accepting run detection)
-    spot::twa_graph_ptr tsSpot = tsAutomaton.toSpotAutomaton();
+    // Important: both automata must share the same BDD dictionary for product()
+    spot::twa_graph_ptr tsSpot = tsAutomaton.toSpotAutomaton(buchiSpot->get_dict());
     spot::twa_graph_ptr productSpot = spot::product(tsSpot, buchiSpot);
     
     // Create product automaton from Spot result

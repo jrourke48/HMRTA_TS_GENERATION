@@ -36,7 +36,8 @@ public:
     const std::vector<uint32_t>& getInitialStates() const;
 
     // Convert TS to Spot automaton
-    spot::twa_graph_ptr toSpotAutomaton() const;
+    // If dict is provided, use it; otherwise create a new BDD dictionary
+    spot::twa_graph_ptr toSpotAutomaton(spot::bdd_dict_ptr dict = nullptr) const;
 };
 
 #endif
