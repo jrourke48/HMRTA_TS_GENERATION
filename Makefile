@@ -15,7 +15,7 @@ all: LTLtoBuchiAutomaton
 LTLtoBuchiAutomaton: LTLtoBuchiAutomaton.cpp Transition_Systems/GridWorldTransitionSystem.cpp
 	$(CXX) $(CXXFLAGS) $(INCLUDES) $(LDFLAGS) $+ -o $(OUTDIR)/$@.exe $(LIBS)
 
-TestingAutomaton: TestingAutomaton.cpp Transition_Systems/GridWorldTransitionSystem.cpp TS.cpp BuchiAutomaton.cpp ProductAutomaton.cpp
+TestingAutomaton: TestingAutomaton.cpp Transition_Systems/GridWorldTransitionSystem.cpp Automatons/TS.cpp Automatons/BuchiAutomaton.cpp Automatons/ProductAutomaton.cpp
 	$(CXX) $(CXXFLAGS) $(INCLUDES) $(LDFLAGS) $+ -o $(OUTDIR)/$@.exe $(LIBS)
 
 GlobalState: GlobalState.cpp

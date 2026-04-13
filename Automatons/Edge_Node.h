@@ -14,7 +14,7 @@ private:
     uint32_t dstId;
     std::string label; //label for the edge
     // For weighted edges, we can add a weight property
-    uint32_t weight;
+    uint16_t weight;
 public:
     // Constructors
     Edge() = default;

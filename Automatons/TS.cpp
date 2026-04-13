@@ -1,5 +1,5 @@
 #include "TS.h"
-#include "Transition_Systems/GridWorldTransitionSystem.h"
+#include "../Transition_Systems/GridWorldTransitionSystem.h"
 #include <algorithm>
 #include <iostream>
 
@@ -11,54 +11,45 @@ TS::TS(TransitionSystem* ts) {
     std::cerr << "DEBUG: Starting TS constructor\n";
     std::cerr << "DEBUG: ts->states.size() = " << ts->states.size() << "\n";
     
-    // Convert states to integer IDs
-    std::unordered_map<std::string, uint32_t> stateIdMap;
-    uint32_t stateCounter = 0;
-    
-    // Create nodes for each state
     std::cerr << "DEBUG: Creating nodes...\n";
+    // Create nodes using the actual state IDs from GridWorld
     for (const auto& state : ts->states) {
-        std::cerr << "DEBUG: Creating node " << stateCounter << "\n";
-        Node* node = new Node(stateCounter);
+        uint32_t stateId = ts->stateToId(state);
+        std::cerr << "DEBUG: Creating node " << stateId << "\n";
+        Node* node = new Node(stateId);
         add_Node(node);
-        
-        // Store mapping from state to node ID
-        std::string stateKey = std::to_string(ts->stateToId(state));
-        stateIdMap[stateKey] = stateCounter;
-        
-        stateCounter++;
     }
     
     std::cerr << "DEBUG: Nodes created. Initial states count: " << ts->initial_states.size() << "\n";
-    // Mark initial states - mark state 0 as initial for now
-    // (the initial state marking will be handled differently)
+    // Mark initial states based on the GridWorld's initial states
     if (ts->initial_states.size() > 0) {
-        std::cerr << "DEBUG: Marking first state as initial\n";
-        setInitial(0);  // Mark the first created node as initial
+        for (const auto& initState : ts->initial_states) {
+            uint32_t initStateId = ts->stateToId(initState);
+            std::cerr << "DEBUG: Marking state " << initStateId << " as initial\n";
+            setInitial(initStateId);
+        }
     }
     
     std::cerr << "DEBUG: Adding edges...\n";
     // Add edges based on transitions
-    stateCounter = 0;
     for (const auto& state : ts->states) {
-        std::cerr << "DEBUG: Processing state " << stateCounter << "\n";
+        uint32_t srcStateId = ts->stateToId(state);
+        std::cerr << "DEBUG: Processing state " << srcStateId << "\n";
         std::cerr << "DEBUG: State has " << state.props.size() << " props\n";
         // Get successors for this state
         try {
             std::cerr << "DEBUG: About to call successors...\n";
-            std::cerr << "DEBUG: State ID = " << ts->stateToId(state) << "\n";
             auto successors = ts->successors(state);
             std::cerr << "DEBUG: Got " << successors.size() << " successors\n";
         
             for (const auto& transition : successors) {
-                int destStateId = ts->stateToId(transition.next);
-                uint32_t destNodeId = stateIdMap[std::to_string(destStateId)];
+                uint32_t destStateId = ts->stateToId(transition.next);
                 
                 // Add edge with cost as weight
-                Edge edge(destNodeId, static_cast<uint32_t>(transition.cost));
+                Edge edge(destStateId, static_cast<uint32_t>(transition.cost));
                 
-                // Get the source node and add edge
-                Node* srcNode = getNode(stateCounter);
+                // Get the source node using actual state ID
+                Node* srcNode = getNode(srcStateId);
                 if (srcNode != nullptr) {
                     srcNode->addEdge(edge);
                     numEdges++;
@@ -67,8 +58,6 @@ TS::TS(TransitionSystem* ts) {
         } catch (const std::exception& e) {
             std::cerr << "DEBUG: Exception in successors: " << e.what() << "\n";
         }
-        
-        stateCounter++;
     }
     std::cerr << "DEBUG: TS constructor complete\n";
 }
@@ -130,14 +119,27 @@ spot::twa_graph_ptr TS::toSpotAutomaton(spot::bdd_dict_ptr dict) const {
     // Create a new Spot automaton with the dictionary
     spot::twa_graph_ptr aut = spot::make_twa_graph(dict);
     
+    // Create a mapping from node ID to Spot state index
+    std::unordered_map<uint32_t, unsigned> nodeIdToSpotState;
+    unsigned spotStateIndex = 0;
+    
     // Create states in the Spot automaton (one per node)
     for (uint32_t i = 0; i < numNodes; ++i) {
         aut->new_state();
     }
     
-    // Set initial state(s)
+    // Build the mapping from node IDs to Spot state indices
+    for (const auto& nodePair : nodeMap) {
+        uint32_t nodeId = nodePair.first;
+        nodeIdToSpotState[nodeId] = spotStateIndex++;
+    }
+    
+    // Set initial state(s) using the mapping
     if (!initialStates.empty()) {
-        aut->set_init_state(initialStates[0]);
+        uint32_t initNodeId = initialStates[0];
+        if (nodeIdToSpotState.find(initNodeId) != nodeIdToSpotState.end()) {
+            aut->set_init_state(nodeIdToSpotState[initNodeId]);
+        }
     }
     
     // Add edges from the TS graph
@@ -147,11 +149,14 @@ spot::twa_graph_ptr TS::toSpotAutomaton(spot::bdd_dict_ptr dict) const {
         
         if (srcNode == nullptr) continue;
         
+        unsigned srcSpotState = nodeIdToSpotState[srcId];
+        
         // Iterate through outgoing edges
         for (const auto& edge : srcNode->getEdges()) {
             uint32_t dstId = edge.getDstId();
+            unsigned dstSpotState = nodeIdToSpotState[dstId];
             // Add edge with bddtrue (true transition) and no acceptance mark
-            aut->new_edge(srcId, dstId, bddtrue, {0});
+            aut->new_edge(srcSpotState, dstSpotState, bddtrue, {0});
         }
     }
     

@@ -28,14 +28,14 @@
 <title>1&#45;&gt;1</title>
 <path fill="none" stroke="black" d="M52.76,-41.51C52.21,-51.04 53.29,-59.73 56,-59.73 57.65,-59.73 58.69,-56.5 59.13,-51.82"/>
 <polygon fill="black" stroke="black" points="62.64,-51.54 59.24,-41.51 55.64,-51.47 62.64,-51.54"/>
-<text text-anchor="middle" x="56" y="-63.53" font-family="Times,serif" font-size="14.00">!&quot;1&quot;</text>
+<text text-anchor="middle" x="56" y="-63.53" font-family="Times,serif" font-size="14.00">!&quot;0&quot;</text>
 </g>
 <!-- 1&#45;&gt;1 -->
 <g id="edge6" class="edge">
 <title>1&#45;&gt;1</title>
 <path fill="none" stroke="black" d="M50.68,-41.15C47.65,-58.52 49.43,-77.73 56,-77.73 61.29,-77.73 63.47,-65.29 62.54,-51.38"/>
 <polygon fill="black" stroke="black" points="65.98,-50.66 61.32,-41.15 59.03,-51.49 65.98,-50.66"/>
-<text text-anchor="middle" x="56" y="-96.53" font-family="Times,serif" font-size="14.00">&quot;1&quot; &amp; &quot;2&quot;</text>
+<text text-anchor="middle" x="56" y="-96.53" font-family="Times,serif" font-size="14.00">&quot;0&quot; &amp; &quot;4&quot;</text>
 <text text-anchor="middle" x="56" y="-81.53" font-family="Times,serif" font-size="14.00">{0}</text>
 </g>
 <!-- 0 -->
@@ -49,7 +49,7 @@
 <title>1&#45;&gt;0</title>
 <path fill="none" stroke="black" d="M74.25,-23.73C98.62,-23.73 143.39,-23.73 172.41,-23.73"/>
 <polygon fill="black" stroke="black" points="172.69,-27.23 182.69,-23.73 172.69,-20.23 172.69,-27.23"/>
-<text text-anchor="middle" x="128.5" y="-42.53" font-family="Times,serif" font-size="14.00">&quot;1&quot; &amp; !&quot;2&quot;</text>
+<text text-anchor="middle" x="128.5" y="-42.53" font-family="Times,serif" font-size="14.00">&quot;0&quot; &amp; !&quot;4&quot;</text>
 <text text-anchor="middle" x="128.5" y="-27.53" font-family="Times,serif" font-size="14.00">{0}</text>
 </g>
 <!-- 0&#45;&gt;1 -->
@@ -57,14 +57,14 @@
 <title>0&#45;&gt;1</title>
 <path fill="none" stroke="black" d="M185.28,-14.18C179.25,-10.81 172.04,-7.43 165,-5.73 133.47,1.91 123.53,1.91 92,-5.73 88.26,-6.63 84.47,-8.01 80.84,-9.61"/>
 <polygon fill="black" stroke="black" points="79.09,-6.57 71.72,-14.18 82.22,-12.83 79.09,-6.57"/>
-<text text-anchor="middle" x="128.5" y="-9.53" font-family="Times,serif" font-size="14.00">&quot;2&quot;</text>
+<text text-anchor="middle" x="128.5" y="-9.53" font-family="Times,serif" font-size="14.00">&quot;4&quot;</text>
 </g>
 <!-- 0&#45;&gt;0 -->
 <g id="edge2" class="edge">
 <title>0&#45;&gt;0</title>
 <path fill="none" stroke="black" d="M189.24,-37.77C184.85,-48.64 188.77,-59.73 201,-59.73 209.41,-59.73 213.89,-54.48 214.44,-47.68"/>
 <polygon fill="black" stroke="black" points="217.88,-47.04 212.76,-37.77 210.98,-48.21 217.88,-47.04"/>
-<text text-anchor="middle" x="201" y="-63.53" font-family="Times,serif" font-size="14.00">!&quot;2&quot;</text>
+<text text-anchor="middle" x="201" y="-63.53" font-family="Times,serif" font-size="14.00">!&quot;4&quot;</text>
 </g>
 </g>
 </svg>

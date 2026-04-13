@@ -63,7 +63,7 @@ public:
             
             // Check if this edge has acceptance marks (transition-based acceptance)
             // Mark destination state as accepting if the transition is accepting
-            if (edge.acc != 0) {
+            if (edge.acc != spot::acc_cond::mark_t()) {
                 setAccepting(dstState);
             }
         }
