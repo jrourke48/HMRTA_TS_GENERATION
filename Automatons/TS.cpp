@@ -8,39 +8,28 @@ TS::TS() {
 
 TS::TS(TransitionSystem* ts) {
     if (!ts) return;
-    std::cerr << "DEBUG: Starting TS constructor\n";
-    std::cerr << "DEBUG: ts->states.size() = " << ts->states.size() << "\n";
     
-    std::cerr << "DEBUG: Creating nodes...\n";
     // Create nodes using the actual state IDs from GridWorld
     for (const auto& state : ts->states) {
         uint32_t stateId = ts->stateToId(state);
-        std::cerr << "DEBUG: Creating node " << stateId << "\n";
         Node* node = new Node(stateId);
         add_Node(node);
     }
     
-    std::cerr << "DEBUG: Nodes created. Initial states count: " << ts->initial_states.size() << "\n";
     // Mark initial states based on the GridWorld's initial states
     if (ts->initial_states.size() > 0) {
         for (const auto& initState : ts->initial_states) {
             uint32_t initStateId = ts->stateToId(initState);
-            std::cerr << "DEBUG: Marking state " << initStateId << " as initial\n";
             setInitial(initStateId);
         }
     }
     
-    std::cerr << "DEBUG: Adding edges...\n";
     // Add edges based on transitions
     for (const auto& state : ts->states) {
         uint32_t srcStateId = ts->stateToId(state);
-        std::cerr << "DEBUG: Processing state " << srcStateId << "\n";
-        std::cerr << "DEBUG: State has " << state.props.size() << " props\n";
         // Get successors for this state
         try {
-            std::cerr << "DEBUG: About to call successors...\n";
             auto successors = ts->successors(state);
-            std::cerr << "DEBUG: Got " << successors.size() << " successors\n";
         
             for (const auto& transition : successors) {
                 uint32_t destStateId = ts->stateToId(transition.next);
@@ -56,10 +45,9 @@ TS::TS(TransitionSystem* ts) {
                 }
             }
         } catch (const std::exception& e) {
-            std::cerr << "DEBUG: Exception in successors: " << e.what() << "\n";
+            // Handle exception silently
         }
     }
-    std::cerr << "DEBUG: TS constructor complete\n";
 }
 
 TS::~TS() {

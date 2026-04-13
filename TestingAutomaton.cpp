@@ -113,6 +113,37 @@ int main()
     }
 
     //=========================================================================
+    // 6b. Validate Product Automaton Structure
+    //=========================================================================
+    std::cout << "\n=== Product Automaton Validation ===" << std::endl;
+    std::cout << "Product has " << productSpot->num_states() << " states\n";
+    std::cout << "TS has " << tsSpot->num_states() << " states, Büchi has " << buchiSpot->num_states() << " states\n";
+    std::cout << "Max expected product states: " << (tsSpot->num_states() * buchiSpot->num_states()) << "\n";
+    
+    // Count product edges
+    unsigned long productEdges = 0;
+    for (auto edge : productSpot->edges()) {
+        productEdges++;
+    }
+    std::cout << "Product has " << productEdges << " edges\n";
+    
+    // Check initial states
+    std::cout << "Product initial state: " << productSpot->get_init_state_number() << "\n";
+    
+    // Count accepting states in product
+    unsigned long acceptingCount = 0;
+    for (unsigned s = 0; s < productSpot->num_states(); ++s) {
+        for (auto edge : productSpot->out(s)) {
+            if (edge.acc != spot::acc_cond::mark_t()) {
+                acceptingCount++;
+                break;
+            }
+        }
+    }
+    std::cout << "Product has " << acceptingCount << " states with accepting transitions\n";
+    std::cout << "Emptiness check result: " << (run ? "NOT EMPTY (formula satisfiable)" : "EMPTY (formula unsatisfiable)") << "\n";
+
+    //=========================================================================
     // 7. Export to DOT files for visualization
     //=========================================================================
     std::ofstream buchiDot("output/buchi_automaton.dot");

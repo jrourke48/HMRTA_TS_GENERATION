@@ -36,14 +36,11 @@ TransitionSystem::TransitionSystem(int width, int height,
 // Helper function to extract x coordinate from state props
 int TransitionSystem::getX(const State& s) const {
     try {
-        std::cerr << "DEBUG getX: s.props.size() = " << s.props.size() << "\n";
         if (s.props.empty()) {
-            std::cerr << "DEBUG getX: Empty props!\n";
             return -1;
         }
         AtomicProposition ap = *(s.props.begin()); // Assuming only one AP is true for a valid state
         int id = ap.getId();
-        std::cerr << "DEBUG getX: Got id = " << id << ", cellX = " << cellX(id) << "\n";
         return cellX(id);
     } catch (const std::exception& e) {
         std::cerr << "Error extracting coordinates from state: " << e.what() << "\n";
@@ -54,14 +51,11 @@ int TransitionSystem::getX(const State& s) const {
 // Helper function to extract y coordinate from state props
 int TransitionSystem::getY(const State& s) const {
     try {
-        std::cerr << "DEBUG getY: s.props.size() = " << s.props.size() << "\n";
         if (s.props.empty()) {
-            std::cerr << "DEBUG getY: Empty props!\n";
             return -1;
         }
         AtomicProposition ap = *(s.props.begin()); // Assuming only one AP is true for a valid state
         int id = ap.getId();
-        std::cerr << "DEBUG getY: Got id = " << id << ", cellY = " << cellY(id) << "\n";
         return cellY(id);
     } catch (const std::exception& e) {
         std::cerr << "Error extracting coordinates from state: " << e.what() << "\n";
@@ -71,27 +65,22 @@ int TransitionSystem::getY(const State& s) const {
 
 // Helper function to create a state from x,y coordinates
 State TransitionSystem::createState(int x, int y) const {
-    std::cerr << "DEBUG createState: Creating state at (" << x << ", " << y << ")\n";
     State s;
     
     // Check bounds first
     if (x < 0 || x >= grid_width || y < 0 || y >= grid_height) {
-        std::cerr << "DEBUG createState: Out of bounds! grid is " << grid_width << "x" << grid_height << "\n";
         return s;  // Return empty state for out of bounds
     }
     
     int id = cellId(x, y);
     std::string apName = std::to_string(id);
-    std::cerr << "DEBUG createState: Looking for AP with name " << apName << ", atomic_props.size() = " << atomic_props.size() << "\n";
     for (const auto& ap : atomic_props) {
         if (ap.getName() == apName) {
-            std::cerr << "DEBUG createState: Found matching AP\n";
             AtomicProposition ap_copy = ap;
             s.props.insert(ap_copy);
             break;
         }
     }
-    std::cerr << "DEBUG createState: Created state with " << s.props.size() << " props\n";
     return s;
 }
 
@@ -129,8 +118,6 @@ void TransitionSystem::StateTransition(const Action& a) {
 
 // Generate a vector of valid successor states from given state
 std::vector<Transition> TransitionSystem::successors(const State& s) const {
-    std::cerr << "DEBUG successors: State has " << s.props.size() << " props\n";
-    
     std::vector<Transition> result;
 
     struct Move {
@@ -147,21 +134,16 @@ std::vector<Transition> TransitionSystem::successors(const State& s) const {
         {Action::RIGHT,     1,  0, 1.0},
     };
     
-    std::cerr << "DEBUG successors: About to call getX\n";
     int curr_x = getX(s);
-    std::cerr << "DEBUG successors: getX returned " << curr_x << "\n";
     int curr_y = getY(s);
-    std::cerr << "DEBUG successors: getY returned " << curr_y << "\n";
 
     for (const Move& move : moves) {
-        std::cerr << "DEBUG successors: Creating state at (" << curr_x + move.dx << ", " << curr_y + move.dy << ")\n";
         State next = createState(curr_x + move.dx, curr_y + move.dy);
         if (isValid(next)) {
             result.push_back(Transition{next, move.action, move.cost});
         }
     }
 
-    std::cerr << "DEBUG successors: Returning " << result.size() << " successors\n";
     return result;
 }
 
