@@ -87,6 +87,78 @@ int main()
     std::cout << "Edges: " << productAutomaton.getnumEdges() << std::endl;
 
     //=========================================================================
+    // 5b. Validate Product Automaton Conversion
+    //=========================================================================
+    std::cout << "\n=== Validating Product Automaton Conversion ===" << std::endl;
+    
+    bool conversion_valid = true;
+    
+    // Check 1: State count match
+    if (productAutomaton.getnumStates() != productSpot->num_states()) {
+        std::cout << "ERROR: State count mismatch!\n";
+        std::cout << "  Custom: " << productAutomaton.getnumStates() << "\n";
+        std::cout << "  Spot:   " << productSpot->num_states() << "\n";
+        conversion_valid = false;
+    } else {
+        std::cout << "✓ State count matches: " << productAutomaton.getnumStates() << "\n";
+    }
+    
+    // Check 2: Edge count match
+    unsigned long spotEdgeCount = 0;
+    for (auto edge : productSpot->edges()) {
+        spotEdgeCount++;
+    }
+    if (productAutomaton.getnumEdges() != spotEdgeCount) {
+        std::cout << "ERROR: Edge count mismatch!\n";
+        std::cout << "  Custom: " << productAutomaton.getnumEdges() << "\n";
+        std::cout << "  Spot:   " << spotEdgeCount << "\n";
+        conversion_valid = false;
+    } else {
+        std::cout << "✓ Edge count matches: " << productAutomaton.getnumEdges() << "\n";
+    }
+    
+    // Check 3: Verify accepting states
+    unsigned long spotAcceptingEdges = 0;
+    for (auto edge : productSpot->edges()) {
+        if (edge.acc != spot::acc_cond::mark_t()) {
+            spotAcceptingEdges++;
+        }
+    }
+    auto customAcceptingStates = productAutomaton.getAcceptingStates();
+    if (customAcceptingStates.size() == 0 && spotAcceptingEdges > 0) {
+        std::cout << "WARNING: No accepting states in custom automaton but Spot has accepting edges!\n";
+        std::cout << "  Spot has " << spotAcceptingEdges << " accepting edges\n";
+        conversion_valid = false;
+    } else {
+        std::cout << "✓ Accepting states identified: " << customAcceptingStates.size() << "\n";
+    }
+    
+    // Check 4: Spot-check a few edges for correctness
+    bool edges_match = true;
+    unsigned checked_edges = 0;
+    unsigned max_check = std::min(5u, (unsigned)spotEdgeCount);
+    for (auto spotEdge : productSpot->edges()) {
+        if (checked_edges >= max_check) break;
+        
+        // Check if this edge exists in custom automaton
+        if (!productAutomaton.isAdjacent(spotEdge.src, spotEdge.dst)) {
+            std::cout << "ERROR: Edge (" << spotEdge.src << " -> " << spotEdge.dst << ") missing in custom automaton!\n";
+            edges_match = false;
+        }
+        checked_edges++;
+    }
+    
+    if (edges_match && checked_edges > 0) {
+        std::cout << "✓ Spot-checked " << checked_edges << " edges - all present and correct\n";
+    }
+    
+    if (conversion_valid) {
+        std::cout << "✓ Product automaton conversion VALID\n";
+    } else {
+        std::cout << "✗ Product automaton conversion has issues\n";
+    }
+
+    //=========================================================================
     // 6. Check for Accepting Run (Emptiness Check)
     //=========================================================================
     std::cout << "\n=== Emptiness Check ===" << std::endl;

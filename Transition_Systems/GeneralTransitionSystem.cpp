@@ -1,22 +1,140 @@
-#include <vector>
-#include <string>
-#include <unordered_set>
-#include <cstdint>
-#include <cassert>
-#include <iostream>
-#include <sstream>
+#include "GeneralTransitionSystem.h"
 #include <algorithm>
-#include <cmath>
-#include <fstream>
-#include <unordered_map>
-#include <spot/twa/twagraph.hh>
-#include <spot/twaalgos/hoa.hh>
-#include <spot/twaalgos/dot.hh>
-#include <bddx.h>
 
+/**
+ * GeneralTransitionSystem - Constructor
+ */
+GeneralTransitionSystem::GeneralTransitionSystem()
+    : numNodes(0), numEdges(0), initialState(0) {
+}
 
-//grid-based transition system implementation for one robot moving in 2D space
-enum class Action : uint8_t { UP, DOWN, LEFT, RIGHT, UPRIGHT, UPLEFT, DOWNRIGHT, DOWNLEFT, WAIT };
+/**
+ * GeneralTransitionSystem - Destructor
+ */
+GeneralTransitionSystem::~GeneralTransitionSystem() {
+    clear();
+}
+
+/**
+ * addNode - Add a node to the transition system
+ */
+void GeneralTransitionSystem::addNode(Node* node) {
+    if (!node) return;
+    
+    uint32_t nodeId = node->getId();
+    
+    // Check if node already exists
+    if (nodeMap.find(nodeId) != nodeMap.end()) {
+        return;
+    }
+    
+    nodeMap[nodeId] = node;
+    numNodes++;
+}
+
+/**
+ * addEdge - Add an edge between two nodes
+ */
+void GeneralTransitionSystem::addEdge(uint32_t srcId, uint32_t dstId, const std::string& label) {
+    auto srcIt = nodeMap.find(srcId);
+    if (srcIt == nodeMap.end()) {
+        return;
+    }
+    
+    Node* srcNode = srcIt->second;
+    Edge edge(dstId, label);
+    srcNode->addEdge(edge);
+    numEdges++;
+}
+
+/**
+ * isAdjacent - Check if two nodes are adjacent
+ */
+bool GeneralTransitionSystem::isAdjacent(uint32_t srcId, uint32_t dstId) const {
+    auto it = nodeMap.find(srcId);
+    if (it == nodeMap.end()) {
+        return false;
+    }
+    
+    Node* srcNode = it->second;
+    const auto& edges = srcNode->getEdges();
+    
+    for (const auto& edge : edges) {
+        if (edge.getDstId() == dstId) {
+            return true;
+        }
+    }
+    
+    return false;
+}
+
+/**
+ * getNode - Get a node by ID
+ */
+Node* GeneralTransitionSystem::getNode(uint32_t nodeId) const {
+    auto it = nodeMap.find(nodeId);
+    if (it != nodeMap.end()) {
+        return it->second;
+    }
+    return nullptr;
+}
+
+/**
+ * clear - Clear all nodes and edges
+ */
+void GeneralTransitionSystem::clear() {
+    for (auto& pair : nodeMap) {
+        delete pair.second;
+    }
+    nodeMap.clear();
+    numNodes = 0;
+    numEdges = 0;
+}
+
+/**
+ * getSuccessors - Get successor nodes for a given node
+ */
+std::vector<Node*> GeneralTransitionSystem::getSuccessors(uint32_t nodeId) const {
+    std::vector<Node*> successors;
+    
+    auto it = nodeMap.find(nodeId);
+    if (it == nodeMap.end()) {
+        return successors;
+    }
+    
+    Node* node = it->second;
+    const auto& edges = node->getEdges();
+    
+    for (const auto& edge : edges) {
+        Node* successor = getNode(edge.getDstId());
+        if (successor) {
+            successors.push_back(successor);
+        }
+    }
+    
+    return successors;
+}
+
+/**
+ * getSuccessorIds - Get successor node IDs for a given node
+ */
+std::vector<uint32_t> GeneralTransitionSystem::getSuccessorIds(uint32_t nodeId) const {
+    std::vector<uint32_t> successorIds;
+    
+    auto it = nodeMap.find(nodeId);
+    if (it == nodeMap.end()) {
+        return successorIds;
+    }
+    
+    Node* node = it->second;
+    const auto& edges = node->getEdges();
+    
+    for (const auto& edge : edges) {
+        successorIds.push_back(edge.getDstId());
+    }
+    
+    return successorIds;
+}
 
 // Atomic Proposition structure
 class AtomicProposition {
