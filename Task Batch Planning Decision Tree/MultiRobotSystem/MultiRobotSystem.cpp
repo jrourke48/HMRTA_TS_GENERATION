@@ -1,11 +1,10 @@
-#include "MultiRobotSystem/MultiRobotSystem.h"
+#include "MultiRobotSystem.h"
 
 /**
  * MultiRobotSystem - Constructor
  */
 MultiRobotSystem::MultiRobotSystem(uint32_t numRobots)
     : numRobots(numRobots) {
-    taskAllocationMatrix.resize(numRobots);
 }
 
 /**
@@ -39,79 +38,6 @@ Robot* MultiRobotSystem::getRobot(uint32_t robotId) const {
 }
 
 /**
- * setTaskAllocation - Set task allocation for a robot
- */
-void MultiRobotSystem::setTaskAllocation(uint32_t robotId, const std::vector<bool>& allocation) {
-    for (size_t i = 0; i < robots.size(); ++i) {
-        if (robots[i]->getRobotId() == robotId) {
-            robots[i]->setTaskAllocation(allocation);
-            if (i < taskAllocationMatrix.size()) {
-                taskAllocationMatrix[i] = allocation;
-            }
-            return;
-        }
-    }
-}
-
-/**
- * getTaskAllocation - Get task allocation for a robot
- */
-const std::vector<bool>& MultiRobotSystem::getTaskAllocation(uint32_t robotId) const {
-    for (const auto* robot : robots) {
-        if (robot->getRobotId() == robotId) {
-            return robot->getRoboTaskAllocation();
-        }
-    }
-    static const std::vector<bool> emptyAllocation;
-    return emptyAllocation;
-}
-
-/**
- * updateRobotState - Update a robot's current state
- */
-void MultiRobotSystem::updateRobotState(uint32_t robotId, uint32_t newState) {
-    Robot* robot = getRobot(robotId);
-    if (robot) {
-        robot->setCurrentState(newState);
-    }
-}
-
-/**
- * getAllRobotStates - Get current states of all robots
- */
-std::vector<uint32_t> MultiRobotSystem::getAllRobotStates() const {
-    std::vector<uint32_t> states;
-    for (const auto* robot : robots) {
-        states.push_back(robot->getCurrentState());
-    }
-    return states;
-}
-
-/**
- * isTaskAllocated - Check if a task is allocated to a robot
- */
-bool MultiRobotSystem::isTaskAllocated(uint32_t robotId, uint32_t taskId) const {
-    Robot* robot = getRobot(robotId);
-    if (robot) {
-        return robot->isAllocatedTask(taskId);
-    }
-    return false;
-}
-
-/**
- * getRobotsForTask - Get all robots allocated to a specific task
- */
-std::vector<uint32_t> MultiRobotSystem::getRobotsForTask(uint32_t taskId) const {
-    std::vector<uint32_t> robotIds;
-    for (const auto* robot : robots) {
-        if (robot->isAllocatedTask(taskId)) {
-            robotIds.push_back(robot->getRobotId());
-        }
-    }
-    return robotIds;
-}
-
-/**
  * clear - Clear all robots
  */
 void MultiRobotSystem::clear() {
@@ -119,5 +45,92 @@ void MultiRobotSystem::clear() {
         delete robot;
     }
     robots.clear();
-    taskAllocationMatrix.clear();
+}
+
+/**
+ * getRobotsWithCapability - Get all robots that have a specific capability
+ */
+std::vector<Robot*> MultiRobotSystem::getRobotsWithCapability(RobotCapability cap) const {
+    std::vector<Robot*> result;
+    for (auto* robot : robots) {
+        if (robot->hasCapability(cap)) {
+            result.push_back(robot);
+        }
+    }
+    return result;
+}
+
+/**
+ * getRobotIdsWithCapability - Get IDs of all robots with a specific capability
+ */
+std::vector<uint32_t> MultiRobotSystem::getRobotIdsWithCapability(RobotCapability cap) const {
+    std::vector<uint32_t> result;
+    for (auto* robot : robots) {
+        if (robot->hasCapability(cap)) {
+            result.push_back(robot->getRobotId());
+        }
+    }
+    return result;
+}
+
+/**
+ * hasRobotWithCapability - Check if any robot has a specific capability
+ */
+bool MultiRobotSystem::hasRobotWithCapability(RobotCapability cap) const {
+    for (auto* robot : robots) {
+        if (robot->hasCapability(cap)) {
+            return true;
+        }
+    }
+    return false;
+}
+
+/**
+ * countRobotsWithCapability - Count how many robots have a specific capability
+ */
+uint32_t MultiRobotSystem::countRobotsWithCapability(RobotCapability cap) const {
+    uint32_t count = 0;
+    for (auto* robot : robots) {
+        if (robot->hasCapability(cap)) {
+            count++;
+        }
+    }
+    return count;
+}
+
+/**
+ * getRobotsWithAllCapabilities - Get robots that have ALL specified capabilities
+ */
+std::vector<Robot*> MultiRobotSystem::getRobotsWithAllCapabilities(const std::vector<RobotCapability>& caps) const {
+    std::vector<Robot*> result;
+    for (auto* robot : robots) {
+        bool hasAll = true;
+        for (RobotCapability cap : caps) {
+            if (!robot->hasCapability(cap)) {
+                hasAll = false;
+                break;
+            }
+        }
+        if (hasAll) {
+            result.push_back(robot);
+        }
+    }
+    return result;
+}
+
+/**
+ * getRobotsWithAnyCapability - Get robots that have ANY of the specified capabilities
+ */
+std::vector<Robot*> MultiRobotSystem::getRobotsWithAnyCapability(const std::vector<RobotCapability>& caps) const {
+    std::vector<Robot*> result;
+    for (auto* robot : robots) {
+        for (RobotCapability cap : caps) {
+            if (robot->hasCapability(cap)) {
+                result.push_back(robot);
+                break;
+            }
+        }
+    }
+    return result;
+}
 }

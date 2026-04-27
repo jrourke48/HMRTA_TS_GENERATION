@@ -1,4 +1,5 @@
 #include "Environment.h"
+#include "Point.h"
 
 /**
  * Environment - Constructor
@@ -37,21 +38,21 @@ std::vector<uint32_t> Environment::getSuccessorStates(uint32_t stateId) const {
 /**
  * isObstacle - Check if a grid cell is an obstacle
  */
-bool Environment::isObstacle(uint32_t x, uint32_t y) const {
+bool Environment::isObstacle(Point p) const {
     if (!gridWorld) {
         return false;
     }
-    return gridWorld->isObstacle(x, y);
+    return gridWorld->isObstacle(p);
 }
 
 /**
  * isFree - Check if a grid cell is free
  */
-bool Environment::isFree(uint32_t x, uint32_t y) const {
+bool Environment::isFree(Point p) const {
     if (!gridWorld) {
         return true;
     }
-    return gridWorld->isFree(x, y);
+    return gridWorld->isFree(p);
 }
 
 /**

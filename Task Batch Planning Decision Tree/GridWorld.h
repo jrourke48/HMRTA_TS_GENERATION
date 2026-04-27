@@ -1,6 +1,7 @@
 #ifndef GRIDWORLD_H
 #define GRIDWORLD_H
 
+#include "Point.h"
 #include <cstdint>
 #include <vector>
 #include <string>
@@ -14,11 +15,10 @@ private:
     uint32_t width;
     uint32_t height;
     std::vector<std::vector<uint8_t>> costmap;  // 2D costmap: 0 = free, 1-254 = cost, 255 = obstacle
-    std::string gridName;
     
 public:
     // Constructor
-    GridWorld(uint32_t w, uint32_t h, const std::string& name = "GridWorld");
+    GridWorld(uint32_t w, uint32_t h);
     
     // Destructor
     ~GridWorld();
@@ -26,22 +26,20 @@ public:
     // Getters
     uint32_t getWidth() const { return width; }
     uint32_t getHeight() const { return height; }
-    std::string getGridName() const { return gridName; }
-    uint8_t getCost(uint32_t x, uint32_t y) const;
+    uint8_t getCost(const Point& point) const;
     const std::vector<std::vector<uint8_t>>& getCostmap() const { return costmap; }
     
     // Setters
-    void setCost(uint32_t x, uint32_t y, uint8_t cost);
-    void setGridName(const std::string& name) { gridName = name; }
-    
+    void setCost(const Point& point, uint8_t cost);
+
     // Grid queries
-    bool isObstacle(uint32_t x, uint32_t y) const;
-    bool isFree(uint32_t x, uint32_t y) const;
-    bool isInBounds(uint32_t x, uint32_t y) const;
+    bool isObstacle(const Point& point) const;
+    bool isFree(const Point& point) const;
+    bool isInBounds(const Point& point) const;
     
     // Grid operations
-    void setObstacle(uint32_t x, uint32_t y) { setCost(x, y, 255); }
-    void clearCell(uint32_t x, uint32_t y) { setCost(x, y, 0); }
+    void setObstacle(const Point& point) { setCost(point, 255); }
+    void clearCell(const Point& point) { setCost(point, 0); }
     void clearAll();
     void fillObstacles();
 };

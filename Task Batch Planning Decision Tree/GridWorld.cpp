@@ -3,8 +3,7 @@
 /**
  * GridWorld - Constructor
  */
-GridWorld::GridWorld(uint32_t w, uint32_t h, const std::string& name)
-    : width(w), height(h), gridName(name) {
+GridWorld::GridWorld(uint32_t w, uint32_t h): width(w), height(h) {
     // Initialize costmap with all free cells (0)
     costmap.resize(height, std::vector<uint8_t>(width, 0));
 }
@@ -18,8 +17,10 @@ GridWorld::~GridWorld() {
 /**
  * getCost - Get the cost at a specific grid cell
  */
-uint8_t GridWorld::getCost(uint32_t x, uint32_t y) const {
-    if (!isInBounds(x, y)) {
+uint8_t GridWorld::getCost(const Point& point) const {
+    uint32_t x = point.getX();
+    uint32_t y = point.getY();
+    if (!isInBounds(point)) {
         return 255;  // Out of bounds = obstacle
     }
     return costmap[y][x];
@@ -28,8 +29,10 @@ uint8_t GridWorld::getCost(uint32_t x, uint32_t y) const {
 /**
  * setCost - Set the cost at a specific grid cell
  */
-void GridWorld::setCost(uint32_t x, uint32_t y, uint8_t cost) {
-    if (!isInBounds(x, y)) {
+void GridWorld::setCost(const Point& point, uint8_t cost) {
+    uint32_t x = point.getX();
+    uint32_t y = point.getY();
+    if (!isInBounds(point)) {
         return;
     }
     costmap[y][x] = cost;
@@ -38,21 +41,23 @@ void GridWorld::setCost(uint32_t x, uint32_t y, uint8_t cost) {
 /**
  * isObstacle - Check if a cell is an obstacle (cost = 255)
  */
-bool GridWorld::isObstacle(uint32_t x, uint32_t y) const {
-    return getCost(x, y) == 255;
+bool GridWorld::isObstacle(const Point& point) const {
+    return getCost(point) == 255;
 }
 
 /**
  * isFree - Check if a cell is free (cost = 0)
  */
-bool GridWorld::isFree(uint32_t x, uint32_t y) const {
-    return getCost(x, y) == 0;
+bool GridWorld::isFree(const Point& point) const {
+    return getCost(point) == 0;
 }
 
 /**
  * isInBounds - Check if coordinates are within grid bounds
  */
-bool GridWorld::isInBounds(uint32_t x, uint32_t y) const {
+bool GridWorld::isInBounds(const Point& point) const {
+    uint32_t x = point.getX();
+    uint32_t y = point.getY();
     return x < width && y < height;
 }
 
@@ -73,3 +78,4 @@ void GridWorld::fillObstacles() {
         std::fill(row.begin(), row.end(), 255);
     }
 }
+

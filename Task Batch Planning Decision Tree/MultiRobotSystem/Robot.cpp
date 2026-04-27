@@ -1,10 +1,12 @@
-#include "MultiRobotSystem/Robot.h"
+#include "Robot.h"
 
 /**
  * Robot - Constructor
  */
-Robot::Robot(uint32_t id, const std::string& name)
-    : robotId(id), robotName(name), currentState(0) {
+Robot::Robot(uint32_t id, const Point& startPos)
+    : robotId(id), startPosition(startPos), currentPosition(startPos) {
+    // Initialize capabilities vector with 17 slots (one per RobotCapability enum)
+    capabilities.resize(17, false);
 }
 
 /**
@@ -14,41 +16,52 @@ Robot::~Robot() {
 }
 
 /**
- * isAllocatedTask - Check if a task is allocated to this robot
+ * initializeCapabilities - Initialize the capabilities vector with a specific size
  */
-bool Robot::isAllocatedTask(uint32_t taskId) const {
-    if (taskId >= taskAllocation.size()) {
+void Robot::initializeCapabilities(size_t numCapabilities) {
+    capabilities.clear();
+    capabilities.resize(numCapabilities, false);
+}
+
+/**
+ * hasCapability - Check if robot has a specific capability (O(1) lookup)
+ */
+bool Robot::hasCapability(RobotCapability cap) const {
+    size_t capIndex = static_cast<size_t>(cap);
+    if (capIndex >= capabilities.size()) {
         return false;
     }
-    return taskAllocation[taskId];
+    return capabilities[capIndex];
 }
 
 /**
- * getTaskTime - Get the time for a specific task
+ * setCapability - Enable or disable a specific capability
  */
-uint16_t Robot::getTaskTime(uint32_t taskId) const {
-    if (taskId >= taskTimes.size()) {
-        return 0;
+void Robot::setCapability(RobotCapability cap, bool enabled) {
+    size_t capIndex = static_cast<size_t>(cap);
+    if (capIndex >= capabilities.size()) {
+        capabilities.resize(capIndex + 1, false);
     }
-    return taskTimes[taskId];
+    capabilities[capIndex] = enabled;
 }
 
 /**
- * allocateTask - Allocate a task to this robot
+ * enableCapability - Enable a capability
  */
-void Robot::allocateTask(uint32_t taskId) {
-    if (taskId >= taskAllocation.size()) {
-        taskAllocation.resize(taskId + 1, false);
-    }
-    taskAllocation[taskId] = true;
+void Robot::enableCapability(RobotCapability cap) {
+    setCapability(cap, true);
 }
 
 /**
- * deallocateTask - Deallocate a task from this robot
+ * disableCapability - Disable a capability
  */
-void Robot::deallocateTask(uint32_t taskId) {
-    if (taskId >= taskAllocation.size()) {
-        return;
-    }
-    taskAllocation[taskId] = false;
+void Robot::disableCapability(RobotCapability cap) {
+    setCapability(cap, false);
+}
+
+/**
+ * clearCapabilities - Disable all capabilities
+ */
+void Robot::clearCapabilities() {
+    std::fill(capabilities.begin(), capabilities.end(), false);
 }
