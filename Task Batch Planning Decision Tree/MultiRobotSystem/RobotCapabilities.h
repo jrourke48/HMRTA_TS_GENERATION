@@ -21,19 +21,14 @@ enum class RobotCapability : uint8_t {
     SENSOR_PROXIMITY     = 7,   // Has proximity/distance sensors
     
     // Manipulation Capabilities
-    MANIPULATION_ARM     = 8,   // Has robotic arm
-    MANIPULATION_GRIPPER = 9,   // Has gripper/manipulator
-    MANIPULATION_TOOL    = 10,  // Can use tools
+    MANIPULATION_GRIPPER = 8,   // Has gripper/manipulator
+    MANIPULATION_TOOL    = 9,  // Can use tools
     
     // Communication Capabilities
-    COMMUNICATION_WIFI   = 11,  // Can communicate via WiFi
-    COMMUNICATION_4G     = 12,  // Can communicate via 4G/LTE
-    COMMUNICATION_RADIO  = 13,  // Can communicate via radio
+    COMMUNICATION_WIFI   = 10,  // Can communicate via WiFi
+    COMMUNICATION_4G     = 11,  // Can communicate via 4G/LTE
     
-    // Special Capabilities
-    CAPABILITY_CHARGING  = 14,  // Can charge other robots
-    CAPABILITY_MAPPING   = 15,  // Can create maps
-    CAPABILITY_PAYLOAD   = 16,  // Can carry payload
+    CAPABILITY_PAYLOAD   = 12,  // Can carry payload
 };
 
 /**
@@ -49,14 +44,10 @@ inline std::string capabilityToString(RobotCapability cap) {
         case RobotCapability::SENSOR_GPS:           return "Sensor_GPS";
         case RobotCapability::SENSOR_IMU:           return "Sensor_IMU";
         case RobotCapability::SENSOR_PROXIMITY:     return "Sensor_Proximity";
-        case RobotCapability::MANIPULATION_ARM:     return "Manipulation_Arm";
         case RobotCapability::MANIPULATION_GRIPPER: return "Manipulation_Gripper";
         case RobotCapability::MANIPULATION_TOOL:    return "Manipulation_Tool";
         case RobotCapability::COMMUNICATION_WIFI:   return "Communication_WiFi";
         case RobotCapability::COMMUNICATION_4G:     return "Communication_4G";
-        case RobotCapability::COMMUNICATION_RADIO:  return "Communication_Radio";
-        case RobotCapability::CAPABILITY_CHARGING:  return "Capability_Charging";
-        case RobotCapability::CAPABILITY_MAPPING:   return "Capability_Mapping";
         case RobotCapability::CAPABILITY_PAYLOAD:   return "Capability_Payload";
         default:                                     return "Unknown";
     }

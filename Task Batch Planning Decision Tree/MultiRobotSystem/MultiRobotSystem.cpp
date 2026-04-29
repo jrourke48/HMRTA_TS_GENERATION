@@ -133,4 +133,4 @@ std::vector<Robot*> MultiRobotSystem::getRobotsWithAnyCapability(const std::vect
     }
     return result;
 }
-}
+

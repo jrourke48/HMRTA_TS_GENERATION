@@ -5,7 +5,7 @@
  * Environment - Constructor
  */
 Environment::Environment(GeneralTransitionSystem* ts, GridWorld* grid)
-    : transitionSystem(ts), gridWorld(grid), environmentName("Environment") {
+    : transitionSystem(ts), gridWorld(grid) {
 }
 
 /**
@@ -18,21 +18,21 @@ Environment::~Environment() {
 /**
  * getInitialState - Get the initial state of the transition system
  */
-uint32_t Environment::getInitialState() const {
-    if (!transitionSystem) {
+uint16_t Environment::getInitialState() const {
+    if (!transitionSystem || transitionSystem->getInitialStates().empty()) {
         return 0;
     }
-    return transitionSystem->getInitialState();
+    return transitionSystem->getInitialStates()[0];
 }
 
 /**
  * getSuccessorStates - Get successor states for a given state
  */
-std::vector<uint32_t> Environment::getSuccessorStates(uint32_t stateId) const {
+std::vector<uint16_t> Environment::getSuccessorStates(uint16_t stateId) const {
     if (!transitionSystem) {
-        return std::vector<uint32_t>();
+        return std::vector<uint16_t>();
     }
-    return transitionSystem->getSuccessorIds(stateId);
+    return transitionSystem->getAdjacencyIds(stateId);
 }
 
 /**
@@ -58,19 +58,43 @@ bool Environment::isFree(Point p) const {
 /**
  * isValidState - Check if a state is valid in the transition system
  */
-bool Environment::isValidState(uint32_t stateId) const {
+bool Environment::isValidState(uint16_t stateId) const {
     if (!transitionSystem) {
         return false;
     }
-    return transitionSystem->getNode(stateId) != nullptr;
+    return transitionSystem->hasState(stateId);
 }
 
 /**
  * getNumStates - Get the number of states in the transition system
  */
-uint32_t Environment::getNumStates() const {
+uint16_t Environment::getNumStates() const {
     if (!transitionSystem) {
         return 0;
     }
-    return transitionSystem->getNumNodes();
+    return transitionSystem->getNumStates();
+}
+
+/**
+ * gridToStateId - Convert grid coordinates to state ID
+ * Encoding: stateId = y * gridWidth + x
+ */
+uint16_t Environment::gridToStateId(Point p) const {
+    if (!gridWorld) {
+        return 0;
+    }
+    return p.getY() * gridWorld->getWidth() + p.getX();
+}
+
+/**
+ * stateIdToGrid - Convert state ID to grid coordinates
+ * Decoding: x = stateId % gridWidth, y = stateId / gridWidth
+ */
+Point Environment::stateIdToGrid(uint16_t stateId) const {
+    if (!gridWorld || gridWorld->getWidth() == 0) {
+        return Point(0, 0);
+    }
+    uint32_t x = stateId % gridWorld->getWidth();
+    uint32_t y = stateId / gridWorld->getWidth();
+    return Point(x, y);
 }

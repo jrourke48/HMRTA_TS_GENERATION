@@ -15,7 +15,6 @@ class Environment {
 private:
     GeneralTransitionSystem* transitionSystem;
     GridWorld* gridWorld;  // 2D global costmap
-    std::string environmentName;
     
 public:
     // Constructor
@@ -27,24 +26,26 @@ public:
     // Getters
     GeneralTransitionSystem* getTransitionSystem() const { return transitionSystem; }
     GridWorld* getGridWorld() const { return gridWorld; }
-    std::string getEnvironmentName() const { return environmentName; }
     
     // Setters
     void setTransitionSystem(GeneralTransitionSystem* ts) { transitionSystem = ts; }
     void setGridWorld(GridWorld* grid) { gridWorld = grid; }
-    void setEnvironmentName(const std::string& name) { environmentName = name; }
     
     // State queries
-    uint32_t getInitialState() const;
-    std::vector<uint32_t> getSuccessorStates(uint32_t stateId) const;
+    uint16_t getInitialState() const;
+    std::vector<uint16_t> getSuccessorStates(uint16_t stateId) const;
+    
+    // Bidirectional mapping between GridWorld and TransitionSystem
+    uint16_t gridToStateId(Point p) const;      // Convert grid coordinates to state ID
+    Point stateIdToGrid(uint16_t stateId) const; // Convert state ID to grid coordinates
     
     // Grid queries
-    bool isObstacle(uint32_t x, uint32_t y) const;
-    bool isFree(uint32_t x, uint32_t y) const;
+    bool isObstacle(Point p) const;
+    bool isFree(Point p) const;
     
     // Utility methods
-    bool isValidState(uint32_t stateId) const;
-    uint32_t getNumStates() const;
+    bool isValidState(uint16_t stateId) const;
+    uint16_t getNumStates() const;
 };
 
 #endif // ENVIRONMENT_H
