@@ -1,6 +1,7 @@
 #include "TaskAllocationAlgorithms.h"
 #include <algorithm>
 #include <queue>
+#include <limits>
 
 /**
  * TaskAllocationAlgorithms - Constructor

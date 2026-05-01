@@ -8,11 +8,28 @@
 #include <string>
 
 /**
- * GeneralTransitionSystem - Base class for transition syst
+ * GeneralTransitionSystem - Base class for transition systems
  * Assumptions: 
  * each state is represented by a unique uint16_t ID that is the states respective single true atomic proposition
- *, and transitions are represented as edges between states.
+ * and transitions are represented as edges between states.
  */
+
+// Forward declaration
+class State;
+
+// Transition represents a transition with an action and cost
+class Transition {
+public:
+    State* next;  // Use pointer to avoid circular dependency
+    uint16_t cost{ 1 };
+        
+    Transition(State* nextState = nullptr) : next(nextState) {}
+    Transition(State* nextState, uint16_t transitionCost) : next(nextState), cost(transitionCost) {}
+    bool operator==(const Transition& other) const {
+        return next == other.next && cost == other.cost;
+    }
+    std::string toString() const;
+};
 
 // State represents a position on a 2D grid
 class State {
@@ -36,7 +53,7 @@ public:
     bool isAdjacent(uint16_t dstId) const {
         for (size_t i = 0; i < numadj; i++)
         {
-            if (adjecency[i].next.getAP() == dstId) {
+            if (adjecency[i].next != nullptr && adjecency[i].next->getAP() == dstId) {
                 return true;
             }
         }
@@ -48,19 +65,6 @@ public:
 
 };
 
-// Transition represents a transition with an action and cost
-class Transition {
-public:
-    State next;
-    uint16_t cost{ 1 };
-        
-    Transition(const State& nextState) : next(nextState) {}
-    Transition(const State& nextState, uint16_t transitionCost) : next(nextState), cost(transitionCost) {}
-    bool operator==(const Transition& other) const {
-        return next == other.next && cost == other.cost;
-    }
-    std::string toString() const;
-};
 class GeneralTransitionSystem {
 protected:
     std::vector<State*> states;  // Collection of all states

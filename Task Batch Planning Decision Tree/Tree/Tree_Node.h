@@ -1,8 +1,19 @@
 
-#include "Automatons/Node.h"
+#ifndef TREE_NODE_H
+#define TREE_NODE_H
+
+#include "../Automatons/Edge_Node.h"
 #include <vector>
 
 class Tree_Node {
+    public:
+        enum class TASK_PROGRESS {
+            PRE,
+            TRA,
+            SUF,
+            OTH
+        };
+    
     private:
         uint32_t id; // Unique identifier for the node
         Tree_Node* ParentNode; // Pointer to the parent node
@@ -13,12 +24,7 @@ class Tree_Node {
         int8_t batch; // Batch number for the node
         TASK_PROGRESS prog; // Type of the node (pre, tra, suf, oth)
     public:
-        enum class TASK_PROGRESS {
-            PRE,
-            TRA,
-            SUF,
-            OTH
-        };
+        
         
         // Constructor
         Tree_Node(uint32_t id, Tree_Node* parent, Node* automatonState, Node* tsState, 
@@ -35,9 +41,9 @@ class Tree_Node {
         Node* getAutomatonState() const;
         Node* getTSState() const;
         const std::vector<bool>& getRoboTaskAllocation() const;
-        const bool isRobotAllocated(uint16_t robotIndex) const;
+        bool isRobotAllocated(uint16_t robotIndex) const;
         const std::vector<uint16_t>& getTimes() const;
-        const uint16_t getTimeForRobot(uint16_t robotIndex) const;
+        uint16_t getTimeForRobot(uint16_t robotIndex) const;
         int8_t getBatch() const;
         TASK_PROGRESS getProgress() const;
         
@@ -49,3 +55,5 @@ class Tree_Node {
         void setBatch(int8_t newBatch);
         void setProgress(TASK_PROGRESS newProg);
 };
+
+#endif // TREE_NODE_H

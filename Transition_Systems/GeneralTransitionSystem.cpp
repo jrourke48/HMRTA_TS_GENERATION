@@ -91,7 +91,7 @@ void GeneralTransitionSystem::addAdjecency(uint16_t srcId, uint16_t dstId, uint1
         return;  // Already exists
     }
     
-    Transition trans(*dstState, cost);
+    Transition trans(dstState, cost);
     srcState->addTransition(trans);
 }
 
@@ -121,7 +121,7 @@ std::vector<Transition> GeneralTransitionSystem::getTransitionsTo(uint16_t state
     std::vector<Transition> result;
     for (auto* state : states) {
         for (const auto& trans : state->getAdjacency()) {
-            if (trans.next.getAP() == stateId) {
+            if (trans.next->getAP() == stateId) {
                 result.push_back(trans);
             }
         }
@@ -149,7 +149,7 @@ std::vector<State*> GeneralTransitionSystem::getAdjacency(uint16_t stateId) cons
     if (!state) return result;
     
     for (const auto& trans : state->getAdjacency()) {
-        State* adj = getState(trans.next.getAP());
+        State* adj = getState(trans.next->getAP());
         if (adj) {
             result.push_back(adj);
         }
@@ -166,7 +166,7 @@ std::vector<uint16_t> GeneralTransitionSystem::getAdjacencyIds(uint16_t stateId)
     if (!state) return result;
     
     for (const auto& trans : state->getAdjacency()) {
-        result.push_back(trans.next.getAP());
+        result.push_back(trans.next->getAP());
     }
     return result;
 }
@@ -205,7 +205,7 @@ uint16_t GeneralTransitionSystem::getTransitionCost(uint16_t srcId, uint16_t dst
     if (!srcState) return 0;
     
     for (const auto& trans : srcState->getAdjacency()) {
-        if (trans.next.getAP() == dstId) {
+        if (trans.next->getAP() == dstId) {
             return trans.cost;
         }
     }
@@ -220,7 +220,7 @@ void GeneralTransitionSystem::setTransitionCost(uint16_t srcId, uint16_t dstId, 
     if (!srcState) return;
     
     for (const auto& trans : srcState->getAdjacency()) {
-        if (trans.next.getAP() == dstId) {
+        if (trans.next->getAP() == dstId) {
             // Note: Cannot modify const transition from getAdjacency()
             // Cost is fixed at construction time
             return;
@@ -257,7 +257,7 @@ void GeneralTransitionSystem::printTransitions() const {
     std::cout << "Transitions (" << getNumEdges() << "):\n";
     for (auto* state : states) {
         for (const auto& trans : state->getAdjacency()) {
-            std::cout << "  " << state->getAP() << " -> " << trans.next.getAP() 
+            std::cout << "  " << state->getAP() << " -> " << trans.next->getAP() 
                       << " (cost=" << trans.cost << ")\n";
         }
     }
@@ -328,5 +328,5 @@ std::vector<uint16_t> GeneralTransitionSystem::getReachableStates(uint16_t start
  * Transition::toString - Convert transition to string representation
  */
 std::string Transition::toString() const {
-    return "Transition to AP=" + std::to_string(next.getAP()) + " (cost=" + std::to_string(cost) + ")";
+    return "Transition to AP=" + std::to_string(next->getAP()) + " (cost=" + std::to_string(cost) + ")";
 }

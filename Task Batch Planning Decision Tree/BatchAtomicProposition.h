@@ -3,7 +3,7 @@
 
 #include <string>
 #include <vector>
-#include "RobotCapabilities.h"
+#include "MultiRobotSystem/RobotCapabilities.h"
 
 class BatchAtomicProposition {
 private:

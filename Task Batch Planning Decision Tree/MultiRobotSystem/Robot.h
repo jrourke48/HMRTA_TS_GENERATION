@@ -2,7 +2,7 @@
 #define ROBOT_H
 
 #include "RobotCapabilities.h"
-#include "../Point.h"
+#include "../Environment/Point.h"
 #include <cstdint>
 #include <vector>
 #include <string>
@@ -14,24 +14,27 @@
 class Robot {
 private:
     uint32_t robotId;
+    std::string name;
     Point startPosition;
     Point currentPosition;
     std::vector<bool> capabilities;  // Index corresponds to RobotCapability enum value
     
 public:
     // Constructor
-    Robot(uint32_t id, const Point& startPos = Point());
+    Robot(uint32_t id, const std::string& robotName, const Point& startPos = Point());
     
     // Destructor
     ~Robot();
     
     // Getters
     uint32_t getRobotId() const { return robotId; }
+    const std::string& getName() const { return name; }
     const Point& getStartPosition() const { return startPosition; }
     const Point& getCurrentPosition() const { return currentPosition; }
     const std::vector<bool>& getCapabilities() const { return capabilities; }
     
     // Setters
+    void setName(const std::string& robotName) { name = robotName; }
     void setCurrentPosition(const Point& position) { currentPosition = position; }
     void initializeCapabilities(size_t numCapabilities);
     

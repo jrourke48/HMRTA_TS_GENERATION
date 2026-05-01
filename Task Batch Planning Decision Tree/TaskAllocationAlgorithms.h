@@ -1,12 +1,14 @@
 #ifndef TASK_ALLOCATION_ALGORITHMS_H
 #define TASK_ALLOCATION_ALGORITHMS_H
 
-#include "PlanningDecisionTree.h"
+#include "Tree/PlanningDecisionTree.h"
+#include "Environment/Environment.h"
 #include "../Automatons/BuchiAutomaton.h"
 #include "../Transition_Systems/GeneralTransitionSystem.h"
 #include "MultiRobotSystem/MultiRobotSystem.h"
 #include <vector>
 #include <memory>
+#include <string>
 
 class TaskAllocationAlgorithms {
     private:
@@ -30,7 +32,7 @@ class TaskAllocationAlgorithms {
         BuchiAutomaton* getNBA() const;
         Environment* getEnvironment() const;
         MultiRobotSystem* getMultiRobotSystem() const;
-        
+
         // Main algorithm methods
         PlanningDecisionTree* buildPlanningTree(uint32_t rootId, Node* automatonState, Node* tsState,
                                         std::vector<bool> taskAllocation, std::vector<uint16_t> times,

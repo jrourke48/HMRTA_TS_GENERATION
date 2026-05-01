@@ -3,8 +3,8 @@
 /**
  * Robot - Constructor
  */
-Robot::Robot(uint32_t id, const Point& startPos)
-    : robotId(id), startPosition(startPos), currentPosition(startPos) {
+Robot::Robot(uint32_t id, const std::string& robotName, const Point& startPos)
+    : robotId(id), name(robotName), startPosition(startPos), currentPosition(startPos) {
     // Initialize capabilities vector with 17 slots (one per RobotCapability enum)
     capabilities.resize(17, false);
 }

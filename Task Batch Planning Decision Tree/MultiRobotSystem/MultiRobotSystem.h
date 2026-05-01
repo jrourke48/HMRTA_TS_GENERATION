@@ -35,6 +35,9 @@ public:
     std::vector<Robot*> getRobotsWithAllCapabilities(const std::vector<RobotCapability>& caps) const;
     std::vector<Robot*> getRobotsWithAnyCapability(const std::vector<RobotCapability>& caps) const;
     
+    std::string to_string() const;
+    
+    
     // Utility
     void clear();
 };

@@ -1,4 +1,6 @@
 #include "MultiRobotSystem.h"
+#include "RobotCapabilities.h"
+#include <sstream>
 
 /**
  * MultiRobotSystem - Constructor
@@ -132,5 +134,47 @@ std::vector<Robot*> MultiRobotSystem::getRobotsWithAnyCapability(const std::vect
         }
     }
     return result;
+}
+
+/**
+ * to_string - Return a formatted table of robots and their capabilities
+ */
+std::string MultiRobotSystem::to_string() const {
+    std::stringstream ss;
+    
+    // Header
+    ss << "MultiRobotSystem contains " << robots.size() << " robots\n";
+    ss << "================================================================================\n";
+    ss << "| Robot ID | Robot Name        | Capabilities\n";
+    ss << "================================================================================\n";
+    
+    // Robot entries
+    for (const auto* robot : robots) {
+        ss << "| " << robot->getRobotId() << "        | " << robot->getName();
+        
+        // Pad robot name to fixed width
+        int nameLen = robot->getName().length();
+        for (int i = 0; i < 17 - nameLen; i++) {
+            ss << " ";
+        }
+        ss << "| ";
+        
+        // List capabilities
+        bool firstCap = true;
+        for (size_t i = 0; i < robot->getCapabilities().size(); i++) {
+            if (robot->getCapabilities()[i]) {
+                if (!firstCap) {
+                    ss << ", ";
+                }
+                ss << capabilityToString(static_cast<RobotCapability>(i));
+                firstCap = false;
+            }
+        }
+        ss << "\n";
+    }
+    
+    ss << "================================================================================\n";
+    
+    return ss.str();
 }
 

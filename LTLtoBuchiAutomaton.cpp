@@ -74,7 +74,6 @@ int main()
     std::cout << "States: " << tsAut->num_states() << std::endl;
     std::cout << "Edges: " << tsAut->num_edges() << std::endl;
     
-    // spot::twa_graph_ptr tsAut  = buchiAut;
 
     //=========================================================================
     // 5. Compute Product Automaton
