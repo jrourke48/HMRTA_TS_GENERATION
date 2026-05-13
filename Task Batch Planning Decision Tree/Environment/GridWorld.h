@@ -12,13 +12,13 @@
  */
 class GridWorld {
 private:
-    uint32_t width;
-    uint32_t height;
+    uint16_t width;
+    uint16_t height;
     std::vector<std::vector<uint8_t>> costmap;  // 2D costmap: 0 = free, 1-254 = cost, 255 = obstacle
     
 public:
     // Constructor
-    GridWorld(uint32_t w, uint32_t h);
+    GridWorld(uint16_t w, uint16_t h);
     
     // Destructor
     ~GridWorld();

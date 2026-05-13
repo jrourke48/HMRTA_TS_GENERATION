@@ -9,25 +9,25 @@
  */
 class Point {
 private:
-    uint32_t x;
-    uint32_t y;
+    uint16_t x;
+    uint16_t y;
     
 public:
     // Constructors
     Point();
-    Point(uint32_t x, uint32_t y);
+    Point(uint16_t x, uint16_t y);
     
     // Destructor
     ~Point();
     
     // Getters
-    uint32_t getX() const { return x; }
-    uint32_t getY() const { return y; }
+    uint16_t getX() const { return x; }
+    uint16_t getY() const { return y; }
     
     // Setters
-    void setX(uint32_t xVal) { x = xVal; }
-    void setY(uint32_t yVal) { y = yVal; }
-    void setPoint(uint32_t xVal, uint32_t yVal) { x = xVal; y = yVal; }
+    void setX(uint16_t xVal) { x = xVal; }
+    void setY(uint16_t yVal) { y = yVal; }
+    void setPoint(uint16_t xVal, uint16_t yVal) { x = xVal; y = yVal; }
     
     // Operators
     bool operator==(const Point& other) const;

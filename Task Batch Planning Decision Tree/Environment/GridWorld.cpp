@@ -3,7 +3,7 @@
 /**
  * GridWorld - Constructor
  */
-GridWorld::GridWorld(uint32_t w, uint32_t h): width(w), height(h) {
+GridWorld::GridWorld(uint16_t w, uint16_t h): width(w), height(h) {
     // Initialize costmap with all free cells (0)
     costmap.resize(height, std::vector<uint8_t>(width, 0));
 }

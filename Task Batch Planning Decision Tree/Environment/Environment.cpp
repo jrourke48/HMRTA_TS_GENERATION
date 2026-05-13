@@ -1,10 +1,12 @@
 #include "Environment.h"
 #include "Point.h"
+#include <iostream>
+#include <iomanip>
 
 /**
  * Environment - Constructor
  */
-Environment::Environment(GeneralTransitionSystem* ts, GridWorld* grid)
+Environment::Environment(TS* ts, GridWorld* grid)
     : transitionSystem(ts), gridWorld(grid) {
 }
 
@@ -12,7 +14,7 @@ Environment::Environment(GeneralTransitionSystem* ts, GridWorld* grid)
  * Environment - Destructor
  */
 Environment::~Environment() {
-    // Note: We don't delete the pointers as they're managed externally
+    // don't delete the pointers as they're managed externally
 }
 
 /**
@@ -28,11 +30,11 @@ uint16_t Environment::getInitialState() const {
 /**
  * getSuccessorStates - Get successor states for a given state
  */
-std::vector<uint16_t> Environment::getSuccessorStates(uint16_t stateId) const {
+std::vector<uint32_t> Environment::getSuccessorStates(uint32_t stateId) const {
     if (!transitionSystem) {
-        return std::vector<uint16_t>();
+        return std::vector<uint32_t>();
     }
-    return transitionSystem->getAdjacencyIds(stateId);
+    return transitionSystem->getAdjacent(stateId);
 }
 
 /**
@@ -42,6 +44,7 @@ bool Environment::isObstacle(Point p) const {
     if (!gridWorld) {
         return false;
     }
+
     return gridWorld->isObstacle(p);
 }
 
@@ -58,43 +61,107 @@ bool Environment::isFree(Point p) const {
 /**
  * isValidState - Check if a state is valid in the transition system
  */
-bool Environment::isValidState(uint16_t stateId) const {
+bool Environment::isValidState(uint32_t stateId) const {
     if (!transitionSystem) {
         return false;
     }
-    return transitionSystem->hasState(stateId);
+    // Check if state exists in the state-to-grid mapping
+    return stateIdToGridMap.find(stateId) != stateIdToGridMap.end();
 }
 
 /**
  * getNumStates - Get the number of states in the transition system
  */
-uint16_t Environment::getNumStates() const {
+uint32_t Environment::getNumStates() const {
     if (!transitionSystem) {
         return 0;
     }
     return transitionSystem->getNumStates();
 }
 
-/**
- * gridToStateId - Convert grid coordinates to state ID
- * Encoding: stateId = y * gridWidth + x
- */
-uint16_t Environment::gridToStateId(Point p) const {
-    if (!gridWorld) {
-        return 0;
+// Bidirectional mapping between GridWorld and TransitionSystem
+uint32_t Environment::gridToTSStateId(Point p) const {
+    // Find which state's region contains this grid point
+    for (const auto& mapping : stateIdToGridMap) {
+        const stateGridMapping& region = mapping.second;
+        uint16_t half_width = region.width / 2;
+        uint16_t half_height = region.height / 2;
+        
+        if (p.getX() >= region.center.getX() - half_width && p.getX() < region.center.getX() + half_width &&
+            p.getY() >= region.center.getY() - half_height && p.getY() < region.center.getY() + half_height) {
+            return mapping.first;
+        }
     }
-    return p.getY() * gridWorld->getWidth() + p.getX();
+    return 0; // Default to state 0 if not found
 }
 
-/**
- * stateIdToGrid - Convert state ID to grid coordinates
- * Decoding: x = stateId % gridWidth, y = stateId / gridWidth
- */
-Point Environment::stateIdToGrid(uint16_t stateId) const {
-    if (!gridWorld || gridWorld->getWidth() == 0) {
-        return Point(0, 0);
+void Environment::mapTSStateToGrid(uint16_t stateId, Point center, uint16_t width, uint16_t height) {
+    stateIdToGridMap[stateId] = {center, width, height};
+}
+void Environment::print_Environment() const {
+    if (!gridWorld || !transitionSystem) {
+        std::cout << "Cannot print environment: GridWorld or TransitionSystem is null" << std::endl;
+        return;
     }
-    uint32_t x = stateId % gridWorld->getWidth();
-    uint32_t y = stateId / gridWorld->getWidth();
-    return Point(x, y);
+    
+    uint32_t width = gridWorld->getWidth();
+    uint32_t height = gridWorld->getHeight();
+    
+    std::cout << "\n========== ASCII Environment Visualization ==========" << std::endl;
+    std::cout << "Grid: " << width << "x" << height << " | States: " << transitionSystem->getNumStates() << std::endl;
+    std::cout << "Legend: . = free, # = obstacle, [0-9] = state center\n" << std::endl;
+    
+    // Print column headers
+    std::cout << "    ";
+    for (uint32_t x = 0; x < width; x++) {
+        if (x % 10 == 0) std::cout << (x / 10) % 10;
+        else std::cout << " ";
+    }
+    std::cout << std::endl;
+    
+    std::cout << "    ";
+    for (uint32_t x = 0; x < width; x++) {
+        std::cout << (x % 10);
+    }
+    std::cout << std::endl;
+    
+    // Print grid
+    for (uint32_t y = 0; y < height; y++) {
+        std::cout << std::setw(3) << y << "|";
+        
+        for (uint32_t x = 0; x < width; x++) {
+            Point p(x, y);
+            char cell = '.';
+            
+            // Check if obstacle
+            if (gridWorld->isObstacle(p)) {
+                cell = '#';
+            }
+            
+            // Check if state center is here
+            for (const auto& mapping : stateIdToGridMap) {
+                if (mapping.second.center.getX() == x && mapping.second.center.getY() == y) {
+                    uint16_t stateId = mapping.first;
+                    if (stateId < 10) {
+                        cell = '0' + stateId;
+                    } else {
+                        cell = 'A' + (stateId - 10);
+                    }
+                    break;
+                }
+            }
+            
+            std::cout << cell;
+        }
+        
+        std::cout << "|" << std::endl;
+    }
+    
+    // Print row indicators
+    std::cout << "    ";
+    for (uint32_t x = 0; x < width; x++) {
+        std::cout << (x % 10);
+    }
+    std::cout << std::endl;
+    std::cout << "====================================================\n" << std::endl;
 }

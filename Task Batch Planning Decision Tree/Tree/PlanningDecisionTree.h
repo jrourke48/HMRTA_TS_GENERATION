@@ -16,6 +16,9 @@ class PlanningDecisionTree {
                              std::vector<bool> taskAllocation, std::vector<uint16_t> times, 
                              int8_t batch, Tree_Node::TASK_PROGRESS prog);
         
+        // Empty constructor
+        PlanningDecisionTree();
+        
         // Destructor
         ~PlanningDecisionTree();
         
@@ -23,6 +26,14 @@ class PlanningDecisionTree {
         Tree_Node* insertNode(Tree_Node* parent, uint32_t nodeId, Node* automatonState, Node* tsState,
                               std::vector<bool> taskAllocation, std::vector<uint16_t> times,
                               int8_t batch, Tree_Node::TASK_PROGRESS prog);
+        
+        /**
+         * insertSubtree - Attach an entire subtree as a child of an existing node
+         * This method attaches subtreeRoot as a child of parentNode
+         * All nodes in the subtree are incorporated into this tree
+         */
+        Tree_Node* insertSubtree(Tree_Node* parentNode, PlanningDecisionTree* subtree);
+        
         void deleteSubtree(Tree_Node* node);
         
         // Getter methods

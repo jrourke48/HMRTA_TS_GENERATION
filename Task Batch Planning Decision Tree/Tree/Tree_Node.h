@@ -35,6 +35,7 @@ class Tree_Node {
         
         // Tree structure methods
         Tree_Node* getParent() const;
+        void setParent(Tree_Node* newParent);
         
         // Getter methods
         uint32_t getId() const;

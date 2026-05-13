@@ -4,19 +4,54 @@
 #include "Automaton.h"
 #include <cstdint>
 #include <vector>
+#include <string>
 #include <memory>
 #include <algorithm>
 #include <spot/twa/twagraph.hh>
 #include <spot/twaalgos/dot.hh>
+#include <spot/tl/parse.hh>
+#include <spot/twaalgos/translate.hh>
+#include "../Task Batch Planning Decision Tree/LTLFormula/LTLFormula.h"
+#include "../Task Batch Planning Decision Tree/LTLFormula/BatchAtomicProposition.h"
 
 class BuchiAutomaton : public Automaton {
 private:
     std::vector<uint32_t> acceptingStates;  // Set of accepting states (Büchi accepting states)
+    LTLFormula ltlFormula;  // LTL formula associated with the Büchi automaton
+
 public:
     BuchiAutomaton();
     ~BuchiAutomaton() override;
     BuchiAutomaton(spot::twa_graph_ptr spotAutomaton);
 
+    // Constructor that takes an LTL formula string and converts it to Büchi automaton
+    BuchiAutomaton(const LTLFormula& ltlFormula) {
+        try {
+            this->ltlFormula = ltlFormula.getSpotFormula();
+            // construct spot buchi
+            spot::translator trans;
+            spot::twa_graph_ptr buchiAut = trans.run(ltlFormula);
+            // convert spot buchi to our buchi automaton
+            fromSpotAutomaton(buchiAut);
+        } catch (const std::exception& e) {
+            throw std::runtime_error("Failed to create Buchi automaton from formula: " + std::string(e.what()));
+        }
+    }
+
+    // Constructor that takes an LTL formula object
+    BuchiAutomaton(const LTLFormula& formula) {
+        try {
+            this->ltlFormula = formula.getSpotFormula();
+            // construct spot buchi
+            spot::translator trans;
+            spot::twa_graph_ptr buchiAut = trans.run(ltlFormula);
+
+            // convert spot buchi to our buchi automaton
+            fromSpotAutomaton(buchiAut);
+        } catch (const std::exception& e) {
+            throw std::runtime_error("Failed to create Buchi automaton from formula: " + std::string(e.what()));
+        }
+    }
     // Override pure virtual methods from Automaton
     void add_Node(Node* node) override;
     bool isAdjacent(uint32_t srcId, uint32_t dstId) const override;
@@ -74,6 +109,11 @@ public:
     };
     const std::vector<uint32_t>& getAcceptingStates() const {
         return acceptingStates;
+    };
+
+    // Method to get the Spot dictionary for accessing atomic propositions
+    spot::formula get_ltl_formula() const {
+        return ltlFormula;
     };
 
 };

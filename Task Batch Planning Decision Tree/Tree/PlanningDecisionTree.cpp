@@ -11,6 +11,7 @@ PlanningDecisionTree::PlanningDecisionTree(uint32_t rootId, Node* automatonState
     root = new Tree_Node(rootId, nullptr, automatonState, tsState, taskAllocation, times, batch, prog);
     nodeCount = 1;
 }
+PlanningDecisionTree::PlanningDecisionTree() : root(nullptr), nodeCount(0) {};
 
 /**
  * PlanningDecisionTree - Destructor
@@ -35,6 +36,30 @@ Tree_Node* PlanningDecisionTree::insertNode(Tree_Node* parent, uint32_t nodeId, 
     Tree_Node* newNode = new Tree_Node(nodeId, parent, automatonState, tsState, taskAllocation, times, batch, prog);
     nodeCount++;
     return newNode;
+}
+
+/**
+ * insertSubtree - Attach an entire subtree as a child of an existing node
+ * This method attaches subtreeRoot as a child of parentNode
+ * All nodes in the subtree are incorporated into this tree
+ */
+Tree_Node* PlanningDecisionTree::insertSubtree(Tree_Node* parentNode, PlanningDecisionTree* subtree) {
+    if (parentNode == nullptr || subtree == nullptr) {
+        return nullptr;
+    }
+    
+    Tree_Node* subtreeRoot = subtree->getRoot();
+    if (subtreeRoot == nullptr) {
+        return nullptr;
+    }
+    
+    // Update the subtree root's parent to point to parentNode
+    subtreeRoot->setParent(parentNode);
+    
+    // Update node count to include all nodes from the subtree
+    nodeCount += subtree->getNodeCount();
+    
+    return subtreeRoot;
 }
 
 /**

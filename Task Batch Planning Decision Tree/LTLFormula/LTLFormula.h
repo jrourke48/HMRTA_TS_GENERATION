@@ -1,0 +1,44 @@
+#ifndef LTL_FORMULA_H
+#define LTL_FORMULA_H
+
+#include "BatchAtomicProposition.h"
+#include <string>
+#include <memory>
+#include <vector>
+#include <spot/twa/twagraph.hh>
+#include <spot/twaalgos/dot.hh>
+#include <spot/tl/parse.hh>
+#include <spot/twaalgos/translate.hh>
+
+class LTLFormula {
+    private:
+    spot::formula formula;
+    std::vector<BatchAtomicProposition> batchAPs; // List of atomic propositions in the formula
+
+    // Helper methods
+    bool isValid() const;
+    void buildTree();
+
+public:
+    // Constructor and Destructor
+    LTLFormula(std::string formulaStr, const std::vector<BatchAtomicProposition>& batchAPs);
+    ~LTLFormula();
+
+    // Core methods
+    void parse(const std::string& formula);
+    std::string toString() const;
+    bool evaluate();
+
+    // Getters and Setters
+    void setFormula(const std::string& formula);
+    std::string getFormula() const;
+    const std::vector<BatchAtomicProposition>& getBatchAPs() const;
+    spot::formula getSpotFormula() const;
+    BatchAtomicProposition getAP(uint16_t id) const;
+    void addBatchAtomicProposition(const BatchAtomicProposition& ap);
+
+
+
+};
+
+#endif // LTL_FORMULA_H

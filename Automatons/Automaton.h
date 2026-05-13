@@ -27,8 +27,8 @@ class Automaton{
         virtual ~Automaton() = default;
         
         //getters and setters
-        uint32_t getnumStates() const { return numNodes; }
-        uint32_t getnumEdges() const { return numEdges; }
+        uint32_t getNumStates() const { return numNodes; }
+        uint32_t getNumEdges() const { return numEdges; }
         
         //add a node to the automaton
         virtual void add_Node(Node* node) = 0;

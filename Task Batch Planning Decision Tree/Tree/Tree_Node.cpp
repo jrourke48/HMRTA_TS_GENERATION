@@ -26,6 +26,13 @@ Tree_Node* Tree_Node::getParent() const {
 }
 
 /**
+ * setParent - Set the parent node
+ */
+void Tree_Node::setParent(Tree_Node* newParent) {
+    ParentNode = newParent;
+}
+
+/**
  * getId - Get the unique identifier
  */
 uint32_t Tree_Node::getId() const {

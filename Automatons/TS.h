@@ -10,9 +10,6 @@
 #include <spot/twa/twagraph.hh>
 #include <spot/twaalgos/dot.hh>
 
-// Forward declaration
-class TransitionSystem;
-
 class TS : public Automaton {
 private:
     std::vector<uint32_t> initialStates;  // Track which states are initial states
@@ -21,14 +18,14 @@ private:
 public:
     TS();
     
-    // Constructor from GridWorldTransitionSystem
-    TS(TransitionSystem* ts);
-    
     ~TS() override;
 
     // Override pure virtual methods from Automaton
     void add_Node(Node* node) override;
     bool isAdjacent(uint32_t srcId, uint32_t dstId) const override;
+
+    // Get all adjacent nodes for a given node
+    std::vector<uint32_t> getAdjacent(uint32_t nodeId) const;
 
     // TS-specific methods
     void setInitial(uint32_t stateId);

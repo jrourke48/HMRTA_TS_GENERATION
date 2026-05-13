@@ -9,7 +9,7 @@ Point::Point() : x(0), y(0) {
 /**
  * Point - Constructor with coordinates
  */
-Point::Point(uint32_t xVal, uint32_t yVal) : x(xVal), y(yVal) {
+Point::Point(uint16_t xVal, uint16_t yVal) : x(xVal), y(yVal) {
 }
 
 /**

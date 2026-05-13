@@ -1,53 +1,8 @@
 #include "TS.h"
-#include "../Transition_Systems/GridWorldTransitionSystem.h"
 #include <algorithm>
 #include <iostream>
 
 TS::TS() {
-}
-
-TS::TS(TransitionSystem* ts) {
-    if (!ts) return;
-    
-    // Create nodes using the actual state IDs from GridWorld
-    for (const auto& state : ts->states) {
-        uint32_t stateId = ts->stateToId(state);
-        Node* node = new Node(stateId);
-        add_Node(node);
-    }
-    
-    // Mark initial states based on the GridWorld's initial states
-    if (ts->initial_states.size() > 0) {
-        for (const auto& initState : ts->initial_states) {
-            uint32_t initStateId = ts->stateToId(initState);
-            setInitial(initStateId);
-        }
-    }
-    
-    // Add edges based on transitions
-    for (const auto& state : ts->states) {
-        uint32_t srcStateId = ts->stateToId(state);
-        // Get successors for this state
-        try {
-            auto successors = ts->successors(state);
-        
-            for (const auto& transition : successors) {
-                uint32_t destStateId = ts->stateToId(transition.next);
-                
-                // Add edge with cost as weight
-                Edge edge(destStateId, static_cast<uint32_t>(transition.cost));
-                
-                // Get the source node using actual state ID
-                Node* srcNode = getNode(srcStateId);
-                if (srcNode != nullptr) {
-                    srcNode->addEdge(edge);
-                    numEdges++;
-                }
-            }
-        } catch (const std::exception& e) {
-            // Handle exception silently
-        }
-    }
 }
 
 TS::~TS() {
@@ -79,6 +34,26 @@ bool TS::isAdjacent(uint32_t srcId, uint32_t dstId) const {
     
     // Check if there's an edge from srcNode to dstId
     return srcNode->isAdjacent(dstId);
+}
+
+std::vector<uint32_t> TS::getAdjacent(uint32_t nodeId) const {
+    std::vector<uint32_t> adjacentNodes;
+    
+    // Find the node
+    auto it = nodeMap.find(nodeId);
+    if (it == nodeMap.end()) return adjacentNodes;
+    
+    Node* node = it->second;
+    
+    // Get all edges from this node
+    std::vector<Edge> edges = node->getEdges();
+    
+    // Extract destination IDs from each edge
+    for (const auto& edge : edges) {
+        adjacentNodes.push_back(edge.getDstId());
+    }
+    
+    return adjacentNodes;
 }
 
 void TS::setInitial(uint32_t stateId) {
