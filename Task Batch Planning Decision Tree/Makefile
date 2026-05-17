@@ -13,13 +13,13 @@ TREE_BIN = $(OUT_DIR)/TreeBuildingTests
 # Source files
 TEST_SRC = Testing/TestIntegration.cpp
 TREE_TEST_SRC = Testing/TreeBuildingTests.cpp
+# TaskAllocationAlgorithms.cpp - WIP, commented out
 COMMON_SRCS = \
 	Environment/Point.cpp \
 	Environment/GridWorld.cpp \
 	Environment/Environment.cpp \
 	Tree/Tree_Node.cpp \
 	Tree/PlanningDecisionTree.cpp \
-	TaskAllocationAlgorithms.cpp \
 	MultiRobotSystem/Robot.cpp \
 	MultiRobotSystem/MultiRobotSystem.cpp \
 	LTLFormula/BatchAtomicProposition.cpp \

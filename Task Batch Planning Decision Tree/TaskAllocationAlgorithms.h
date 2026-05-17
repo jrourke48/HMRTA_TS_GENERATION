@@ -18,6 +18,8 @@ class TaskAllocationAlgorithms {
         MultiRobotSystem* multiRobotSystem;
         std::vector<Tree_Node*> visitedNodes; // To keep track of visited nodes during search
         std::vector<uint32_t> visitedAutomatonStates; // To keep track of visited automaton states during search
+        std::vector<uint8_t> treebatchvals; // To keep track of batch values in the tree (if needed for cost calculations)
+    
         
     public:
         // Constructor
@@ -40,6 +42,14 @@ class TaskAllocationAlgorithms {
         void addVisitedNode(Tree_Node* node);
         bool isNodeVisited(Tree_Node* node) const;
         std::vector<Tree_Node*>& getVisitedNodes();
+        Tree_Node* getLastVisitedNode() const{
+            if (visitedNodes.empty()) return nullptr;
+            return visitedNodes.back();
+        };
+        Tree_Node* getFirstVisitedNode() const{
+            if (visitedNodes.empty()) return nullptr;
+            return visitedNodes.front();
+        };
         void clearVisitedNodes();
 
         // Visited automaton states methods
@@ -48,12 +58,18 @@ class TaskAllocationAlgorithms {
         std::vector<uint32_t>& getVisitedAutomatonStates();
         void clearVisitedAutomatonStates();
 
-        // Main algorithm methods
-        PlanningDecisionTree* buildPlanningTree(uint32_t rootId, Node* automatonState, Node* tsState,
-                                        std::vector<bool> taskAllocation, std::vector<uint16_t> times,
-                                        int8_t batch, Tree_Node::TASK_PROGRESS prog);
+        // Batch values in tree methods
+        void addBatchValue(uint8_t batchValue);
+        bool isBatchValueInTree(int8_t batchValue);
+        std::vector<int8_t>& getBatchValues();
+        void clearBatchValues();
 
-        // Helper algorithm methods based on pseudocode
+        // Parse edge labels to extract AP IDs
+        // Removes !, &, | symbols and returns vector of AP IDs that are TRUE (not negated)
+        std::vector<uint32_t> parseEdgeLabel(const std::string& label) const;
+        
+        // Collect and merge AP IDs from multiple edges, removing duplicates
+        std::vector<uint32_t> collectUniqueAPsFromEdges(const std::vector<std::string>& edges) const;
         /**
          * Algorithm 1: Intensive Inter-Task Relationship Tree Search
          * Builds a planning tree considering inter-task relationships

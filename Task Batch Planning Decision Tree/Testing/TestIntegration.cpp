@@ -1,4 +1,4 @@
-#include "../TaskAllocationAlgorithms.h"
+//#include "../TaskAllocationAlgorithms.h"
 #include "../MultiRobotSystem/MultiRobotSystem.h"
 #include "../MultiRobotSystem/Robot.h"
 #include "../../Automatons/BuchiAutomaton.h"
@@ -97,6 +97,54 @@ int main() {
         std::cout << "  - Batch Atomic Propositions:" << std::endl;
         for (const auto& bap : ltl2.getBatchAPs()) {
             std::cout << "    " << bap.toString() << std::endl;
+        }
+        
+        // Test 3: Check Edge Labels are properly extracted
+        std::cout << "\n=== Test 3: Edge Label Extraction ===" << std::endl;
+        std::cout << "  - Checking edge labels from LTL formula: " << ltl2_str << std::endl;
+        bool hasEdgesWithLabels = false;
+        for (uint16_t i = 0; i < buchi2->getNumStates(); i++) {
+            Node* node = buchi2->getNode(i);
+            if (node) {
+                const std::vector<Edge>& edges = node->getEdges();
+                if (!edges.empty()) {
+                    std::cout << "    State " << i << " has " << edges.size() << " edge(s):" << std::endl;
+                    for (size_t j = 0; j < edges.size(); ++j) {
+                        const Edge& edge = edges[j];
+                        std::string label = edge.getLabel();
+                        std::cout << "      Edge " << j << " -> State " << edge.getDstId();
+                        if (!label.empty() && label != "true" && label != "false") {
+                            std::cout << " | Label: \"" << label << "\"";
+                            hasEdgesWithLabels = true;
+                        } else if (label == "true") {
+                            std::cout << " | Label: (unconditional)";
+                        } else if (label == "false") {
+                            std::cout << " | Label: (impossible)";
+                        } else {
+                            std::cout << " | Label: (empty)";
+                        }
+                        std::cout << std::endl;
+                    }
+                }
+            }
+        }
+        
+        if (hasEdgesWithLabels) {
+            std::cout << "  ✓ Edge labels successfully extracted from LTL formula!" << std::endl;
+        } else {
+            std::cout << "  ⚠ No edge labels found (may be normal for some formulas)" << std::endl;
+        }
+        
+        // Test 4: Visualize Buchi Automaton as PNG
+        std::cout << "\n=== Test 4: Buchi Automaton Visualization ===" << std::endl;
+        try {
+            buchi2->visualize("../output/buchi_automaton_test");
+            std::cout << "✓ Buchi automaton visualized successfully!" << std::endl;
+            std::cout << "  - Generated: ../output/buchi_automaton_test.dot" << std::endl;
+            std::cout << "  - Generated: ../output/buchi_automaton_test.png" << std::endl;
+        } catch (const std::exception& e) {
+            std::cerr << "⚠ Failed to generate visualization: " << e.what() << std::endl;
+            std::cerr << "  (Ensure graphviz 'dot' command is installed)" << std::endl;
         }
         
         delete buchi2;
@@ -251,7 +299,7 @@ void testComponentCreation() {
     std::cout << "✓ BuchiAutomaton created" << std::endl;
     
     // Create algorithm
-    TaskAllocationAlgorithms algo(buchi2, &env, &mrs);
+    // TaskAllocationAlgorithms algo(buchi2, &env, &mrs);
     
     // Prepare parameters for buildPlanningTree
     Node* automatonState = buchi2->getNode(0);  // Get initial automaton state

@@ -41,19 +41,19 @@ public:
     void setGridWorld(GridWorld* grid) { gridWorld = grid; }
     
     // State queries
-    uint16_t getInitialState() const;
-    std::vector<uint16_t> getSuccessorStates(uint16_t stateId) const;
+    uint32_t getInitialState() const;
+    std::vector<uint32_t> getSuccessorStates(uint32_t stateId) const;
     
     // Bidirectional mapping between GridWorld and TransitionSystem
-    uint16_t gridToTSStateId(Point p) const;      // Convert grid coordinates to state ID
-    Point TSStateIdToGridCenter(uint16_t stateId) const {
+    uint32_t gridToTSStateId(Point p) const;      // Convert grid coordinates to state ID
+    Point TSStateIdToGridCenter(uint32_t stateId) const {
         auto id = stateIdToGridMap.find(stateId);
         if (id != stateIdToGridMap.end()) {
                 return id->second.center;
             }
         return Point(0, 0); // Default if not found
     } // Convert state ID to grid coordinates
-    void mapTSStateToGrid(uint16_t stateId, Point center, uint16_t width, uint16_t height); 
+    void mapTSStateToGrid(uint32_t stateId, Point center, uint16_t width, uint16_t height); 
     // Map a state ID to a grid area
     
     // Obstacle and free space queries
@@ -61,8 +61,8 @@ public:
     bool isFree(Point p) const;
     
     // Utility methods
-    bool isValidState(uint16_t stateId) const;
-    uint16_t getNumStates() const;
+    bool isValidState(uint32_t stateId) const;
+    uint32_t getNumStates() const;
     void print_Environment() const;
 };
 

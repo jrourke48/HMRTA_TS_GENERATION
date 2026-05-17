@@ -20,7 +20,7 @@ Environment::~Environment() {
 /**
  * getInitialState - Get the initial state of the transition system
  */
-uint16_t Environment::getInitialState() const {
+uint32_t Environment::getInitialState() const {
     if (!transitionSystem || transitionSystem->getInitialStates().empty()) {
         return 0;
     }
@@ -95,7 +95,7 @@ uint32_t Environment::gridToTSStateId(Point p) const {
     return 0; // Default to state 0 if not found
 }
 
-void Environment::mapTSStateToGrid(uint16_t stateId, Point center, uint16_t width, uint16_t height) {
+void Environment::mapTSStateToGrid(uint32_t stateId, Point center, uint16_t width, uint16_t height) {
     stateIdToGridMap[stateId] = {center, width, height};
 }
 void Environment::print_Environment() const {
@@ -107,61 +107,96 @@ void Environment::print_Environment() const {
     uint32_t width = gridWorld->getWidth();
     uint32_t height = gridWorld->getHeight();
     
-    std::cout << "\n========== ASCII Environment Visualization ==========" << std::endl;
+    std::cout << "\n========== ASCII Environment Visualization (TS Regions Overlay) ==========" << std::endl;
     std::cout << "Grid: " << width << "x" << height << " | States: " << transitionSystem->getNumStates() << std::endl;
-    std::cout << "Legend: . = free, # = obstacle, [0-9] = state center\n" << std::endl;
+    std::cout << "Legend: [#] = obstacle, [0-9] = state center, || = region boundary\n" << std::endl;
     
     // Print column headers
-    std::cout << "    ";
+    std::cout << "     ";
     for (uint32_t x = 0; x < width; x++) {
-        if (x % 10 == 0) std::cout << (x / 10) % 10;
-        else std::cout << " ";
+        std::cout << std::setw(3) << (x % 10);
     }
     std::cout << std::endl;
     
-    std::cout << "    ";
-    for (uint32_t x = 0; x < width; x++) {
-        std::cout << (x % 10);
-    }
-    std::cout << std::endl;
-    
-    // Print grid
+    // Print grid with region boundaries and horizontal separators
     for (uint32_t y = 0; y < height; y++) {
-        std::cout << std::setw(3) << y << "|";
+        // Horizontal separator line
+        std::cout << "     ";
+        for (uint32_t x = 0; x < width; x++) {
+            // Check for region boundary (vertical)
+            Point p(x, y);
+            bool isLeftBoundary = (x == 0) || (gridToTSStateId(Point(x - 1, y)) != gridToTSStateId(p));
+            bool isRightBoundary = (x == width - 1) || (gridToTSStateId(Point(x + 1, y)) != gridToTSStateId(p));
+            
+            if (isLeftBoundary) std::cout << "||";
+            else std::cout << "| ";
+            std::cout << "_";
+            if (isRightBoundary && x == width - 1) std::cout << "||";
+        }
+        std::cout << std::endl;
         
+        // Cell content row
+        std::cout << std::setw(3) << y << " |";
         for (uint32_t x = 0; x < width; x++) {
             Point p(x, y);
-            char cell = '.';
+            char cell = ' ';
             
             // Check if obstacle
             if (gridWorld->isObstacle(p)) {
                 cell = '#';
-            }
-            
-            // Check if state center is here
-            for (const auto& mapping : stateIdToGridMap) {
-                if (mapping.second.center.getX() == x && mapping.second.center.getY() == y) {
-                    uint16_t stateId = mapping.first;
-                    if (stateId < 10) {
-                        cell = '0' + stateId;
-                    } else {
-                        cell = 'A' + (stateId - 10);
+            } else {
+                // Check if this is a region center
+                bool isCenter = false;
+                for (const auto& mapping : stateIdToGridMap) {
+                    if (mapping.second.center.getX() == x && mapping.second.center.getY() == y) {
+                        uint32_t stateId = mapping.first;
+                        if (stateId < 10) {
+                            cell = '0' + stateId;
+                        } else {
+                            cell = 'A' + (stateId - 10);
+                        }
+                        isCenter = true;
+                        break;
                     }
-                    break;
                 }
             }
             
+            // Check if this cell is on a region boundary
+            bool isLeftBoundary = (x == 0) || (gridToTSStateId(Point(x - 1, y)) != gridToTSStateId(p));
+            bool isRightBoundary = (x == width - 1) || (gridToTSStateId(Point(x + 1, y)) != gridToTSStateId(p));
+            
+            if (isLeftBoundary) std::cout << "||";
+            else std::cout << "| ";
+            
             std::cout << cell;
+            
+            if (isRightBoundary && x == width - 1) std::cout << "||";
         }
-        
-        std::cout << "|" << std::endl;
+        std::cout << std::endl;
     }
     
-    // Print row indicators
-    std::cout << "    ";
+    // Final bottom separator
+    std::cout << "     ";
     for (uint32_t x = 0; x < width; x++) {
-        std::cout << (x % 10);
+        Point p(x, height - 1);
+        bool isLeftBoundary = (x == 0) || (gridToTSStateId(Point(x - 1, height - 1)) != gridToTSStateId(p));
+        bool isRightBoundary = (x == width - 1) || (gridToTSStateId(Point(x + 1, height - 1)) != gridToTSStateId(p));
+        
+        if (isLeftBoundary) std::cout << "||";
+        else std::cout << "| ";
+        std::cout << "_";
+        if (isRightBoundary && x == width - 1) std::cout << "||";
     }
     std::cout << std::endl;
-    std::cout << "====================================================\n" << std::endl;
+    
+    // Print state region information
+    std::cout << "\nState Region Mappings:" << std::endl;
+    for (const auto& mapping : stateIdToGridMap) {
+        uint32_t stateId = mapping.first;
+        const auto& region = mapping.second;
+        std::cout << "  State " << stateId << ": Center (" << region.center.getX() << ", " << region.center.getY() 
+                  << "), Size " << region.width << "x" << region.height << std::endl;
+    }
+    
+    std::cout << "\n============================================================================\n" << std::endl;
 }

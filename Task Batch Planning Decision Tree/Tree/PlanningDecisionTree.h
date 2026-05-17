@@ -26,6 +26,7 @@ class PlanningDecisionTree {
         Tree_Node* insertNode(Tree_Node* parent, uint32_t nodeId, Node* automatonState, Node* tsState,
                               std::vector<bool> taskAllocation, std::vector<uint16_t> times,
                               int8_t batch, Tree_Node::TASK_PROGRESS prog);
+        Tree_Node* insertNode(Tree_Node* newNode);
         
         /**
          * insertSubtree - Attach an entire subtree as a child of an existing node

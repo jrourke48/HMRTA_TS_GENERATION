@@ -46,7 +46,7 @@ private:
 public:
     // Constructors
     Node() = default;
-    Node(uint32_t id) : id(id), label(""), numEdges(0) {}
+    Node(uint32_t id) : id(id), label("Room" + std::to_string(id)), numEdges(0) {}
     Node(uint32_t id, const std::string& label) : id(id), label(label), numEdges(0) {}
     //constructor for subclasses
     virtual ~Node() = default;
@@ -55,6 +55,7 @@ public:
     void setId(uint32_t id) { this->id = id; };
     std::string getLabel() const { return label; };
     void setLabel(const std::string& label) { this->label = label; };
+    uint32_t getidfromlabel() const { return std::stoul(label.substr(4)); }; //convert label to id if label is numeric
     std::vector<Edge> getEdges() const { return edges; };
     //add an edge to this node
     void addEdge(const Edge& edge) { edges.push_back(edge);

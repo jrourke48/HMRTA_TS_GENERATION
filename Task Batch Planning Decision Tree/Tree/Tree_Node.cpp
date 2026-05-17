@@ -12,6 +12,16 @@ Tree_Node::Tree_Node(uint32_t id, Tree_Node* parent, Node* automatonState, Node*
 }
 
 /**
+ * Tree_Node - Constructor (simplified)
+ * Initializes a tree node with only a parent, automaton, and transition system states
+ * Other fields are initialized with default values
+ */
+Tree_Node::Tree_Node(uint32_t id, Tree_Node* parent, Node* automatonState, Node* tsState)
+    : id(id), ParentNode(parent), automaton_state(automatonState), ts_state(tsState),
+      robo_task_allocation(), times(), batch(0), prog(TASK_PROGRESS::PRE) {
+}
+
+/**
  * Tree_Node - Destructor
  */
 Tree_Node::~Tree_Node() {

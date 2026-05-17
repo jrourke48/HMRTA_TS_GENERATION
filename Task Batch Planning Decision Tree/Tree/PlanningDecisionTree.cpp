@@ -39,6 +39,20 @@ Tree_Node* PlanningDecisionTree::insertNode(Tree_Node* parent, uint32_t nodeId, 
 }
 
 /**
+ * insertNode - Insert an existing node into the tree
+ * This overload takes a pre-constructed Tree_Node and adds it to the tree
+ * Returns pointer to the inserted node
+ */
+Tree_Node* PlanningDecisionTree::insertNode(Tree_Node* newNode) {
+    if (newNode == nullptr) {
+        return nullptr;
+    }
+    
+    nodeCount++;
+    return newNode;
+}
+
+/**
  * insertSubtree - Attach an entire subtree as a child of an existing node
  * This method attaches subtreeRoot as a child of parentNode
  * All nodes in the subtree are incorporated into this tree

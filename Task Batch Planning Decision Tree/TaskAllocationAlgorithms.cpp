@@ -19,6 +19,11 @@ TaskAllocationAlgorithms::~TaskAllocationAlgorithms() {
     // Note: We don't delete the pointers here as they are managed externally
 }
 
+//  * Algorithm 1: Intensive Inter-Task Relationship Tree Search
+//  * Converts LTL formula to Büchi automaton and initializes tree planning
+//  */
+
+
 /**
  * setNBA - Set the NBA reference
  */
@@ -61,75 +66,10 @@ MultiRobotSystem* TaskAllocationAlgorithms::getMultiRobotSystem() const {
     return multiRobotSystem;
 }
 
-/**
- * addVisitedNode - Add a node to the visited nodes collection
- */
-void TaskAllocationAlgorithms::addVisitedNode(Tree_Node* node) {
-    if (node) {
-        visitedNodes.push_back(node);
-    }
-}
-
-/**
- * isNodeVisited - Check if a node has been visited
- */
-bool TaskAllocationAlgorithms::isNodeVisited(Tree_Node* node) const {
-    if (!node) return false;
-    return std::find(visitedNodes.begin(), visitedNodes.end(), node) != visitedNodes.end();
-}
-
-/**
- * getVisitedNodes - Get the collection of visited nodes
- */
-std::vector<Tree_Node*>& TaskAllocationAlgorithms::getVisitedNodes() {
-    return visitedNodes;
-}
-
-/**
- * clearVisitedNodes - Clear all visited nodes
- */
-void TaskAllocationAlgorithms::clearVisitedNodes() {
-    visitedNodes.clear();
-}
-
-/**
- * addVisitedAutomatonState - Add an automaton state to the visited states collection
- */
-void TaskAllocationAlgorithms::addVisitedAutomatonState(uint32_t state) {
-    visitedAutomatonStates.push_back(state);
-}
-
-/**
- * isAutomatonStateVisited - Check if an automaton state has been visited
- */
-bool TaskAllocationAlgorithms::isAutomatonStateVisited(uint32_t state) const {
-    return std::find(visitedAutomatonStates.begin(), visitedAutomatonStates.end(), state) != visitedAutomatonStates.end();
-}
-
-/**
- * getVisitedAutomatonStates - Get the collection of visited automaton states
- */
-std::vector<uint32_t>& TaskAllocationAlgorithms::getVisitedAutomatonStates() {
-    return visitedAutomatonStates;
-}
-
-/**
- * clearVisitedAutomatonStates - Clear all visited automaton states
- */
-void TaskAllocationAlgorithms::clearVisitedAutomatonStates() {
-    visitedAutomatonStates.clear();
-}
-
-/**
- * Algorithm 1: Intensive Inter-Task Relationship Tree Search
- * Converts LTL formula to Büchi automaton and initializes tree planning
- */
 Tree_Node* TaskAllocationAlgorithms::intensiveInterTaskRelationshipTreeSearch(
     BuchiAutomaton* nbaPtr,
     Environment* envPtr,
     MultiRobotSystem* multiRobotSystemPtr) {
-    
-    std::cout << "[DEBUG] Starting intensiveInterTaskRelationshipTreeSearch" << std::endl;
     
     // Get initial automaton state (typically state 0)
     Node* initialAutomatonState = nbaPtr->getNode(0);
@@ -174,71 +114,47 @@ Tree_Node* TaskAllocationAlgorithms::intensiveInterTaskRelationshipTreeSearch(
     int currentDepth = 0;
     
     while (!nodeQueue.empty() && currentDepth < maxDepth) {
-        PlanningDecisionTree* tree = new PlanningDecisionTree();
+        PlanningDecisionTree* subtree = new PlanningDecisionTree();
         uint32_t buchisize = nbaPtr->getNumStates();
 
         for (uint32_t i = 0; i < buchisize; ++i) {
             Node* nbaState = nbaPtr->getNode(i);
-            if (!isAutomatonStateVisited(nbaState->getId())) {
+            uint32_t nbaId = nbaState->getId();
+            if (!isAutomatonStateVisited(nbaId)) {
                 // Only process if this state has NOT been visited in this task stage
-                addVisitedAutomatonState(nbaState->getId());
-                addVisitedNode(tree->getRoot());
-                nodeQueue.pop();
-            // Get current automaton state
-            Node* automatonState = currentNode->getAutomatonState();
-            std::cout << "[DEBUG] Got automaton state pointer: " << (void*)automatonState << std::endl;
-            
-            if (!automatonState) {
-                std::cout << "[DEBUG] Automaton state is null, skipping" << std::endl;
-                continue;
-            }
-            
-            std::cout << "[DEBUG] About to call getEdges()" << std::endl;
-            std::cout.flush();
-            
-            std::vector<Edge> edges = automatonState->getEdges();
-            
-            std::cout << "[DEBUG] Successfully called getEdges()" << std::endl;
-            std::cout << "[DEBUG] Automaton state has " << edges.size() << " edges" << std::endl;
-            
-            for (size_t edgeIdx = 0; edgeIdx < edges.size(); ++edgeIdx) {
-                const auto& edge = edges[edgeIdx];
-                uint32_t nextAutomatonStateId = edge.getDstId();
-                
-                Node* nextAutomatonState = nbaPtr->getNode(nextAutomatonStateId);
-                if (!nextAutomatonState) continue;
-                
-                // Reuse the same environment node
-                Node* tsNode = currentNode->getTSState();
-                if (!tsNode) continue;
-                
-                std::cout << "[DEBUG] About to insert child node " << nodeIdCounter << std::endl;
-                
-                Tree_Node* childNode = tree->insertNode(
-                    currentNode,
-                    nodeIdCounter++,
-                    nextAutomatonState,
-                    tsNode,
-                    currentNode->getRoboTaskAllocation(),
-                    currentNode->getTimes(),
-                    currentNode->getBatch(),
-                    Tree_Node::TASK_PROGRESS::TRA
-                );
-                
-                std::cout << "[DEBUG] Child node inserted: " << (childNode ? "success" : "failed") << std::endl;
-                
-                if (childNode) {
-                    nodeQueue.push(childNode);
+                // Get edge labels to get to this state
+                Tree_Node* di = getLastVisitedNode();
+                std::vector<std::string>> edges = nbaPtr->getEdgeLabels(nbaId, di->getAutomatonState()->getId());
+                std::vector<uint32_t> apIds = collectUniqueAPsFromEdges(edges);
+                for (uint32_t apId : apIds) {
+                    //create the new tree node with the curret automaton state and task state
+                    nodeIdCounter++;
+                    Tree_Node* disub = new Tree_Node(nodeIdCounter, di, nbaState, envPtr->getTSStateForAP(apId));
+                    if (need to do){
+                        UnrelatedTaskSearch(nbaId, 0, spot::formula());
+                    }
                 }
+                if di.prog == disub.prog{
+                    addVisitedAutomatonState(nbaState->getId());
+                }
+                else {
+                    clearVisitedAutomatonStates();
+                }
+                
+                addVisitedNode(noddeees;);
             }
         }
+        for (Tree_Node* node : getVisitedNodes()) {
+            //TO DOprune sub trees
+            std::cout << "[DEBUG] Visited Node ID: " << node->getId() 
+                      << ", Automaton State ID: " << node->getAutomatonState()->getId() 
+                      << ", TS State ID: " << node->getTSState()->getId() << std::endl;
+        }
+        //TO DO add subtree to main tree and di to Traversed Tree
         currentDepth++;
-    }
-    
-    std::cout << "[DEBUG] BFS expansion complete, returning tree" << std::endl;
-    return tree;
-}
 
+    }
+}
 /**
  * Algorithm 2: Unrelated-Task Search (US)
  * Searches for unrelated tasks that can be executed independently
@@ -394,4 +310,169 @@ Tree_Node* TaskAllocationAlgorithms::exclusiveTaskSearch(
     // Step 8: Return exclusive task tree node
     // TODO: Create and return appropriate tree node
     return nullptr;
+}
+
+
+/**
+ * addVisitedNode - Add a node to the visited nodes collection
+ */
+void TaskAllocationAlgorithms::addVisitedNode(Tree_Node* node) {
+    if (node) {
+        visitedNodes.push_back(node);
+    }
+}
+
+/**
+ * isNodeVisited - Check if a node has been visited
+ */
+bool TaskAllocationAlgorithms::isNodeVisited(Tree_Node* node) const {
+    if (!node) return false;
+    return std::find(visitedNodes.begin(), visitedNodes.end(), node) != visitedNodes.end();
+}
+
+/**
+ * getVisitedNodes - Get the collection of visited nodes
+ */
+std::vector<Tree_Node*>& TaskAllocationAlgorithms::getVisitedNodes() {
+    return visitedNodes;
+}
+
+/**
+ * clearVisitedNodes - Clear all visited nodes
+ */
+void TaskAllocationAlgorithms::clearVisitedNodes() {
+    visitedNodes.clear();
+}
+
+/**
+ * addVisitedAutomatonState - Add an automaton state to the visited states collection
+ */
+void TaskAllocationAlgorithms::addVisitedAutomatonState(uint32_t state) {
+    visitedAutomatonStates.push_back(state);
+}
+
+/**
+ * isAutomatonStateVisited - Check if an automaton state has been visited
+ */
+bool TaskAllocationAlgorithms::isAutomatonStateVisited(uint32_t state) const {
+    return std::find(visitedAutomatonStates.begin(), visitedAutomatonStates.end(), state) != visitedAutomatonStates.end();
+}
+
+/**
+ * getVisitedAutomatonStates - Get the collection of visited automaton states
+ */
+std::vector<uint32_t>& TaskAllocationAlgorithms::getVisitedAutomatonStates() {
+    return visitedAutomatonStates;
+}
+
+/**
+ * clearVisitedAutomatonStates - Clear all visited automaton states
+ */
+void TaskAllocationAlgorithms::clearVisitedAutomatonStates() {
+    visitedAutomatonStates.clear();
+}
+
+/**
+ * addBatchValue - Add a batch value to the collection
+ */
+void TaskAllocationAlgorithms::addBatchValue(uint8_t batchValue) {
+    treebatchvals.push_back(batchValue);
+}
+
+/**
+ * isBatchValueInTree - Check if a batch value is in the tree
+ * If not found, adds the absolute value of the batch (only if positive)
+ */
+bool TaskAllocationAlgorithms::isBatchValueInTree(int8_t batchValue) {
+    uint8_t absBatchValue = static_cast<uint8_t>(std::abs(batchValue));
+    bool found = std::find(treebatchvals.begin(), treebatchvals.end(), absBatchValue) != treebatchvals.end();
+    if (!found) {
+        if (absBatchValue > 0) {
+            treebatchvals.push_back(absBatchValue);
+        }
+    }
+    return found;
+}
+
+/**
+ * getBatchValues - Get the collection of batch values in the tree
+ */
+std::vector<uint8_t>& TaskAllocationAlgorithms::getBatchValues() {
+    return treebatchvals;
+}
+
+/**
+ * clearBatchValues - Clear all batch values
+ */
+void TaskAllocationAlgorithms::clearBatchValues() {
+    treebatchvals.clear();
+}
+
+std::vector<uint32_t> TaskAllocationAlgorithms::parseEdgeLabel(const std::string& label) const {
+    std::vector<uint32_t> apIds;
+    
+    // Remove acceptance marks {0}
+    std::string cleaned = label;
+    size_t pos = cleaned.find("{0}");
+    if (pos != std::string::npos) {
+        cleaned.erase(pos, 3);
+    }
+    
+    // Replace | with & to have single delimiter
+    for (size_t i = 0; i < cleaned.length(); ++i) {
+        if (cleaned[i] == '|') {
+            cleaned[i] = '&';
+        }
+    }
+    
+    // Split by &
+    size_t start = 0;
+    size_t end = cleaned.find('&');
+    
+    while (start < cleaned.length()) {
+        // Extract token
+        std::string token = (end == std::string::npos) ? 
+                           cleaned.substr(start) : 
+                           cleaned.substr(start, end - start);
+        
+        // Trim whitespace and quotes
+        token.erase(0, token.find_first_not_of(" \t\n\r\""));
+        token.erase(token.find_last_not_of(" \t\n\r\"") + 1);
+        
+        // Skip if empty or negated (starts with !)
+        if (!token.empty() && token[0] != '!') {
+            try {
+                // Extract number from "p0", "p1", etc. (skip 'p' prefix)
+                if (token[0] == 'p' && token.length() > 1) {
+                    uint32_t apId = std::stoul(token.substr(1));
+                    apIds.push_back(apId);
+                }
+            } catch (const std::exception& e) {
+                std::cerr << "Error parsing AP: " << token << std::endl;
+            }
+        }
+        
+        // Move to next token
+        if (end == std::string::npos) break;
+        start = end + 1;
+        end = cleaned.find('&', start);
+    }
+    
+    return apIds;
+}
+
+std::vector<uint32_t> TaskAllocationAlgorithms::collectUniqueAPsFromEdges(const std::vector<std::string>& edges) const {
+    std::vector<uint32_t> allApIds;
+    
+    for (const auto& edgeLabel : edges) {
+        std::vector<uint32_t> apIds = parseEdgeLabel(edgeLabel);
+        // Insert unique elements
+        for (uint32_t apId : apIds) {
+            if (std::find(allApIds.begin(), allApIds.end(), apId) == allApIds.end()) {
+                allApIds.push_back(apId);
+            }
+        }
+    }
+    
+    return allApIds;
 }

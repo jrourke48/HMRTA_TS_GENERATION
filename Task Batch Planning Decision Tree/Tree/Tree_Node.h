@@ -30,6 +30,7 @@ class Tree_Node {
         Tree_Node(uint32_t id, Tree_Node* parent, Node* automatonState, Node* tsState, 
                   std::vector<bool> taskAllocation, std::vector<uint16_t> times, int8_t batch, TASK_PROGRESS prog);
         
+        Tree_Node(uint32_t id, Tree_Node* parent, Node* automatonState, Node* tsState);
         // Destructor
         ~Tree_Node();
         
