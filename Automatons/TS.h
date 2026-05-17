@@ -12,8 +12,8 @@
 
 class TS : public Automaton {
 private:
-    std::vector<uint32_t> initialStates;  // Track which states are initial states
-    std::unordered_map<uint32_t, uint32_t> stateToNodeId;  // Map from state index to node ID
+    std::vector<uint16_t> initialStates;  // Track which states are initial states
+    std::unordered_map<uint16_t, uint32_t> stateToNodeId;  // Map from state index to node ID
 
 public:
     TS();
@@ -22,15 +22,15 @@ public:
 
     // Override pure virtual methods from Automaton
     void add_Node(Node* node) override;
-    bool isAdjacent(uint32_t srcId, uint32_t dstId) const override;
+    bool isAdjacent(uint16_t srcId, uint16_t dstId) const override;
 
     // Get all adjacent nodes for a given node
-    std::vector<uint32_t> getAdjacent(uint32_t nodeId) const;
+    std::vector<uint16_t> getAdjacent(uint16_t nodeId) const;
 
     // TS-specific methods
-    void setInitial(uint32_t stateId);
-    bool isInitial(uint32_t stateId) const;
-    const std::vector<uint32_t>& getInitialStates() const;
+    void setInitial(uint16_t stateId);
+    bool isInitial(uint16_t stateId) const;
+    const std::vector<uint16_t>& getInitialStates() const;
 
     // Convert TS to Spot automaton
     // If dict is provided, use it; otherwise create a new BDD dictionary

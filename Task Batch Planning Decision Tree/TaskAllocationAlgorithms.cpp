@@ -125,8 +125,9 @@ Tree_Node* TaskAllocationAlgorithms::intensiveInterTaskRelationshipTreeSearch(
                 // Get edge labels to get to this state
                 Tree_Node* di = getLastVisitedNode();
                 std::vector<std::string>> edges = nbaPtr->getEdgeLabels(nbaId, di->getAutomatonState()->getId());
-                std::vector<uint32_t> apIds = collectUniqueAPsFromEdges(edges);
-                for (uint32_t apId : apIds) {
+                std::vector<uint16_t> apIds = collectUniqueAPsFromEdges(edges);
+                for (uint16_t apId : apIds) {
+                    int8_t batchVal = nbaPtr->getLTLFormula()->getBatchVal(apId);
                     //create the new tree node with the curret automaton state and task state
                     nodeIdCounter++;
                     Tree_Node* disub = new Tree_Node(nodeIdCounter, di, nbaState, envPtr->getTSStateForAP(apId));
@@ -408,8 +409,8 @@ void TaskAllocationAlgorithms::clearBatchValues() {
     treebatchvals.clear();
 }
 
-std::vector<uint32_t> TaskAllocationAlgorithms::parseEdgeLabel(const std::string& label) const {
-    std::vector<uint32_t> apIds;
+std::vector<uint16_t> TaskAllocationAlgorithms::parseEdgeLabel(const std::string& label) const {
+    std::vector<uint16_t> apIds;
     
     // Remove acceptance marks {0}
     std::string cleaned = label;
@@ -444,7 +445,7 @@ std::vector<uint32_t> TaskAllocationAlgorithms::parseEdgeLabel(const std::string
             try {
                 // Extract number from "p0", "p1", etc. (skip 'p' prefix)
                 if (token[0] == 'p' && token.length() > 1) {
-                    uint32_t apId = std::stoul(token.substr(1));
+                    uint16_t apId = static_cast<uint16_t>(std::stoul(token.substr(1)));
                     apIds.push_back(apId);
                 }
             } catch (const std::exception& e) {
@@ -461,13 +462,13 @@ std::vector<uint32_t> TaskAllocationAlgorithms::parseEdgeLabel(const std::string
     return apIds;
 }
 
-std::vector<uint32_t> TaskAllocationAlgorithms::collectUniqueAPsFromEdges(const std::vector<std::string>& edges) const {
-    std::vector<uint32_t> allApIds;
+std::vector<uint16_t> TaskAllocationAlgorithms::collectUniqueAPsFromEdges(const std::vector<std::string>& edges) const {
+    std::vector<uint16_t> allApIds;
     
     for (const auto& edgeLabel : edges) {
-        std::vector<uint32_t> apIds = parseEdgeLabel(edgeLabel);
+        std::vector<uint16_t> apIds = parseEdgeLabel(edgeLabel);
         // Insert unique elements
-        for (uint32_t apId : apIds) {
+        for (uint16_t apId : apIds) {
             if (std::find(allApIds.begin(), allApIds.end(), apId) == allApIds.end()) {
                 allApIds.push_back(apId);
             }

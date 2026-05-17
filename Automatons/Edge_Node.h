@@ -11,25 +11,25 @@
 class Edge {
 private:
     // destination node ID for this edge
-    uint32_t dstId;
+    uint16_t dstId;
     std::string label; //label for the edge
     // For weighted edges, we can add a weight property
-    uint16_t weight;
+    uint32_t weight;
 public:
     // Constructors
     Edge() = default;
-    Edge(uint32_t dstId) : dstId(dstId), weight(1) {}
-    Edge(uint32_t dstId, uint32_t weight) : dstId(dstId), weight(weight) {}
-    Edge(uint32_t dstId, const std::string& label) : dstId(dstId), label(label), weight(1) {}
-    Edge(uint32_t dstId, const std::string& label, uint32_t weight = 1) : dstId(dstId), label(label), weight(weight) {}
+    Edge(uint16_t dstId) : dstId(dstId), weight(1) {}
+    Edge(uint16_t dstId, uint32_t weight) : dstId(dstId), weight(weight) {}
+    Edge(uint16_t dstId, const std::string& label) : dstId(dstId), label(label), weight(1) {}
+    Edge(uint16_t dstId, const std::string& label, uint32_t weight = 1) : dstId(dstId), label(label), weight(weight) {}
     //constructor for subclasses
     virtual ~Edge() = default;
     
     //getters and setters
-    uint32_t getDstId() const { return dstId; };
+    uint16_t getDstId() const { return dstId; };
     uint32_t getWeight() const { return weight; };
     std::string getLabel() const { return label; };
-    void setDstId(uint32_t id) { dstId = id; };
+    void setDstId(uint16_t id) { dstId = id; };
     void setWeight(uint32_t w) { weight = w; };
     void setLabel(const std::string& label) { this->label = label; };
 };
@@ -39,30 +39,30 @@ class Node{
 private:
     // For a simple unweighted automaton, we can just store the node ID.
     // For a more complex automaton, we can also include additional properties (e.g., labels, accepting state flag).
-    uint32_t id;
+    uint16_t id;
     std::string label; //label for the node
     uint32_t numEdges; //total number of outgoing edges for the node
     std::vector<Edge> edges; // outgoing edges from this node
 public:
     // Constructors
     Node() = default;
-    Node(uint32_t id) : id(id), label("Room" + std::to_string(id)), numEdges(0) {}
-    Node(uint32_t id, const std::string& label) : id(id), label(label), numEdges(0) {}
+    Node(uint16_t id) : id(id), label("Room" + std::to_string(id)), numEdges(0) {}
+    Node(uint16_t id, const std::string& label) : id(id), label(label), numEdges(0) {}
     //constructor for subclasses
     virtual ~Node() = default;
     //getters and setters
-    uint32_t getId() const { return id; };
-    void setId(uint32_t id) { this->id = id; };
+    uint16_t getId() const { return id; };
+    void setId(uint16_t id) { this->id = id; };
     std::string getLabel() const { return label; };
     void setLabel(const std::string& label) { this->label = label; };
-    uint32_t getidfromlabel() const { return std::stoul(label.substr(4)); }; //convert label to id if label is numeric
+    uint16_t getidfromlabel() const { return static_cast<uint16_t>(std::stoul(label.substr(4))); }; //convert label to id if label is numeric
     std::vector<Edge> getEdges() const { return edges; };
     //add an edge to this node
     void addEdge(const Edge& edge) { edges.push_back(edge);
         numEdges++;
     };
     //check if there is a direct edge to a given destination node
-    bool isAdjacent(uint32_t dstId) const {
+    bool isAdjacent(uint16_t dstId) const {
         for (const Edge& edge : edges) {
             if (edge.getDstId() == dstId) {
                 return true;

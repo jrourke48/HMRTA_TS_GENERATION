@@ -20,7 +20,7 @@ class Automaton{
     protected:
         uint32_t numNodes = 0;
         uint32_t numEdges = 0;
-        std::map<uint32_t, Node*> nodeMap;  //map from node ID to node pointer for quick access
+        std::map<uint16_t, Node*> nodeMap;  //map from node ID to node pointer for quick access
     
     public:
         Automaton() = default;
@@ -34,10 +34,10 @@ class Automaton{
         virtual void add_Node(Node* node) = 0;
         
         //check if there is a direct edge between two nodes
-        virtual bool isAdjacent(uint32_t srcId, uint32_t dstId) const = 0;
+        virtual bool isAdjacent(uint16_t srcId, uint16_t dstId) const = 0;
         
         //get a node by ID
-        Node* getNode(uint32_t nodeId) const {
+        Node* getNode(uint16_t nodeId) const {
             auto it = nodeMap.find(nodeId);
             if (it != nodeMap.end()) {
                 return it->second;
@@ -46,7 +46,7 @@ class Automaton{
         }
         
         //get all nodes
-        const std::map<uint32_t, Node*>& getNodes() const {
+        const std::map<uint16_t, Node*>& getNodes() const {
             return nodeMap;
         }
 };

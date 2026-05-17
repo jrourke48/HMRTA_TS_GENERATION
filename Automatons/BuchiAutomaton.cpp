@@ -9,7 +9,7 @@ BuchiAutomaton::~BuchiAutomaton() {
 void BuchiAutomaton::add_Node(Node* node) {
     if (node == nullptr) return;
     
-    uint32_t nodeId = node->getId();
+    uint16_t nodeId = node->getId();
     
     // Add to nodeMap for quick access
     nodeMap[nodeId] = node;
@@ -18,7 +18,7 @@ void BuchiAutomaton::add_Node(Node* node) {
     numNodes++;
 }
 
-bool BuchiAutomaton::isAdjacent(uint32_t srcId, uint32_t dstId) const {
+bool BuchiAutomaton::isAdjacent(uint16_t srcId, uint16_t dstId) const {
     // Find source node
     auto it = nodeMap.find(srcId);
     if (it == nodeMap.end()) return false;
@@ -28,7 +28,7 @@ bool BuchiAutomaton::isAdjacent(uint32_t srcId, uint32_t dstId) const {
     // Check if there's an edge from srcNode to dstId
     return srcNode->isAdjacent(dstId);
 }
-std::vector<std::string> BuchiAutomaton::getEdgeLabels(uint32_t srcId, uint32_t dstId) const {
+std::vector<std::string> BuchiAutomaton::getEdgeLabels(uint16_t srcId, uint16_t dstId) const {
     std::vector<std::string> labels;
     auto it = nodeMap.find(srcId);
     if (it == nodeMap.end()) return labels;

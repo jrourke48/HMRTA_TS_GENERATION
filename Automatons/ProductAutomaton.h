@@ -9,8 +9,8 @@
 
 class ProductAutomaton : public Automaton {
 private:
-    std::vector<std::pair<uint32_t, uint32_t>> stateMapping;  // Maps product states to (ts_state, automaton_state)
-    std::vector<uint32_t> acceptingStates;  // Set of accepting states
+    std::vector<std::pair<uint16_t, uint16_t>> stateMapping;  // Maps product states to (ts_state, automaton_state)
+    std::vector<uint16_t> acceptingStates;  // Set of accepting states
 public:
     ProductAutomaton();
     
@@ -21,15 +21,15 @@ public:
 
     // Override pure virtual methods from Automaton
     void add_Node(Node* node) override;
-    bool isAdjacent(uint32_t srcId, uint32_t dstId) const override;
+    bool isAdjacent(uint16_t srcId, uint16_t dstId) const override;
     
-    void setAccepting(uint32_t stateId);
-    bool isAccepting(uint32_t stateId) const;
-    const std::vector<uint32_t>& getAcceptingStates() const;
+    void setAccepting(uint16_t stateId);
+    bool isAccepting(uint16_t stateId) const;
+    const std::vector<uint16_t>& getAcceptingStates() const;
 
     // Product-specific methods
-    void addStateMapping(uint32_t productState, uint32_t tsState, uint32_t automataState);
-    std::pair<uint32_t, uint32_t> getStateMapping(uint32_t productState) const;
+    void addStateMapping(uint16_t productState, uint16_t tsState, uint16_t automataState);
+    std::pair<uint16_t, uint16_t> getStateMapping(uint16_t productState) const;
 };
 
 #endif

@@ -16,7 +16,7 @@ TS::~TS() {
 void TS::add_Node(Node* node) {
     if (node == nullptr) return;
     
-    uint32_t nodeId = node->getId();
+    uint16_t nodeId = node->getId();
     
     // Add to nodeMap for quick access
     nodeMap[nodeId] = node;
@@ -25,7 +25,7 @@ void TS::add_Node(Node* node) {
     numNodes++;
 }
 
-bool TS::isAdjacent(uint32_t srcId, uint32_t dstId) const {
+bool TS::isAdjacent(uint16_t srcId, uint16_t dstId) const {
     // Find source node
     auto it = nodeMap.find(srcId);
     if (it == nodeMap.end()) return false;
@@ -36,8 +36,8 @@ bool TS::isAdjacent(uint32_t srcId, uint32_t dstId) const {
     return srcNode->isAdjacent(dstId);
 }
 
-std::vector<uint32_t> TS::getAdjacent(uint32_t nodeId) const {
-    std::vector<uint32_t> adjacentNodes;
+std::vector<uint16_t> TS::getAdjacent(uint16_t nodeId) const {
+    std::vector<uint16_t> adjacentNodes;
     
     // Find the node
     auto it = nodeMap.find(nodeId);
@@ -56,7 +56,7 @@ std::vector<uint32_t> TS::getAdjacent(uint32_t nodeId) const {
     return adjacentNodes;
 }
 
-void TS::setInitial(uint32_t stateId) {
+void TS::setInitial(uint16_t stateId) {
     // Add to initial states if not already present
     auto it = std::find(initialStates.begin(), initialStates.end(), stateId);
     if (it == initialStates.end()) {
@@ -64,12 +64,12 @@ void TS::setInitial(uint32_t stateId) {
     }
 }
 
-bool TS::isInitial(uint32_t stateId) const {
+bool TS::isInitial(uint16_t stateId) const {
     auto it = std::find(initialStates.begin(), initialStates.end(), stateId);
     return it != initialStates.end();
 }
 
-const std::vector<uint32_t>& TS::getInitialStates() const {
+const std::vector<uint16_t>& TS::getInitialStates() const {
     return initialStates;
 }
 
@@ -83,7 +83,7 @@ spot::twa_graph_ptr TS::toSpotAutomaton(spot::bdd_dict_ptr dict) const {
     spot::twa_graph_ptr aut = spot::make_twa_graph(dict);
     
     // Create a mapping from node ID to Spot state index
-    std::unordered_map<uint32_t, unsigned> nodeIdToSpotState;
+    std::unordered_map<uint16_t, unsigned> nodeIdToSpotState;
     unsigned spotStateIndex = 0;
     
     // Create states in the Spot automaton (one per node)
@@ -93,7 +93,7 @@ spot::twa_graph_ptr TS::toSpotAutomaton(spot::bdd_dict_ptr dict) const {
     
     // Build the mapping from node IDs to Spot state indices
     for (const auto& nodePair : nodeMap) {
-        uint32_t nodeId = nodePair.first;
+        uint16_t nodeId = nodePair.first;
         nodeIdToSpotState[nodeId] = spotStateIndex++;
     }
     

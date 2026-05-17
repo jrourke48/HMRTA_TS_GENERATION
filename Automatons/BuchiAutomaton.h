@@ -22,18 +22,18 @@
 
 class BuchiAutomaton : public Automaton {
 private:
-    std::vector<uint32_t> acceptingStates;  // Set of accepting states (Büchi accepting states)
-    LTLFormula ltlFormula;  // LTL formula associated with the Büchi automaton
+    std::vector<uint16_t> acceptingStates;  // Set of accepting states (Büchi accepting states)
+    const LTLFormula* ltlFormula;  // LTL formula associated with the Büchi automaton (externally owned)
     spot::twa_graph_ptr spotAutomaton;  // Store the Spot automaton for visualization
-    uint32_t initialState;  // Initial state of the Büchi automaton
+    uint16_t initialState;  // Initial state of the Büchi automaton
 
 public:
-    // Constructor that takes an LTL formula object
-    BuchiAutomaton(const LTLFormula& formula) : ltlFormula(formula) {
+    // Constructor that takes a pointer to an LTL formula object (externally owned)
+    BuchiAutomaton(const LTLFormula* formula) : ltlFormula(formula) {
         try {
             // Extract spot formula from LTLFormula and build automaton
             spot::translator trans;
-            spot::twa_graph_ptr buchiAut = trans.run(ltlFormula.getSpotFormula());
+            spot::twa_graph_ptr buchiAut = trans.run(ltlFormula->getSpotFormula());
             // Convert spot buchi to our buchi automaton
             fromSpotAutomaton(buchiAut);
         } catch (const std::exception& e) {
@@ -44,18 +44,18 @@ public:
     ~BuchiAutomaton() override;
     // Override pure virtual methods from Automaton
     void add_Node(Node* node) override;
-    bool isAdjacent(uint32_t srcId, uint32_t dstId) const override;
+    bool isAdjacent(uint16_t srcId, uint16_t dstId) const override;
 
     // Büchi-specific methods
     // Getters for initial and accepting states
-    void setInitial(uint32_t stateId) {
+    void setInitial(uint16_t stateId) {
         initialState = stateId;
     };
-    uint32_t getInitialState() const {
+    uint16_t getInitialState() const {
         return initialState;
     };
     // Get the list of accepting states
-    void setAccepting(uint32_t stateId) {
+    void setAccepting(uint16_t stateId) {
         // Add to accepting states if not already present
         auto it = std::find(acceptingStates.begin(), acceptingStates.end(), stateId);
         if (it == acceptingStates.end()) {
@@ -63,11 +63,11 @@ public:
         }
     };
     // Check if a state is an accepting state
-    bool isAcceptingState(uint32_t stateId) const {
+    bool isAcceptingState(uint16_t stateId) const {
         return std::find(acceptingStates.begin(), acceptingStates.end(), stateId) != acceptingStates.end();
     };
     //get the edge label for a given source and destination
-    std::vector<std::string> getEdgeLabels(uint32_t srcId, uint32_t dstId) const;
+    std::vector<std::string> getEdgeLabels(uint16_t srcId, uint16_t dstId) const;
 
     void fromSpotAutomaton(spot::twa_graph_ptr spotAutomaton) {
         if (!spotAutomaton) return;
@@ -242,20 +242,26 @@ public:
         return label.empty() ? "true" : label;
     }
 
-    bool isAccepting(uint32_t stateId) const {
+    bool isAccepting(uint16_t stateId) const {
         auto it = std::find(acceptingStates.begin(), acceptingStates.end(), stateId);
         return it != acceptingStates.end();
     };
-    const std::vector<uint32_t>& getAcceptingStates() const {
+    const std::vector<uint16_t>& getAcceptingStates() const {
         return acceptingStates;
     };
-    uint32_t getInitialState() const {
+    uint16_t getInitialState() const {
         return initialState;
     };
 
     // Method to get the Spot formula object
     spot::formula get_ltl_formula() const {
-        return ltlFormula.getSpotFormula();
+        if (!ltlFormula) return spot::formula();
+        return ltlFormula->getSpotFormula();
+    };
+
+    // Method to get the LTLFormula object
+    const LTLFormula* getLTLFormula() const {
+        return ltlFormula;
     };
 
     // Visualization methods

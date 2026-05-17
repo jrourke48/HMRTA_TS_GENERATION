@@ -80,6 +80,14 @@ void LTLFormula::addBatchAtomicProposition(const BatchAtomicProposition& ap) {
     batchAPs.push_back(ap);
 }
 
+// Get the batch value for a specific AP ID
+int8_t LTLFormula::getBatchVal(uint16_t apId) const {
+    if (apId < batchAPs.size()) {
+        return batchAPs[apId].getBatchValue();
+    }
+    throw std::out_of_range("Atomic proposition ID out of range");
+}
+
 // Check if formula is valid
 bool LTLFormula::isValid() const {
     // TODO: Implement validation logic

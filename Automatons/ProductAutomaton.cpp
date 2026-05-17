@@ -10,8 +10,8 @@ ProductAutomaton::ProductAutomaton(spot::twa_graph_ptr spotAutomaton) {
     unsigned numStates = spotAutomaton->num_states();
     
     // Create nodes for each state
-    for (unsigned i = 0; i < numStates; ++i) {
-        Node* node = new Node(i);
+    for (unsigned i = 0; i < numStates && i <= UINT16_MAX; ++i) {
+        Node* node = new Node(static_cast<uint16_t>(i));
         add_Node(node);
     }
     
@@ -22,11 +22,11 @@ ProductAutomaton::ProductAutomaton(spot::twa_graph_ptr spotAutomaton) {
         unsigned dstState = edge.dst;
         
         // Get source node and add edge
-        Node* srcNode = getNode(srcState);
+        Node* srcNode = getNode(static_cast<uint16_t>(srcState));
         if (srcNode != nullptr) {
             // Extract edge label/condition if available
             // For now, create unweighted edge
-            Edge e(dstState);
+            Edge e(static_cast<uint16_t>(dstState));
             srcNode->addEdge(e);
             numEdges++;
         }
@@ -34,7 +34,7 @@ ProductAutomaton::ProductAutomaton(spot::twa_graph_ptr spotAutomaton) {
         // Check if this edge has acceptance marks (transition-based acceptance)
         // Mark destination state as accepting if the transition is accepting
         if (edge.acc != spot::acc_cond::mark_t()) {
-            setAccepting(dstState);
+            setAccepting(static_cast<uint16_t>(dstState));
         }
     }
 }
@@ -47,7 +47,7 @@ ProductAutomaton::~ProductAutomaton() {
     nodeMap.clear();
 }
 
-void ProductAutomaton::setAccepting(uint32_t stateId) {
+void ProductAutomaton::setAccepting(uint16_t stateId) {
     // Add to accepting states if not already present
     auto it = std::find(acceptingStates.begin(), acceptingStates.end(), stateId);
     if (it == acceptingStates.end()) {
@@ -55,19 +55,19 @@ void ProductAutomaton::setAccepting(uint32_t stateId) {
     }
 }
 
-bool ProductAutomaton::isAccepting(uint32_t stateId) const {
+bool ProductAutomaton::isAccepting(uint16_t stateId) const {
     auto it = std::find(acceptingStates.begin(), acceptingStates.end(), stateId);
     return it != acceptingStates.end();
 }
 
-const std::vector<uint32_t>& ProductAutomaton::getAcceptingStates() const {
+const std::vector<uint16_t>& ProductAutomaton::getAcceptingStates() const {
     return acceptingStates;
 }
 
 void ProductAutomaton::add_Node(Node* node) {
     if (node == nullptr) return;
     
-    uint32_t nodeId = node->getId();
+    uint16_t nodeId = node->getId();
     
     // Add to nodeMap for quick access
     nodeMap[nodeId] = node;
@@ -76,7 +76,7 @@ void ProductAutomaton::add_Node(Node* node) {
     numNodes++;
 }
 
-bool ProductAutomaton::isAdjacent(uint32_t srcId, uint32_t dstId) const {
+bool ProductAutomaton::isAdjacent(uint16_t srcId, uint16_t dstId) const {
     // Find source node
     auto it = nodeMap.find(srcId);
     if (it == nodeMap.end()) return false;
@@ -87,7 +87,7 @@ bool ProductAutomaton::isAdjacent(uint32_t srcId, uint32_t dstId) const {
     return srcNode->isAdjacent(dstId);
 }
 
-void ProductAutomaton::addStateMapping(uint32_t productState, uint32_t tsState, uint32_t automataState) {
+void ProductAutomaton::addStateMapping(uint16_t productState, uint16_t tsState, uint16_t automataState) {
     // Ensure stateMapping is large enough
     if (productState >= stateMapping.size()) {
         stateMapping.resize(productState + 1);
@@ -96,7 +96,7 @@ void ProductAutomaton::addStateMapping(uint32_t productState, uint32_t tsState, 
     stateMapping[productState] = std::make_pair(tsState, automataState);
 }
 
-std::pair<uint32_t, uint32_t> ProductAutomaton::getStateMapping(uint32_t productState) const {
+std::pair<uint16_t, uint16_t> ProductAutomaton::getStateMapping(uint16_t productState) const {
     if (productState < stateMapping.size()) {
         return stateMapping[productState];
     }

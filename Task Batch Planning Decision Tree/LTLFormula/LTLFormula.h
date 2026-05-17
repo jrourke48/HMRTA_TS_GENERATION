@@ -36,6 +36,7 @@ public:
     spot::formula getSpotFormula() const;
     BatchAtomicProposition getAP(uint16_t id) const;
     void addBatchAtomicProposition(const BatchAtomicProposition& ap);
+    int8_t getBatchVal(uint16_t apId) const;
 
 
 
