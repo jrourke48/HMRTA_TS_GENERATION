@@ -249,9 +249,6 @@ public:
     const std::vector<uint16_t>& getAcceptingStates() const {
         return acceptingStates;
     };
-    uint16_t getInitialState() const {
-        return initialState;
-    };
 
     // Method to get the Spot formula object
     spot::formula get_ltl_formula() const {

@@ -17,6 +17,7 @@ private:
     std::string name;
     Point startPosition;
     Point currentPosition;
+    uint8_t velo = 1; // Default velocity in gridpoints/second (can be modified as needed)
     std::vector<bool> capabilities;  // Index corresponds to RobotCapability enum value
     
 public:
@@ -31,11 +32,13 @@ public:
     const std::string& getName() const { return name; }
     const Point& getStartPosition() const { return startPosition; }
     const Point& getCurrentPosition() const { return currentPosition; }
+    uint8_t getVelocity() const { return velo; }
     const std::vector<bool>& getCapabilities() const { return capabilities; }
     
     // Setters
     void setName(const std::string& robotName) { name = robotName; }
     void setCurrentPosition(const Point& position) { currentPosition = position; }
+    void setVelocity(uint8_t velocity) { velo = velocity; }
     void initializeCapabilities(size_t numCapabilities);
     
     // Capability management
@@ -44,6 +47,9 @@ public:
     void enableCapability(RobotCapability cap);
     void disableCapability(RobotCapability cap);
     void clearCapabilities();
+
+    //get updated time for robot
+    uint16_t getUpdatedTime(uint16_t currentTime, const Point& targetPosition) const;
 };
 
 #endif // ROBOT_H

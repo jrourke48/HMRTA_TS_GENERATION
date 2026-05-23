@@ -137,6 +137,29 @@ std::vector<Robot*> MultiRobotSystem::getRobotsWithAnyCapability(const std::vect
 }
 
 /**
+ * updateAllRobotTimes - Update the times for all robots to reach a target position
+ */
+std::vector<uint16_t> MultiRobotSystem::updateAllRobotTimes(const std::vector<uint16_t>& currentTimes, const Point& targetPosition) {
+    std::vector<uint16_t> updatedTimes;
+    for (size_t i = 0; i < robots.size(); ++i) {
+        if (i < currentTimes.size()) {
+            updatedTimes.push_back(robots[i]->getUpdatedTime(currentTimes[i], targetPosition));
+        } else {
+            updatedTimes.push_back(0); // Default time if not enough currentTimes provided
+        }
+    }
+    return updatedTimes;
+}
+
+/**
+ * getEmptyV - Get a vector of false values corresponding to the number of robots
+ */
+std::vector<bool> MultiRobotSystem::getEmptyV() const {
+    std::vector<bool> emptyV(robots.size(), false);
+    return emptyV;
+}
+
+/**
  * to_string - Return a formatted table of robots and their capabilities
  */
 std::string MultiRobotSystem::to_string() const {

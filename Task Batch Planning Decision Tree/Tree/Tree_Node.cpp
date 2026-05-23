@@ -1,4 +1,5 @@
 #include "Tree_Node.h"
+#include <algorithm>
 
 /**
  * Tree_Node - Constructor
@@ -13,12 +14,12 @@ Tree_Node::Tree_Node(uint32_t id, Tree_Node* parent, Node* automatonState, Node*
 
 /**
  * Tree_Node - Constructor (simplified)
- * Initializes a tree node with only a parent, automaton, and transition system states
+ * Initializes a tree node with only a parent, automaton, transition system states, and batch
  * Other fields are initialized with default values
  */
-Tree_Node::Tree_Node(uint32_t id, Tree_Node* parent, Node* automatonState, Node* tsState)
+Tree_Node::Tree_Node(uint32_t id, Tree_Node* parent, Node* automatonState, Node* tsState, int8_t batch)
     : id(id), ParentNode(parent), automaton_state(automatonState), ts_state(tsState),
-      robo_task_allocation(), times(), batch(0), prog(TASK_PROGRESS::PRE) {
+      robo_task_allocation(), times(), batch(batch), prog(TASK_PROGRESS::PRE) {
 }
 
 /**
@@ -149,6 +150,75 @@ void Tree_Node::setBatch(int8_t newBatch) {
 /**
  * setProgress - Set the progress type
  */
-void Tree_Node::setProgress(TASK_PROGRESS newProg) {
-    prog = newProg;
+void Tree_Node::setProgress(TASK_PROGRESS curProg) {
+    if (curProg == TASK_PROGRESS::PRE) {
+        prog = TASK_PROGRESS::TRA;
+    }
+    else if (curProg == TASK_PROGRESS::TRA) {
+        prog = TASK_PROGRESS::SUF;
+    }
+    else {
+        prog = TASK_PROGRESS::OTH;
+    }
+}
+
+/**
+ * getSortedTimes - Returns times sorted by value with robot indices preserved
+ * Returns vector of (robotIndex, time) pairs sorted by time in ascending order
+ * Does NOT modify the original times vector
+ */
+std::vector<std::pair<uint16_t, uint16_t>> Tree_Node::getSortedTimes() const {
+    std::vector<std::pair<uint16_t, uint16_t>> result;
+    
+    if (times.empty()) {
+        return result;
+    }
+    
+    // Create vector of indices [0, 1, 2, ..., n-1]
+    std::vector<uint16_t> indices(times.size());
+    for (size_t i = 0; i < times.size(); ++i) {
+        indices[i] = static_cast<uint16_t>(i);
+    }
+    
+    // Sort indices based on their corresponding times
+    if (times.size() > 1) {
+        quickSortIndices(indices, 0, static_cast<int>(indices.size()) - 1);
+    }
+    
+    // Build result as (robotIndex, time) pairs in sorted order
+    for (uint16_t idx : indices) {
+        result.push_back({idx, times[idx]});
+    }
+    
+    return result;
+}
+
+/**
+ * quickSortIndices - Helper method for quicksort algorithm
+ * Sorts indices array based on their corresponding times values
+ * Preserves mapping between sorted times and robot indices
+ */
+void Tree_Node::quickSortIndices(std::vector<uint16_t>& indices, int low, int high) const {
+    if (low < high) {
+        // Partition based on times at these indices
+        uint16_t pivotIdx = indices[high];
+        uint16_t pivotTime = times[pivotIdx];
+        int i = low - 1;
+        
+        // Partition: move indices with smaller times to the left
+        for (int j = low; j < high; ++j) {
+            if (times[indices[j]] < pivotTime) {
+                ++i;
+                std::swap(indices[i], indices[j]);
+            }
+        }
+        
+        // Place pivot index in correct position
+        std::swap(indices[i + 1], indices[high]);
+        int partitionIndex = i + 1;
+        
+        // Recursively sort left and right partitions
+        quickSortIndices(indices, low, partitionIndex - 1);
+        quickSortIndices(indices, partitionIndex + 1, high);
+    }
 }

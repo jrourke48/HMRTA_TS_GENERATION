@@ -15,7 +15,7 @@ class Tree_Node {
         };
     
     private:
-        uint32_t id; // Unique identifier for the node
+        uint32_t id; // Unique identifier for the node (encodes NBA, TS, and robot allocation info)
         Tree_Node* ParentNode; // Pointer to the parent node
         Node* automaton_state; // Associated NBA state
         Node* ts_state; // Associated transition system state
@@ -30,7 +30,7 @@ class Tree_Node {
         Tree_Node(uint32_t id, Tree_Node* parent, Node* automatonState, Node* tsState, 
                   std::vector<bool> taskAllocation, std::vector<uint16_t> times, int8_t batch, TASK_PROGRESS prog);
         
-        Tree_Node(uint32_t id, Tree_Node* parent, Node* automatonState, Node* tsState);
+        Tree_Node(uint32_t id, Tree_Node* parent, Node* automatonState, Node* tsState, int8_t batch);
         // Destructor
         ~Tree_Node();
         
@@ -55,7 +55,16 @@ class Tree_Node {
         void setRoboTaskAllocation(const std::vector<bool>& allocation);
         void setTimes(const std::vector<uint16_t>& newTimes);
         void setBatch(int8_t newBatch);
-        void setProgress(TASK_PROGRESS newProg);
+        void setProgress(TASK_PROGRESS curProg);
+        
+        // Sorting methods
+        // Returns vector of (robotIndex, time) pairs sorted by time in ascending order
+        // Preserves original times vector; maps each sorted time to its robot index
+        std::vector<std::pair<uint16_t, uint16_t>> getSortedTimes() const;
+
+private:
+        // Helper method for quicksort - sorts indices based on their corresponding times
+        void quickSortIndices(std::vector<uint16_t>& indices, int low, int high) const;
 };
 
 #endif // TREE_NODE_H

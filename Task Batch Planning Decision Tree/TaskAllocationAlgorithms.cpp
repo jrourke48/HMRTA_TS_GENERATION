@@ -9,7 +9,7 @@
  * Initializes the algorithm with references to NBA, Environment, and MultiRobotSystem
  */
 TaskAllocationAlgorithms::TaskAllocationAlgorithms(BuchiAutomaton* nbaPtr, Environment* envPtr, MultiRobotSystem* robotSysPtr)
-    : nba(nbaPtr), environment(envPtr), multiRobotSystem(robotSysPtr) {
+    : nba(nbaPtr), environment(envPtr), planningTree(nullptr), traversedTree(nullptr), multiRobotSystem(robotSysPtr) {
 }
 
 /**
@@ -66,6 +66,34 @@ MultiRobotSystem* TaskAllocationAlgorithms::getMultiRobotSystem() const {
     return multiRobotSystem;
 }
 
+/**
+ * setPlanningTree - Set the planning tree reference
+ */
+void TaskAllocationAlgorithms::setPlanningTree(PlanningDecisionTree* tree) {
+    planningTree = tree;
+}
+
+/**
+ * getPlanningTree - Get the planning tree reference
+ */
+PlanningDecisionTree* TaskAllocationAlgorithms::getPlanningTree() const {
+    return planningTree;
+}
+
+/**
+ * setTraversedTree - Set the traversed tree reference
+ */
+void TaskAllocationAlgorithms::setTraversedTree(PlanningDecisionTree* tree) {
+    traversedTree = tree;
+}
+
+/**
+ * getTraversedTree - Get the traversed tree reference
+ */
+PlanningDecisionTree* TaskAllocationAlgorithms::getTraversedTree() const {
+    return traversedTree;
+}
+
 Tree_Node* TaskAllocationAlgorithms::intensiveInterTaskRelationshipTreeSearch(
     BuchiAutomaton* nbaPtr,
     Environment* envPtr,
@@ -75,9 +103,7 @@ Tree_Node* TaskAllocationAlgorithms::intensiveInterTaskRelationshipTreeSearch(
     Node* initialAutomatonState = nbaPtr->getNode(0);
     // Get environment initial state ID
     uint16_t initialEnvStateId = envPtr->getInitialState();
-    
-    // Create a placeholder node for environment (use stack allocation instead of heap)
-    std::cout << "[DEBUG] Creating initial environment node with ID: " << initialEnvStateId << std::endl;
+
     Node initialEnvNode(initialEnvStateId);
     Node* initialEnvNodePtr = &initialEnvNode;
     
@@ -101,97 +127,153 @@ Tree_Node* TaskAllocationAlgorithms::intensiveInterTaskRelationshipTreeSearch(
         0,                              // batch
         Tree_Node::TASK_PROGRESS::PRE   // progress
     );
-    // Add initial node and automaton state to visited collections
+    setPlanningTree(tree);
+    setTraversedTree(new PlanningDecisionTree());
+    
+    // Initialize untraversed queue with root node
+    addUntraversedPlanningNode(tree->getRoot());
+    
+    // ID counter for new nodes
+    uint32_t nodeIdCounter = 1;
+    //add root to the visited nodes and visited automaton states
     addVisitedNode(tree->getRoot());
     addVisitedAutomatonState(initialAutomatonState->getId());
     
-    // BFS expansion - limit depth to prevent infinite loops
-    std::queue<Tree_Node*> nodeQueue;
-    nodeQueue.push(tree->getRoot());
-    // Initialize planning tree with initial state
-    uint32_t nodeIdCounter = 1;
-    int maxDepth = 3;  // Limited depth for testing
-    int currentDepth = 0;
-    
-    while (!nodeQueue.empty() && currentDepth < maxDepth) {
+    // Process nodes from untraversed queue until empty
+    Tree_Node* currentNode = nullptr;
+    while ((currentNode = getNextUntraversedNode()) != nullptr) {
+        
+        // Create subtree for current node
         PlanningDecisionTree* subtree = new PlanningDecisionTree();
-        uint32_t buchisize = nbaPtr->getNumStates();
-
-        for (uint32_t i = 0; i < buchisize; ++i) {
+        uint16_t buchisize = nbaPtr->getNumStates();
+        
+        // Iterate through all automaton states
+        for (uint16_t i = 0; i < buchisize; ++i) {
             Node* nbaState = nbaPtr->getNode(i);
-            uint32_t nbaId = nbaState->getId();
+            uint16_t nbaId = nbaState->getId();
+            
             if (!isAutomatonStateVisited(nbaId)) {
-                // Only process if this state has NOT been visited in this task stage
-                // Get edge labels to get to this state
-                Tree_Node* di = getLastVisitedNode();
-                std::vector<std::string>> edges = nbaPtr->getEdgeLabels(nbaId, di->getAutomatonState()->getId());
+                // Only process if this automaton state has NOT been visited in this task stage
+                // Get edge labels from current automaton state to this state
+                std::vector<std::string> edges = nbaPtr->getEdgeLabels(nbaId, currentNode->getAutomatonState()->getId());
                 std::vector<uint16_t> apIds = collectUniqueAPsFromEdges(edges);
+                
                 for (uint16_t apId : apIds) {
                     int8_t batchVal = nbaPtr->getLTLFormula()->getBatchVal(apId);
-                    //create the new tree node with the curret automaton state and task state
+                    Node* TSState = envPtr->getTSStateForAP(apId);
+                    
+                    // Create new tree node with automaton state and task state
                     nodeIdCounter++;
-                    Tree_Node* disub = new Tree_Node(nodeIdCounter, di, nbaState, envPtr->getTSStateForAP(apId));
-                    if (need to do){
-                        UnrelatedTaskSearch(nbaId, 0, spot::formula());
+                    Tree_Node* newNode = new Tree_Node(nodeIdCounter, currentNode, nbaState, 
+                                                       TSState, batchVal);
+                    
+                    // Route based on batch value
+                    if (!isBatchValueInTree(batchVal) || batchVal == 0) {
+                        unrelatedTaskSearch(newNode, TSState, currentNode);
                     }
+                    else if (batchVal > 0) {
+                        // TODO: compatible task search needs to consider sub tasks and main tasks
+                        compatibleTaskSearch(newNode, TSState, currentNode);
+                    }
+                    else {
+                        // TODO: exclusive task search needs to consider sub tasks and main tasks
+                        exclusiveTaskSearch(newNode, TSState, currentNode);
+                    }
+                    
+                    // Track visited automaton states based on progress
+                    if (currentNode->prog == newNode->prog) {
+                        addVisitedAutomatonState(nbaState->getId());
+                    }
+                    else {
+                        clearVisitedAutomatonStates();
+                    }
+                    
+                    // Add to subtree
+                    subtree->insertNode(newNode);
                 }
-                if di.prog == disub.prog{
-                    addVisitedAutomatonState(nbaState->getId());
-                }
-                else {
-                    clearVisitedAutomatonStates();
-                }
-                
-                addVisitedNode(noddeees;);
             }
         }
-        for (Tree_Node* node : getVisitedNodes()) {
-            //TO DOprune sub trees
-            std::cout << "[DEBUG] Visited Node ID: " << node->getId() 
-                      << ", Automaton State ID: " << node->getAutomatonState()->getId() 
-                      << ", TS State ID: " << node->getTSState()->getId() << std::endl;
+        
+        // Prune subtree (TODO: implement pruning logic)
+        // ...
+        
+        // After pruning, add all remaining nodes in subtree to untraversed queue (except currentNode)
+        std::vector<Tree_Node*> remainingNodes = subtree->getAllNodes();  // Assumes this method exists
+        for (Tree_Node* node : remainingNodes) {
+            if (node != currentNode) {
+                addUntraversedPlanningNode(node);
+            }
         }
-        //TO DO add subtree to main tree and di to Traversed Tree
-        currentDepth++;
-
+        
+        // Attach subtree to planning tree
+        if (currentNode->getParent()) {
+            planningTree->insertSubtree(currentNode->getParent(), subtree);
+        }
+        else {
+            // If currentNode is root, insert subtree differently
+            planningTree->insertSubtree(currentNode, subtree);
+        }
+        
+        // Add currentNode to traversed tree
+        traversedTree->addNode(currentNode);
     }
+    
+    return tree->getRoot();
 }
 /**
  * Algorithm 2: Unrelated-Task Search (US)
  * Searches for unrelated tasks that can be executed independently
+ * Mutates newNode with search results
  */
-Tree_Node* TaskAllocationAlgorithms::unrelatedTaskSearch(
-    uint32_t /*q*/,
-    uint32_t /*ds*/,
-    spot::formula /*ltlFormula*/) {
+void TaskAllocationAlgorithms::unrelatedTaskSearch(
+    Tree_Node* newNode,
+    Node* TSState,
+    Tree_Node* currentNode) {
     
-    // Initialize cost calculation
-    // ρ_pos(ds) = cost to reach ds
-    double rho_pos = 1.0; // Placeholder for actual cost calculation
+    if (!newNode || !TSState || !multiRobotSystem || !nba || !environment) {
+        return;
+    }
     
-    // ρ_prox(ds) = proximity cost from current robot position
-    double rho_prox = 0.5; // Placeholder for actual proximity calculation
+    uint16_t tsStateId = TSState->getId();
+    Point taskLocation = environment->TSStatetoGridCenter(tsStateId);
     
-    // Calculate base cost: u_ds = ρ_pos + (1/V_m) * |ρ_pos^-1 - ρ_prox|
-    // where V_m is the maximum velocity (set to 1 for normalization)
-    double V_m = 1.0;
-    // double u_ds = rho_pos + (1.0 / V_m) * std::abs((1.0 / rho_pos) - rho_prox);
-    
-    // Sort by cost T according to sorted order based on (d_T, V, u_ds)
-    // Return best unrelated task tree node
-    // TODO: Create and return appropriate tree node
-    return nullptr;
-}
+    // Update all robot times based on current positions and travel to task location
+    std::vector<uint16_t> curtimes = newNode->getTimes();
+    std::vector<uint16_t> updatedTimes = multiRobotSystem->updateAllRobotTimes(curtimes, taskLocation);
 
+    //get the sort of the times vector and get the corresponding robot indices to find the best robot assignment
+    std::vector<std::pair<uint16_t, uint16_t>> sortedTimes = newNode->getSortedTimes();
+    
+    // Get required capabilities from the BatchAtomicProposition
+    BatchAtomicProposition batchAP = nba->getLTLFormula()->getAP(tsStateId);
+    std::vector<bool> requiredCapabilities = batchAP.getCapabilities();
+    
+    // Find all permutations of robots that satisfy all required capabilities
+    std::vector<Robot*>& allRobots = multiRobotSystem->getRobots();
+    std::vector<bool> V = 
+        findMinRoboTimes(allRobots, requiredCapabilities, sortedTimes);
+    
+    if (V.empty()) {
+        // No valid robot combinations found that satisfy all capabilities
+        return;
+    }
+    
+    // Calculate time for each valid permutation and select minimum
+    uint16_t minTime = std::numeric_limits<uint16_t>::max();
+    std::vector<Robot*> bestPermutation;
+    
+        
 /**
  * Algorithm 3: Compatible-Task Search (CS)
  * Searches for compatible tasks considering both sub-tasks and main tasks
+ * Mutates newNode with search results
  */
-Tree_Node* TaskAllocationAlgorithms::compatibleTaskSearch(
-    uint32_t q,
-    uint32_t /*ds*/,
-    const std::vector<uint16_t>& subTasks,
-    const std::vector<uint16_t>& /*tasks*/) {
+void TaskAllocationAlgorithms::compatibleTaskSearch(
+    Tree_Node* newNode,
+    Node* TSState,
+    Tree_Node* currentNode) {
+    
+    if (!newNode) return;
     
     // Initialize cost: t_cs = t_us^-1 + (1/V_m) * |ρ_ds^-1 - ρ_prox|
     double t_us = 1.0; // From previous US result
@@ -203,71 +285,56 @@ Tree_Node* TaskAllocationAlgorithms::compatibleTaskSearch(
     
     // Determine cost t_cs based on automaton state
     // If automaton state V(n) == 1: highest priority
-    bool isAcceptingState = nba && nba->isAccepting(q);
-    
-    if (isAcceptingState) {
-        // Higher priority for accepting states
-        t_cs = std::max(t_cs, 0.9);
-    } else {
-        // Lower priority for non-accepting states
-        t_cs = std::min(t_cs, 0.5);
+    if (newNode->getAutomatonState() && nba) {
+        bool isAcceptingState = nba->isAccepting(newNode->getAutomatonState()->getId());
+        
+        if (isAcceptingState) {
+            // Higher priority for accepting states
+            t_cs = std::max(t_cs, 0.9);
+        } else {
+            // Lower priority for non-accepting states
+            t_cs = std::min(t_cs, 0.5);
+        }
     }
     
-    // Return best compatible task tree node
-    // TODO: Create and return appropriate tree node
-    return nullptr;
+    // TODO: Mutate newNode with appropriate cost calculations and task assignment
 }
 
 /**
  * Algorithm 4: Exclusive-task Search (ES)
  * Searches for exclusive tasks that have conflicting batches
- * Input: d_s (robot state), T^sub_B (sub-tasks), T_B (tasks)
+ * Mutates newNode with search results
  */
-Tree_Node* TaskAllocationAlgorithms::exclusiveTaskSearch(
-    uint32_t ds,
-    const std::vector<uint16_t>& subTasks,
-    const std::vector<uint16_t>& tasks) {
+void TaskAllocationAlgorithms::exclusiveTaskSearch(
+    Tree_Node* newNode,
+    Node* TSState,
+    Tree_Node* currentNode) {
     
-    if (!nba || !multiRobotSystem) {
-        return 0;
+    if (!newNode || !nba || !multiRobotSystem) {
+        return;
     }
     
-    // Step 1: Check if there exist exclusive robots in T_B
-    // Find tasks where d_s.bat = -d_s.bat (conflicting batches)
-    std::vector<uint16_t> exclusiveRobots;
-    
-    for (uint16_t task : tasks) {
-        // Check for batch conflicts with sub-tasks
-        for (uint16_t subTask : subTasks) {
-            // If batches are conflicting (opposite signs or mutually exclusive)
-            // Add to exclusive robots set
-            if (task != subTask) {
-                exclusiveRobots.push_back(task);
-                break;
-            }
-        }
-    }
+    // Step 1: Check if there exist exclusive robots
+    // Find robots with conflicting batch values
+    std::vector<Robot*> exclusiveRobots;
     
     // Step 2: If exclusive robots exist and automaton is in accepting state
     std::vector<Robot*> exclusiveSet;  // A^-
     
-    // Get all robots and filter for exclusives
-    if (!exclusiveRobots.empty() && nba) {
-        // Check current automaton states - for all nodes, check if V(n) == 1
-        bool hasAcceptingState = false;
-        for (uint32_t i = 0; i < nba->getNumStates(); ++i) {
-            if (nba->isAccepting(i)) {
-                hasAcceptingState = true;
-                break;
-            }
+    // Check current automaton states - for all nodes, check if V(n) == 1
+    bool hasAcceptingState = false;
+    for (uint16_t i = 0; i < nba->getNumStates(); ++i) {
+        if (nba->isAccepting(i)) {
+            hasAcceptingState = true;
+            break;
         }
-        
-        if (hasAcceptingState) {
-            // Add exclusive robots to A^- set
-            for (auto robot : multiRobotSystem->getRobots()) {
-                if (robot) {
-                    exclusiveSet.push_back(robot);
-                }
+    }
+    
+    if (hasAcceptingState) {
+        // Add exclusive robots to A^- set
+        for (auto robot : multiRobotSystem->getRobots()) {
+            if (robot) {
+                exclusiveSet.push_back(robot);
             }
         }
     }
@@ -286,31 +353,7 @@ Tree_Node* TaskAllocationAlgorithms::exclusiveTaskSearch(
     double t_cs = 1.0;  // From previous CS result
     // double t_es = (1.0 / t_cs) + (1.0 / V_m) * std::abs((1.0 / rho_pos) - rho_prox);
     
-    // Step 5: Set d^sub according to sorted d, V based on d_s, V and z_cs
-    uint16_t best_d_sub = 0;
-    if (!subTasks.empty()) {
-        best_d_sub = subTasks[0];
-    }
-    
-    // Step 6: If d^sub.V(n) == 1, set t^i and p^i_cs
-    bool isAcceptingTask = false;
-    if (nba && best_d_sub < nba->getNumStates()) {
-        isAcceptingTask = nba->isAccepting(best_d_sub);
-    }
-    
-    if (isAcceptingTask) {
-        // Set maximum t_i
-        // double t_i = 1.0;
-        // Set proximity p^i_cs
-        // double p_i_cs = 0.8;
-    }
-    
-    // Step 7: Set d^sub_a based on t_i (task assignment)
-    // This would involve assigning the task to an available robot
-    
-    // Step 8: Return exclusive task tree node
-    // TODO: Create and return appropriate tree node
-    return nullptr;
+    // TODO: Mutate newNode with appropriate cost calculations and task assignment
 }
 
 
@@ -348,21 +391,21 @@ void TaskAllocationAlgorithms::clearVisitedNodes() {
 /**
  * addVisitedAutomatonState - Add an automaton state to the visited states collection
  */
-void TaskAllocationAlgorithms::addVisitedAutomatonState(uint32_t state) {
+void TaskAllocationAlgorithms::addVisitedAutomatonState(uint16_t state) {
     visitedAutomatonStates.push_back(state);
 }
 
 /**
  * isAutomatonStateVisited - Check if an automaton state has been visited
  */
-bool TaskAllocationAlgorithms::isAutomatonStateVisited(uint32_t state) const {
+bool TaskAllocationAlgorithms::isAutomatonStateVisited(uint16_t state) const {
     return std::find(visitedAutomatonStates.begin(), visitedAutomatonStates.end(), state) != visitedAutomatonStates.end();
 }
 
 /**
  * getVisitedAutomatonStates - Get the collection of visited automaton states
  */
-std::vector<uint32_t>& TaskAllocationAlgorithms::getVisitedAutomatonStates() {
+std::vector<uint16_t>& TaskAllocationAlgorithms::getVisitedAutomatonStates() {
     return visitedAutomatonStates;
 }
 
@@ -407,6 +450,36 @@ std::vector<uint8_t>& TaskAllocationAlgorithms::getBatchValues() {
  */
 void TaskAllocationAlgorithms::clearBatchValues() {
     treebatchvals.clear();
+}
+
+/**
+ * addUntraversedPlanningNode - Add a node to the untraversed queue
+ */
+void TaskAllocationAlgorithms::addUntraversedPlanningNode(Tree_Node* node) {
+    if (node) {
+        untraversedPlanningQueue.push(node);
+    }
+}
+
+/**
+ * getNextUntraversedNode - Get the next untraversed node from the queue
+ */
+Tree_Node* TaskAllocationAlgorithms::getNextUntraversedNode() {
+    if (!untraversedPlanningQueue.empty()) {
+        Tree_Node* node = untraversedPlanningQueue.front();
+        untraversedPlanningQueue.pop();
+        return node;
+    }
+    return nullptr;
+}
+
+/**
+ * clearUntraversedQueue - Clear all untraversed nodes from the queue
+ */
+void TaskAllocationAlgorithms::clearUntraversedQueue() {
+    while (!untraversedPlanningQueue.empty()) {
+        untraversedPlanningQueue.pop();
+    }
 }
 
 std::vector<uint16_t> TaskAllocationAlgorithms::parseEdgeLabel(const std::string& label) const {
@@ -476,4 +549,35 @@ std::vector<uint16_t> TaskAllocationAlgorithms::collectUniqueAPsFromEdges(const 
     }
     
     return allApIds;
+}
+
+/**
+ * findMinRoboTimes
+ * Finds all combinations of robots whose combined capabilities satisfy all required capabilities
+ * Uses bitmask iteration to generate all possible combinations (2^n)
+ * Filters to only valid combinations where all required capabilities are satisfied
+ */
+std::vector<bool> TaskAllocationAlgorithms::getTaskAllocation(
+    std::vector<Robot*>& robots,
+    const std::vector<bool>& requiredCapabilities, const std::vector<std::pair<uint16_t, uint16_t>>& sortedTimes) {
+    
+    std::vector<bool> bestVector = MultiRobotSystem::getEmptyV();  // This will store the best combination of robots (as a boolean vector)
+    
+    if (robots.empty() || requiredCapabilities.empty()) {
+        return bestVector;  // No robots or no capabilities means we can't satisfy requirements
+    }
+    // Number of robots and capabilities
+    std::vector<bool> curcapabilities = MultiRobotSystemptr->getRobot(sortedTimes[0].first)->getCapabilities();  
+    // This will store the capabilities of the current combination of robots
+    uint8_t i = 0;
+    while () {
+        uint16_t maxtime = sortedTimes[i].second;  // Get the max time (second element of pair)
+        
+        for (size_t j = 0; j < requiredCapabilities.size(); ++j) {
+            if (requiredCapabilities[i]) {
+                curcapabilities.push_back(static_cast<RobotCapability>(i));
+            }
+            i++;
+        }
+    }
 }

@@ -34,7 +34,14 @@ std::vector<uint32_t> Environment::getSuccessorStates(uint32_t stateId) const {
     if (!transitionSystem) {
         return std::vector<uint32_t>();
     }
-    return transitionSystem->getAdjacent(stateId);
+    
+    // Get adjacent states as uint16_t and convert to uint32_t
+    std::vector<uint16_t> adjacentIds = transitionSystem->getAdjacent(static_cast<uint16_t>(stateId));
+    std::vector<uint32_t> result;
+    for (uint16_t id : adjacentIds) {
+        result.push_back(static_cast<uint32_t>(id));
+    }
+    return result;
 }
 
 /**

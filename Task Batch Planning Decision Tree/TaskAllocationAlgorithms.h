@@ -12,13 +12,19 @@
 #include <spot/tl/formula.hh>
 
 class TaskAllocationAlgorithms {
+    //TODO implement the prog function and the the unrelated task search
+    // implement the preliminary tests of the algorithms and the overall tree search to see if we can get a working
+    // version of the algorithms before optimizing and adding the batch value tracking and batch-based search routing
     private:
         BuchiAutomaton* nba;
         Environment* environment;
+        PlanningDecisionTree* planningTree;
+        PlanningDecisionTree* traversedTree; // To keep track of the tree being traversed during search
         MultiRobotSystem* multiRobotSystem;
         std::vector<Tree_Node*> visitedNodes; // To keep track of visited nodes during search
-        std::vector<uint32_t> visitedAutomatonStates; // To keep track of visited automaton states during search
+        std::vector<uint16_t> visitedAutomatonStates; // To keep track of visited automaton states during search
         std::vector<uint8_t> treebatchvals; // To keep track of batch values in the tree (if needed for cost calculations)
+        std::queue<Tree_Node*> untraversedPlanningQueue; // Queue of nodes in planning tree not yet traversed
     
         
     public:
@@ -38,6 +44,14 @@ class TaskAllocationAlgorithms {
         Environment* getEnvironment() const;
         MultiRobotSystem* getMultiRobotSystem() const;
 
+        // Planning tree methods
+        void setPlanningTree(PlanningDecisionTree* tree);
+        PlanningDecisionTree* getPlanningTree() const;
+        
+        // Traversed tree methods
+        void setTraversedTree(PlanningDecisionTree* tree);
+        PlanningDecisionTree* getTraversedTree() const;
+
         // Visited nodes methods
         void addVisitedNode(Tree_Node* node);
         bool isNodeVisited(Tree_Node* node) const;
@@ -53,16 +67,22 @@ class TaskAllocationAlgorithms {
         void clearVisitedNodes();
 
         // Visited automaton states methods
-        void addVisitedAutomatonState(uint32_t state);
-        bool isAutomatonStateVisited(uint32_t state) const;
-        std::vector<uint32_t>& getVisitedAutomatonStates();
+        
+        void addVisitedAutomatonState(uint16_t state);
+        bool isAutomatonStateVisited(uint16_t state) const;
+        std::vector<uint16_t>& getVisitedAutomatonStates();
         void clearVisitedAutomatonStates();
 
         // Batch values in tree methods
         void addBatchValue(uint8_t batchValue);
         bool isBatchValueInTree(int8_t batchValue);
-        std::vector<int8_t>& getBatchValues();
+        std::vector<uint8_t>& getBatchValues();
         void clearBatchValues();
+
+        // Untraversed planning queue methods
+        void addUntraversedPlanningNode(Tree_Node* node);
+        Tree_Node* getNextUntraversedNode();
+        void clearUntraversedQueue();
 
         // Parse edge labels to extract AP IDs
         // Removes !, &, | symbols and returns vector of AP IDs that are TRUE (not negated)
@@ -82,34 +102,50 @@ class TaskAllocationAlgorithms {
         /**
          * Algorithm 2: Unrelated-Task Search (US)
          * Searches for unrelated tasks that can be executed
-         * Input: q (automaton state), ds (robot state), φ' (LTL formula)
+         * Mutates newNode with search results
          */
-        Tree_Node* unrelatedTaskSearch(
-            uint32_t q,
-            uint32_t ds,
-            spot::formula ltlFormula);
+        void unrelatedTaskSearch(
+            Tree_Node* newNode,
+            Node* TSState,
+            Tree_Node* currentNode);
         
         /**
          * Algorithm 3: Compatible-Task Search (CS)
          * Searches for compatible tasks considering constraints
-         * Input: q (automaton state), ds (robot state), T^sub_B (sub-tasks), T_B (tasks)
+         * Mutates newNode with search results
          */
-        Tree_Node* compatibleTaskSearch(
-            uint32_t q,
-            uint32_t ds,
-            const std::vector<uint16_t>& subTasks,
-            const std::vector<uint16_t>& tasks);
+        void compatibleTaskSearch(
+            Tree_Node* newNode,
+            Node* TSState,
+            Tree_Node* currentNode);
         
         /**
          * Algorithm 4: Exclusive-task Search (ES)
          * Searches for exclusive tasks that have conflicting batches
-         * Input: d_s (robot state), T^sub_B (sub-tasks), T_B (tasks)
+         * Mutates newNode with search results
          */
-        Tree_Node* exclusiveTaskSearch(
-            uint32_t ds,
-            const std::vector<uint16_t>& subTasks,
-            const std::vector<uint16_t>& tasks);
+        void exclusiveTaskSearch(
+            Tree_Node* newNode,
+            Node* TSState,
+            Tree_Node* currentNode);
 
 private:
+        /**
+         * findRobotPermutationsSatisfyingCapabilities
+         * Finds all combinations of robots whose union of capabilities satisfies all required capabilities
+         * Uses bitmask to generate all 2^n combinations of robots
+         */
+        std::vector<std::vector<Robot*>> findRobotPermutationsSatisfyingCapabilities(
+            std::vector<Robot*>& robots,
+            const std::vector<bool>& requiredCapabilities);
+        
+        /**
+         * calculateTotalTimeForPermutation
+         * Calculates the maximum time needed for a robot permutation to complete the task
+         * Returns the max time across all robots in the permutation
+         */
+        uint16_t calculateTotalTimeForPermutation(
+            const std::vector<Robot*>& permutation,
+            const std::vector<uint16_t>& robotTimes);
 };
 #endif // TASK_ALLOCATION_ALGORITHMS_H

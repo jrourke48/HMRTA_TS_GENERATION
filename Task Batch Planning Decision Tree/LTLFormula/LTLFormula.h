@@ -13,7 +13,7 @@
 class LTLFormula {
     private:
     spot::formula formula;
-    std::vector<BatchAtomicProposition> batchAPs; // List of atomic propositions in the formula
+    std::vector<BatchAtomicProposition>* batchAPs; // List of atomic propositions in the formula
 
     // Helper methods
     bool isValid() const;

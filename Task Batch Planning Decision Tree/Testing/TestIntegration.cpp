@@ -38,7 +38,7 @@ int main() {
         LTLFormula ltl1(ltl1_str, batchAPs1);
         std::cout << "✓ LTL Formula created: " << ltl1.getFormula() << std::endl;
         
-        BuchiAutomaton* buchi1 = new BuchiAutomaton(ltl1);
+        BuchiAutomaton* buchi1 = new BuchiAutomaton(&ltl1);
         std::cout << "✓ Buchi automaton created successfully" << std::endl;
         std::cout << "  - States: " << buchi1->getNumStates() << std::endl;
         std::cout << "  - Edges: " << buchi1->getNumEdges() << std::endl;
@@ -47,7 +47,7 @@ int main() {
         
         // Test 2: Create LTL Formula from complex formula
         std::cout << "\n=== Test 2: Complex LTL Formula ===" << std::endl;
-        std::string ltl2_str = "G(\"p0\" -> F \"p1\")";  // Globally: if p0 then eventually p1
+        std::string ltl2_str = "F\"p0\" && F \"p1\"";  // always eventually p0 and eventually p1
         std::cout << "Creating formula: " << ltl2_str << std::endl;
         
         std::vector<BatchAtomicProposition> batchAPs2;
@@ -58,7 +58,7 @@ int main() {
         std::cout << "✓ LTL Formula created: " << ltl2.getFormula() << std::endl;
         std::cout << "  - Batch APs: " << ltl2.getBatchAPs().size() << std::endl;
         
-        BuchiAutomaton* buchi2 = new BuchiAutomaton(ltl2);
+        BuchiAutomaton* buchi2 = new BuchiAutomaton(&ltl2);
         std::cout << "✓ Buchi automaton created successfully" << std::endl;
         std::cout << "  - States: " << buchi2->getNumStates() << std::endl;
         std::cout << "  - Edges: " << buchi2->getNumEdges() << std::endl;
@@ -295,7 +295,7 @@ void testComponentCreation() {
     std::cout << "✓ LTL Formula created" << std::endl;
     
     // Create Büchi automaton from formula
-    BuchiAutomaton* buchi2 = new BuchiAutomaton(ltlFormula);
+    BuchiAutomaton* buchi2 = new BuchiAutomaton(&ltlFormula);
     std::cout << "✓ BuchiAutomaton created" << std::endl;
     
     // Create algorithm
