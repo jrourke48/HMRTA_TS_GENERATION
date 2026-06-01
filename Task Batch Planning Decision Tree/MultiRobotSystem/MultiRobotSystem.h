@@ -35,7 +35,7 @@ public:
     std::vector<Robot*> getRobotsWithAllCapabilities(const std::vector<RobotCapability>& caps) const;
     std::vector<Robot*> getRobotsWithAnyCapability(const std::vector<RobotCapability>& caps) const;
     std::string to_string() const;
-    std::vector<uint16_t> updateAllRobotTimes(const std::vector<uint16_t>& currentTimes, const Point& targetPosition);
+    static std::vector<uint16_t> updateAllRobotTimes(const std::vector<Robot*>& robots, const std::vector<uint16_t>& currentTimes, const Point& targetPosition);
     //getemptyV vector
     std::vector<bool> getEmptyV() const;
     

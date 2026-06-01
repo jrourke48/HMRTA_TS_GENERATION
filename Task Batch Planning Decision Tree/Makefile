@@ -73,14 +73,14 @@ run: $(OUT_BIN)
 	@$(OUT_BIN)
 
 # Run tree building tests
-test-tree: $(TREE_BIN)
-	@echo "Running tree building tests..."
-	@$(TREE_BIN)
-
-# Run task allocation tests
-test-task: $(TASK_ALLOC_BIN)
+test-tree: $(TASK_ALLOC_BIN)
 	@echo "Running task allocation tests..."
 	@$(TASK_ALLOC_BIN)
+
+# Run task allocation tests
+test-task: $(TREE_BIN)
+	@echo "Running tree building tests..."
+	@$(TREE_BIN)
 
 # Shortcut to run only tree tests
 tree-only: test-tree

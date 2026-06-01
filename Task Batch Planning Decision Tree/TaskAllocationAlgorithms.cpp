@@ -144,6 +144,8 @@ PlanningDecisionTree* TaskAllocationAlgorithms::intensiveInterTaskRelationshipTr
         // Create subtree for current node
         PlanningDecisionTree* subtree = new PlanningDecisionTree();
         uint16_t buchisize = nbaPtr->getNumStates();
+        std::cout << "[DEBUG] Processing " << buchisize << " automaton states from current node (state " 
+                  << currentNode->getAutomatonState()->getId() << ")" << std::endl;
         
         // Iterate through all automaton states
         for (uint16_t i = 0; i < buchisize; ++i) {
@@ -151,13 +153,19 @@ PlanningDecisionTree* TaskAllocationAlgorithms::intensiveInterTaskRelationshipTr
             uint16_t nbaId = nbaState->getId();
             
             if (!isAutomatonStateVisited(nbaId)) {
+                std::cout << "  [DEBUG] Automaton state " << nbaId << " not visited, processing..." << std::endl;
                 // Only process if this automaton state has NOT been visited in this task stage
                 // Get edge labels from current automaton state to this state
-                std::vector<std::string> edges = nbaPtr->getEdgeLabels(nbaId, currentNode->getAutomatonState()->getId());
+                std::vector<std::string> edges = nbaPtr->getEdgeLabels(currentNode->getAutomatonState()->getId(), nbaId);
+                std::cout << "    [DEBUG] Found " << edges.size() << " edge(s)" << std::endl;
                 std::vector<uint16_t> apIds = collectUniqueAPsFromEdges(edges);
+                std::cout << "    [DEBUG] Collected " << apIds.size() << " unique AP(s): ";
+                for (auto apId : apIds) std::cout << apId << " ";
+                std::cout << std::endl;
                 
                 for (uint16_t apId : apIds) {
                     int8_t batchVal = nbaPtr->getLTLFormula()->getBatchVal(apId);
+                    std::cout << "      [DEBUG] AP " << apId << " has batch value " << static_cast<int>(batchVal) << std::endl;
                     Node* TSState = envPtr->getTransitionSystem()->getNode(apId);
                     
                     // Create new tree node with automaton state and task state
@@ -167,13 +175,16 @@ PlanningDecisionTree* TaskAllocationAlgorithms::intensiveInterTaskRelationshipTr
                     
                     // Route based on batch value
                     if (!isBatchValueInTree(batchVal) || batchVal == 0) {
+                        std::cout << "        [DEBUG] Routing to unrelatedTaskSearch" << std::endl;
                         unrelatedTaskSearch(newNode, TSState, currentNode);
                     }
                     else if (batchVal > 0) {
+                        std::cout << "        [DEBUG] Routing to compatibleTaskSearch" << std::endl;
                         // TODO: compatible task search needs to consider sub tasks and main tasks
                         compatibleTaskSearch(newNode, TSState, currentNode);
                     }
                     else {
+                        std::cout << "        [DEBUG] Routing to exclusiveTaskSearch" << std::endl;
                         // TODO: exclusive task search needs to consider sub tasks and main tasks
                         exclusiveTaskSearch(newNode, TSState, currentNode);
                     }
@@ -229,52 +240,28 @@ void TaskAllocationAlgorithms::unrelatedTaskSearch(
     Tree_Node* currentNode) {
     
     if (!newNode || !TSState || !multiRobotSystem || !nba || !environment) {
-        std::cerr << "DEBUG: unrelatedTaskSearch - Invalid input parameters" << std::endl;
         return;
     }
     
-    std::cout << "\n[DEBUG unrelatedTaskSearch] Starting unrelated task search" << std::endl;
-    
+    // current task state information
     uint16_t tsStateId = TSState->getId();
-    std::cout << "  TS State ID: " << tsStateId << std::endl;
-    
+    // Get task location from environment mapping p_an
     Point taskLocation = environment->TSStateIdToGridCenter(tsStateId);
-    std::cout << "  Task Location: (" << taskLocation.x << ", " << taskLocation.y << ")" << std::endl;
+    std::vector<uint16_t> updatedtimes = MultiRobotSystem::updateAllRobotTimes(multiRobotSystem->getRobots(), currentNode->getTimes(), taskLocation);
 
     // Get the sort of the times vector and get the corresponding robot indices to find the best robot assignment
-    std::vector<std::pair<uint16_t, uint16_t>> sortedTimes = newNode->getSortedTimes();
-    std::cout << "  Sorted Times (Robot Index, Time): ";
-    for (const auto& [robotIdx, time] : sortedTimes) {
-        std::cout << "(" << robotIdx << "," << time << ") ";
-    }
-    std::cout << std::endl;
+    std::vector<std::pair<uint16_t, uint16_t>> sortedTimes = Tree_Node::getSortedTimes(updatedtimes);
     
     // Get required capabilities from the BatchAtomicProposition
     BatchAtomicProposition batchAP = nba->getLTLFormula()->getAP(tsStateId);
     std::vector<bool> requiredCapabilities = batchAP.getCapabilities();
-    std::cout << "  Required Capabilities: [";
-    for (size_t i = 0; i < requiredCapabilities.size(); ++i) {
-        std::cout << (requiredCapabilities[i] ? "1" : "0");
-        if (i < requiredCapabilities.size() - 1) std::cout << ", ";
-    }
-    std::cout << "]" << std::endl;
     
     // Find all permutations of robots that satisfy all required capabilities
     const std::vector<Robot*>& allRobots = multiRobotSystem->getRobots();
-    std::cout << "  Available Robots: " << allRobots.size() << std::endl;
-    for (size_t i = 0; i < allRobots.size(); ++i) {
-        const auto& caps = allRobots[i]->getCapabilities();
-        std::cout << "    Robot " << i << " (" << allRobots[i]->getName() << "): [";
-        for (size_t j = 0; j < caps.size(); ++j) {
-            std::cout << (caps[j] ? "1" : "0");
-            if (j < caps.size() - 1) std::cout << ", ";
-        }
-        std::cout << "]" << std::endl;
-    }
     
     auto [taskAllocation, maxTime] = getTaskAllocation(allRobots, requiredCapabilities, sortedTimes);
     
-    std::cout << "  Task Allocation Result: [";
+    std::cout << "Task Allocation Result: [";
     for (size_t i = 0; i < taskAllocation.size(); ++i) {
         std::cout << (taskAllocation[i] ? "1" : "0");
         if (i < taskAllocation.size() - 1) std::cout << ", ";
@@ -291,27 +278,13 @@ void TaskAllocationAlgorithms::unrelatedTaskSearch(
     }
     
     if (!hasAllocation) {
-        // No valid robot combinations found that satisfy all capabilities
-        std::cout << "  ⚠ No valid allocation found - no robots satisfy all required capabilities" << std::endl;
         return;
     }
 
     // Update all robot times based on current positions and travel to task location
     std::vector<uint16_t> curtimes = newNode->getTimes();
-    std::cout << "  Current Times Before Update: [";
-    for (size_t i = 0; i < curtimes.size(); ++i) {
-        std::cout << curtimes[i];
-        if (i < curtimes.size() - 1) std::cout << ", ";
-    }
-    std::cout << "]" << std::endl;
     
-    std::vector<uint16_t> updatedTimes = multiRobotSystem->updateAllRobotTimes(curtimes, taskLocation);
-    std::cout << "  Updated Times After Travel: [";
-    for (size_t i = 0; i < updatedTimes.size(); ++i) {
-        std::cout << updatedTimes[i];
-        if (i < updatedTimes.size() - 1) std::cout << ", ";
-    }
-    std::cout << "]" << std::endl;
+    std::vector<uint16_t> updatedTimes = MultiRobotSystem::updateAllRobotTimes(multiRobotSystem->getRobots(), curtimes, taskLocation);
     
     // Set all allocated robots to the max time of allocated robots, leave others unchanged
     for (size_t i = 0; i < taskAllocation.size() && i < updatedTimes.size(); ++i) {
@@ -320,27 +293,20 @@ void TaskAllocationAlgorithms::unrelatedTaskSearch(
         }
     }
     
-    std::cout << "  Final Times (allocated robots set to max): [";
-    for (size_t i = 0; i < updatedTimes.size(); ++i) {
-        std::cout << updatedTimes[i];
-        if (i < updatedTimes.size() - 1) std::cout << ", ";
-    }
-    std::cout << "]" << std::endl;
-    
     // Update newNode with the task allocation and updated times
     newNode->setRoboTaskAllocation(taskAllocation);
     newNode->setTimes(updatedTimes);
     if (TSState && nba) {
         bool isAcceptingState = nba->isAccepting(newNode->getAutomatonState()->getId());
-        std::cout << "  Automaton State " << newNode->getAutomatonState()->getId() 
+        std::cout << "Automaton State " << newNode->getAutomatonState()->getId() 
                   << " is " << (isAcceptingState ? "ACCEPTING" : "NON-ACCEPTING") << std::endl;
         if (isAcceptingState) {
             newNode->setProgress(currentNode->getProgress());    // If accepting state, increment progress
-            std::cout << "  ✓ Progress updated" << std::endl;
+            std::cout << "Progress updated" << std::endl;
         }
     }
     
-    std::cout << "  ✓ unrelatedTaskSearch completed successfully" << std::endl;
+    std::cout << "unrelatedTaskSearch completed successfully" << std::endl;
  }
 /**
  * Algorithm 3: Compatible-Task Search (CS)
@@ -355,8 +321,8 @@ void TaskAllocationAlgorithms::unrelatedTaskSearch(
  */
 void TaskAllocationAlgorithms::compatibleTaskSearch(
     Tree_Node* newNode,
-    Node* TSState,
-    Tree_Node* currentNode) {
+    [[maybe_unused]] Node* TSState,
+    [[maybe_unused]] Tree_Node* currentNode) {
     
     if (!newNode) return;
     
@@ -541,23 +507,42 @@ void TaskAllocationAlgorithms::clearUntraversedQueue() {
 std::vector<uint16_t> TaskAllocationAlgorithms::parseEdgeLabel(const std::string& label) const {
     std::vector<uint16_t> apIds;
     
+    std::cout << "[parseEdgeLabel] ===== ENTRY =====" << std::endl;
+    std::cout << "[parseEdgeLabel] Input label: \"" << label << "\"" << std::endl;
+    std::cout << "[parseEdgeLabel] Label length: " << label.length() << " characters" << std::endl;
+    
     // Remove acceptance marks {0}
     std::string cleaned = label;
     size_t pos = cleaned.find("{0}");
     if (pos != std::string::npos) {
+        std::cout << "[parseEdgeLabel] Found acceptance mark {0} at position " << pos << ", removing..." << std::endl;
         cleaned.erase(pos, 3);
+        std::cout << "[parseEdgeLabel] After removing {0}: \"" << cleaned << "\"" << std::endl;
+    } else {
+        std::cout << "[parseEdgeLabel] No acceptance marks {0} found" << std::endl;
     }
     
     // Replace | with & to have single delimiter
+    int pipeCount = 0;
     for (size_t i = 0; i < cleaned.length(); ++i) {
         if (cleaned[i] == '|') {
+            pipeCount++;
             cleaned[i] = '&';
         }
+    }
+    if (pipeCount > 0) {
+        std::cout << "[parseEdgeLabel] Replaced " << pipeCount << " pipe(s) (|) with ampersand(&)" << std::endl;
+        std::cout << "[parseEdgeLabel] After replacement: \"" << cleaned << "\"" << std::endl;
+    } else {
+        std::cout << "[parseEdgeLabel] No pipes (|) to replace" << std::endl;
     }
     
     // Split by &
     size_t start = 0;
     size_t end = cleaned.find('&');
+    int tokenCount = 0;
+    
+    std::cout << "[parseEdgeLabel] Starting tokenization..." << std::endl;
     
     while (start < cleaned.length()) {
         // Extract token
@@ -565,20 +550,36 @@ std::vector<uint16_t> TaskAllocationAlgorithms::parseEdgeLabel(const std::string
                            cleaned.substr(start) : 
                            cleaned.substr(start, end - start);
         
+        std::cout << "[parseEdgeLabel]   Token[" << tokenCount << "] (raw): \"" << token << "\"" << std::endl;
+        
         // Trim whitespace and quotes
         token.erase(0, token.find_first_not_of(" \t\n\r\""));
         token.erase(token.find_last_not_of(" \t\n\r\"") + 1);
         
+        std::cout << "[parseEdgeLabel]   Token[" << tokenCount << "] (trimmed): \"" << token << "\"" << std::endl;
+        
         // Skip if empty or negated (starts with !)
-        if (!token.empty() && token[0] != '!') {
+        if (token.empty()) {
+            std::cout << "[parseEdgeLabel]   Token[" << tokenCount << "] - SKIPPED (empty)" << std::endl;
+        } else if (token[0] == '!') {
+            std::cout << "[parseEdgeLabel]   Token[" << tokenCount << "] - SKIPPED (negated, starts with !)" << std::endl;
+        } else {
             try {
                 // Extract number from "p0", "p1", etc. (skip 'p' prefix)
                 if (token[0] == 'p' && token.length() > 1) {
-                    uint16_t apId = static_cast<uint16_t>(std::stoul(token.substr(1)));
+                    std::cout << "[parseEdgeLabel]   Token[" << tokenCount << "] - Format OK (starts with 'p')" << std::endl;
+                    std::string numStr = token.substr(1);
+                    std::cout << "[parseEdgeLabel]   Extracting number from: \"" << numStr << "\"" << std::endl;
+                    uint16_t apId = static_cast<uint16_t>(std::stoul(numStr));
+                    std::cout << "[parseEdgeLabel]   Parsed AP ID: " << apId << std::endl;
                     apIds.push_back(apId);
+                } else if (token[0] != 'p') {
+                    std::cout << "[parseEdgeLabel]   Token[" << tokenCount << "] - SKIPPED (doesn't start with 'p')" << std::endl;
+                } else {
+                    std::cout << "[parseEdgeLabel]   Token[" << tokenCount << "] - SKIPPED (starts with 'p' but no number)" << std::endl;
                 }
             } catch (const std::exception& e) {
-                std::cerr << "Error parsing AP: " << token << std::endl;
+                std::cerr << "[parseEdgeLabel] ERROR parsing AP from token \"" << token << "\": " << e.what() << std::endl;
             }
         }
         
@@ -586,7 +587,20 @@ std::vector<uint16_t> TaskAllocationAlgorithms::parseEdgeLabel(const std::string
         if (end == std::string::npos) break;
         start = end + 1;
         end = cleaned.find('&', start);
+        tokenCount++;
     }
+    
+    std::cout << "[parseEdgeLabel] Final Result: " << apIds.size() << " AP ID(s) extracted: [";
+    if (apIds.empty()) {
+        std::cout << "(empty)";
+    } else {
+        for (size_t i = 0; i < apIds.size(); ++i) {
+            std::cout << apIds[i];
+            if (i < apIds.size() - 1) std::cout << ", ";
+        }
+    }
+    std::cout << "]" << std::endl;
+    std::cout << "[parseEdgeLabel] ===== EXIT =====" << std::endl;
     
     return apIds;
 }
@@ -594,15 +608,62 @@ std::vector<uint16_t> TaskAllocationAlgorithms::parseEdgeLabel(const std::string
 std::vector<uint16_t> TaskAllocationAlgorithms::collectUniqueAPsFromEdges(const std::vector<std::string>& edges) const {
     std::vector<uint16_t> allApIds;
     
-    for (const auto& edgeLabel : edges) {
+    std::cout << "[collectUniqueAPsFromEdges] ===== ENTRY =====" << std::endl;
+    std::cout << "[collectUniqueAPsFromEdges] Input: " << edges.size() << " edge(s)" << std::endl;
+    
+    // Log all input edges
+    for (size_t i = 0; i < edges.size(); ++i) {
+        std::cout << "[collectUniqueAPsFromEdges]   Edge[" << i << "]: \"" << edges[i] << "\"" << std::endl;
+    }
+    
+    // Process each edge label string
+    for (size_t edgeIdx = 0; edgeIdx < edges.size(); ++edgeIdx) {
+        const auto& edgeLabel = edges[edgeIdx];
+        std::cout << "[collectUniqueAPsFromEdges] Processing Edge[" << edgeIdx << "]: \"" << edgeLabel << "\"" << std::endl;
+        
+        // Parse the edge label to extract AP IDs
+        // Edge labels are typically formatted like: "p0", "p0 | p1", "p0 & p1", etc.
         std::vector<uint16_t> apIds = parseEdgeLabel(edgeLabel);
-        // Insert unique elements
+        std::cout << "[collectUniqueAPsFromEdges]   Parsed " << apIds.size() << " AP(s) from this edge: ";
+        if (apIds.empty()) {
+            std::cout << "(empty)" << std::endl;
+        } else {
+            for (size_t i = 0; i < apIds.size(); ++i) {
+                std::cout << apIds[i];
+                if (i < apIds.size() - 1) std::cout << ", ";
+            }
+            std::cout << std::endl;
+        }
+        
+        // Merge parsed AP IDs into the result, avoiding duplicates
+        // This ensures each unique AP ID appears only once in the final result
         for (uint16_t apId : apIds) {
-            if (std::find(allApIds.begin(), allApIds.end(), apId) == allApIds.end()) {
+            // Check if this AP ID is already in the collection
+            auto it = std::find(allApIds.begin(), allApIds.end(), apId);
+            if (it == allApIds.end()) {
+                // Add only if not already present
+                std::cout << "[collectUniqueAPsFromEdges]     Adding AP " << apId << " to collection (NEW)" << std::endl;
                 allApIds.push_back(apId);
+            } else {
+                // Already exists, skip
+                std::cout << "[collectUniqueAPsFromEdges]     AP " << apId << " already in collection (DUPLICATE, skipped)" << std::endl;
             }
         }
     }
+    
+    std::cout << "[collectUniqueAPsFromEdges] Final Result:" << std::endl;
+    std::cout << "[collectUniqueAPsFromEdges]   Total unique AP(s): " << allApIds.size() << std::endl;
+    std::cout << "[collectUniqueAPsFromEdges]   Collection: [";
+    if (allApIds.empty()) {
+        std::cout << "(empty)";
+    } else {
+        for (size_t i = 0; i < allApIds.size(); ++i) {
+            std::cout << allApIds[i];
+            if (i < allApIds.size() - 1) std::cout << ", ";
+        }
+    }
+    std::cout << "]" << std::endl;
+    std::cout << "[collectUniqueAPsFromEdges] ===== EXIT =====" << std::endl;
     
     return allApIds;
 }
@@ -636,17 +697,21 @@ std::pair<std::vector<bool>, uint16_t> TaskAllocationAlgorithms::getTaskAllocati
             Robot* robot = robots[robotIdx];
             if (robot) {
                 std::vector<bool> robotCapabilities = robot->getCapabilities();
+                bool robotContributesCapability = false;
                 
-                // Union this robot's capabilities with accumulated (only required ones)
+                // Check if this robot contributes any required capabilities
                 for (size_t j = 0; j < requiredCapabilities.size() && j < robotCapabilities.size(); ++j) {
                     if (requiredCapabilities[j] && robotCapabilities[j]) {
                         accumulatedCapabilities[j] = true;
+                        robotContributesCapability = true;
                     }
                 }
                 
-                // Mark this robot as selected and track max time
-                taskAllocation[robotIdx] = true;
-                maxTime = std::max(maxTime, time);  // Update max time of selected robots
+                // Only mark robot as selected if it contributes at least one required capability
+                if (robotContributesCapability) {
+                    taskAllocation[robotIdx] = true;
+                    maxTime = std::max(maxTime, time);  // Update max time of selected robots
+                }
             }
         }
         

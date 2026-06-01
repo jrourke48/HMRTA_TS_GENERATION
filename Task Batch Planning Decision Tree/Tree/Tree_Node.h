@@ -62,6 +62,7 @@ class Tree_Node {
         // Returns vector of (robotIndex, time) pairs sorted by time in ascending order
         // Preserves original times vector; maps each sorted time to its robot index
         std::vector<std::pair<uint16_t, uint16_t>> getSortedTimes() const;
+        static std::vector<std::pair<uint16_t, uint16_t>> getSortedTimes(const std::vector<uint16_t>& times);
 
 private:
         // Helper method for quicksort - sorts indices based on their corresponding times

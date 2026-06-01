@@ -201,6 +201,41 @@ std::vector<std::pair<uint16_t, uint16_t>> Tree_Node::getSortedTimes() const {
 }
 
 /**
+ * getSortedTimes (static) - Static version that takes a times vector
+ * Returns times sorted by value with robot indices preserved
+ * Returns vector of (robotIndex, time) pairs sorted by time in ascending order
+ * Does NOT modify the input times vector
+ */
+std::vector<std::pair<uint16_t, uint16_t>> Tree_Node::getSortedTimes(const std::vector<uint16_t>& timesVec) {
+    std::vector<std::pair<uint16_t, uint16_t>> result;
+    
+    if (timesVec.empty()) {
+        return result;
+    }
+    
+    // Create vector of indices [0, 1, 2, ..., n-1]
+    std::vector<uint16_t> indices(timesVec.size());
+    for (size_t i = 0; i < timesVec.size(); ++i) {
+        indices[i] = static_cast<uint16_t>(i);
+    }
+    
+    // Sort indices based on their corresponding times using lambda comparator
+    if (timesVec.size() > 1) {
+        // Use standard sort with lambda for simplicity in static context
+        std::sort(indices.begin(), indices.end(), [&timesVec](uint16_t a, uint16_t b) {
+            return timesVec[a] < timesVec[b];
+        });
+    }
+    
+    // Build result as (robotIndex, time) pairs in sorted order
+    for (uint16_t idx : indices) {
+        result.push_back({idx, timesVec[idx]});
+    }
+    
+    return result;
+}
+
+/**
  * quickSortIndices - Helper method for quicksort algorithm
  * Sorts indices array based on their corresponding times values
  * Preserves mapping between sorted times and robot indices

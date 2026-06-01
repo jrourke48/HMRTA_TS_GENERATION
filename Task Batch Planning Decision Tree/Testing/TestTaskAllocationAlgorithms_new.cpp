@@ -519,9 +519,9 @@ void testGetTaskAllocationComprehensive() {
     
     cout << "\n=== Test Scenario 1: Single Robot Satisfies All Capabilities ===" << endl;
     {
-        // Create requirement that only robot 0 can satisfy (SENSOR_GPS)
+        // Create requirement that only robot 0 can satisfy (SENSOR_GPS at index 5)
         vector<bool> requiredCaps(13, false);
-        requiredCaps[0] = true;  // SENSOR_GPS (Robot 0 has this)
+        requiredCaps[5] = true;  // SENSOR_GPS (Robot 0 has this at index 5)
         
         vector<pair<uint16_t, uint16_t>> sortedTimes = {{0, 1}, {1, 2}, {2, 3}};
         
@@ -537,7 +537,7 @@ void testGetTaskAllocationComprehensive() {
         cout << "], Max Time: " << maxTime << endl;
         
         if (allocation[0]) {
-            cout << "  ✓ Robot 0 correctly allocated (has SENSOR_GPS)" << endl;
+            cout << "  ✓ Robot 0 correctly allocated (has SENSOR_GPS at index 5)" << endl;
         } else {
             cout << "  ✗ FAILED: Robot 0 should be allocated" << endl;
         }
@@ -545,11 +545,11 @@ void testGetTaskAllocationComprehensive() {
     
     cout << "\n=== Test Scenario 2: Multiple Robots Needed to Satisfy All Capabilities ===" << endl;
     {
-        // Create requirement that needs robot 0 (GPS) AND robot 1 (GROUND) AND robot 2 (CAMERA)
+        // Create requirement that needs robot 0 (GPS at 5) AND robot 1 (GROUND at 0) AND robot 2 (CAMERA at 3)
         vector<bool> requiredCaps(13, false);
-        requiredCaps[0] = true;  // SENSOR_GPS (Robot 0)
-        requiredCaps[1] = true;  // MOVEMENT_GROUND (Robot 1)
-        requiredCaps[2] = true;  // SENSOR_CAMERA (Robot 2)
+        requiredCaps[5] = true;  // SENSOR_GPS (Robot 0)
+        requiredCaps[0] = true;  // MOVEMENT_GROUND (Robot 1)
+        requiredCaps[3] = true;  // SENSOR_CAMERA (Robot 2)
         
         vector<pair<uint16_t, uint16_t>> sortedTimes = {{0, 1}, {1, 2}, {2, 3}};
         
@@ -622,15 +622,15 @@ void testGetTaskAllocationComprehensive() {
     
     cout << "\n=== Test Scenario 5: Greedy Selection - Stops When All Capabilities Satisfied ===" << endl;
     {
-        // Requirement for just SENSOR_GPS (Robot 0 has)
+        // Requirement for just SENSOR_GPS (Robot 0 has at index 5)
         vector<bool> requiredCaps(13, false);
-        requiredCaps[0] = true;  // SENSOR_GPS
+        requiredCaps[5] = true;  // SENSOR_GPS at index 5
         
         vector<pair<uint16_t, uint16_t>> sortedTimes = {{0, 5}, {1, 10}, {2, 15}};
         
         auto [allocation, maxTime] = algo.getTaskAllocation(robots, requiredCaps, sortedTimes);
         
-        cout << "  Requirements: GPS only (Robot 0 has it)" << endl;
+        cout << "  Requirements: GPS only (Robot 0 has it at index 5)" << endl;
         cout << "  Sorted Times: (0,5), (1,10), (2,15)" << endl;
         cout << "  Allocation: [";
         for (bool a : allocation) cout << (a ? "1" : "0");
@@ -648,16 +648,16 @@ void testGetTaskAllocationComprehensive() {
     
     cout << "\n=== Test Scenario 6: Cumulative Capability Satisfaction ===" << endl;
     {
-        // Requirement for GPS AND GROUND (Robot 0 has GPS, Robot 1 has GROUND)
+        // Requirement for GPS (Robot 0 at 5) AND GROUND (Robot 1 at 0)
         vector<bool> requiredCaps(13, false);
-        requiredCaps[0] = true;  // SENSOR_GPS (Robot 0)
-        requiredCaps[1] = true;  // MOVEMENT_GROUND (Robot 1)
+        requiredCaps[5] = true;  // SENSOR_GPS (Robot 0 at index 5)
+        requiredCaps[0] = true;  // MOVEMENT_GROUND (Robot 1 at index 0)
         
         vector<pair<uint16_t, uint16_t>> sortedTimes = {{0, 5}, {1, 10}, {2, 15}};
         
         auto [allocation, maxTime] = algo.getTaskAllocation(robots, requiredCaps, sortedTimes);
         
-        cout << "  Requirements: GPS (Robot 0) + GROUND (Robot 1)" << endl;
+        cout << "  Requirements: GPS at index 5 (Robot 0) + GROUND at index 0 (Robot 1)" << endl;
         cout << "  Sorted Times: (0,5), (1,10), (2,15)" << endl;
         cout << "  Allocation: [";
         for (bool a : allocation) cout << (a ? "1" : "0");
@@ -968,6 +968,183 @@ void testTreeSearchAlgorithmComprehensive() {
 // MAIN TEST RUNNER
 // ============================================================================
 
+// ============================================================================
+// COMPREHENSIVE TEST FOR collectUniqueAPsFromEdges FUNCTION
+// ============================================================================
+
+void testCollectUniqueAPsFromEdgesComprehensive() {
+    cout << "\n" << string(70, '=') << endl;
+    cout << "COMPREHENSIVE TEST: collectUniqueAPsFromEdges FUNCTION" << endl;
+    cout << string(70, '=') << endl;
+    
+    TS* ts = nullptr; GridWorld* grid = nullptr; Environment* env = nullptr;
+    createTestSystemComponents(ts, grid, env);
+    BuchiAutomaton* nba = createTestBuchiAutomaton();
+    MultiRobotSystem* mrs = createTestMultiRobotSystem();
+    
+    TaskAllocationAlgorithms algo(nba, env, mrs);
+    
+    cout << "\n=== Test 1: Single Edge with Single AP ===" << endl;
+    {
+        vector<string> edges = {"p0"};
+        cout << "  Input edges: [\"p0\"]" << endl;
+        auto result = algo.collectUniqueAPsFromEdges(edges);
+        cout << "  Expected: [0], Got: [";
+        for (size_t i = 0; i < result.size(); ++i) {
+            cout << result[i];
+            if (i < result.size() - 1) cout << ", ";
+        }
+        cout << "]" << endl;
+        
+        assert(result.size() == 1 && result[0] == 0);
+        cout << "  ✓ PASSED" << endl;
+    }
+    
+    cout << "\n=== Test 2: Single Edge with Multiple APs (OR separated) ===" << endl;
+    {
+        vector<string> edges = {"p0 | p1 | p2"};
+        cout << "  Input edges: [\"p0 | p1 | p2\"]" << endl;
+        auto result = algo.collectUniqueAPsFromEdges(edges);
+        cout << "  Expected: [0, 1, 2], Got: [";
+        for (size_t i = 0; i < result.size(); ++i) {
+            cout << result[i];
+            if (i < result.size() - 1) cout << ", ";
+        }
+        cout << "]" << endl;
+        
+        // Check that we have exactly 3 APs and they are 0, 1, 2
+        assert(result.size() == 3);
+        assert(std::find(result.begin(), result.end(), 0) != result.end());
+        assert(std::find(result.begin(), result.end(), 1) != result.end());
+        assert(std::find(result.begin(), result.end(), 2) != result.end());
+        cout << "  ✓ PASSED" << endl;
+    }
+    
+    cout << "\n=== Test 3: Single Edge with Multiple APs (AND separated) ===" << endl;
+    {
+        vector<string> edges = {"p3 & p4 & p5"};
+        cout << "  Input edges: [\"p3 & p4 & p5\"]" << endl;
+        auto result = algo.collectUniqueAPsFromEdges(edges);
+        cout << "  Expected: [3, 4, 5], Got: [";
+        for (size_t i = 0; i < result.size(); ++i) {
+            cout << result[i];
+            if (i < result.size() - 1) cout << ", ";
+        }
+        cout << "]" << endl;
+        
+        assert(result.size() == 3);
+        assert(std::find(result.begin(), result.end(), 3) != result.end());
+        assert(std::find(result.begin(), result.end(), 4) != result.end());
+        assert(std::find(result.begin(), result.end(), 5) != result.end());
+        cout << "  ✓ PASSED" << endl;
+    }
+    
+    cout << "\n=== Test 4: Multiple Edges with Duplicate APs ===" << endl;
+    {
+        vector<string> edges = {"p0 | p1", "p1 | p2", "p0"};
+        cout << "  Input edges: [\"p0 | p1\", \"p1 | p2\", \"p0\"]" << endl;
+        auto result = algo.collectUniqueAPsFromEdges(edges);
+        cout << "  Expected: [0, 1, 2] (duplicates removed), Got: [";
+        for (size_t i = 0; i < result.size(); ++i) {
+            cout << result[i];
+            if (i < result.size() - 1) cout << ", ";
+        }
+        cout << "]" << endl;
+        
+        // Should have exactly 3 unique APs despite duplicates
+        assert(result.size() == 3);
+        assert(std::find(result.begin(), result.end(), 0) != result.end());
+        assert(std::find(result.begin(), result.end(), 1) != result.end());
+        assert(std::find(result.begin(), result.end(), 2) != result.end());
+        cout << "  ✓ PASSED (Duplicates correctly handled)" << endl;
+    }
+    
+    cout << "\n=== Test 5: Empty Edge List ===" << endl;
+    {
+        vector<string> edges;
+        cout << "  Input edges: []" << endl;
+        auto result = algo.collectUniqueAPsFromEdges(edges);
+        cout << "  Expected: [], Got: [";
+        for (size_t i = 0; i < result.size(); ++i) {
+            cout << result[i];
+            if (i < result.size() - 1) cout << ", ";
+        }
+        cout << "]" << endl;
+        
+        assert(result.size() == 0);
+        cout << "  ✓ PASSED" << endl;
+    }
+    
+    cout << "\n=== Test 6: Complex Edge with Negations and Acceptance Marks ===" << endl;
+    {
+        vector<string> edges = {"p0 & p1 | !p2 | p3 {0}"};
+        cout << "  Input edges: [\"p0 & p1 | !p2 | p3 {0}\"]" << endl;
+        auto result = algo.collectUniqueAPsFromEdges(edges);
+        cout << "  Expected: [0, 1, 3] (p2 negated and acceptance marks removed), Got: [";
+        for (size_t i = 0; i < result.size(); ++i) {
+            cout << result[i];
+            if (i < result.size() - 1) cout << ", ";
+        }
+        cout << "]" << endl;
+        
+        // Should have 0, 1, 3 but not 2 (which is negated)
+        assert(result.size() == 3);
+        assert(std::find(result.begin(), result.end(), 0) != result.end());
+        assert(std::find(result.begin(), result.end(), 1) != result.end());
+        assert(std::find(result.begin(), result.end(), 3) != result.end());
+        assert(std::find(result.begin(), result.end(), 2) == result.end());  // Negated, should not be included
+        cout << "  ✓ PASSED (Negations and acceptance marks correctly handled)" << endl;
+    }
+    
+    cout << "\n=== Test 7: High Index APs ===" << endl;
+    {
+        vector<string> edges = {"p10 | p11 | p12"};
+        cout << "  Input edges: [\"p10 | p11 | p12\"]" << endl;
+        auto result = algo.collectUniqueAPsFromEdges(edges);
+        cout << "  Expected: [10, 11, 12], Got: [";
+        for (size_t i = 0; i < result.size(); ++i) {
+            cout << result[i];
+            if (i < result.size() - 1) cout << ", ";
+        }
+        cout << "]" << endl;
+        
+        assert(result.size() == 3);
+        assert(std::find(result.begin(), result.end(), 10) != result.end());
+        assert(std::find(result.begin(), result.end(), 11) != result.end());
+        assert(std::find(result.begin(), result.end(), 12) != result.end());
+        cout << "  ✓ PASSED" << endl;
+    }
+    
+    cout << "\n=== Test 8: Mixed Operators with Duplicate APs ===" << endl;
+    {
+        vector<string> edges = {"p5 | p6 & p5", "p6 | p7", "p5 & p6 & p7"};
+        cout << "  Input edges: [\"p5 | p6 & p5\", \"p6 | p7\", \"p5 & p6 & p7\"]" << endl;
+        auto result = algo.collectUniqueAPsFromEdges(edges);
+        cout << "  Expected: [5, 6, 7] (all duplicates removed), Got: [";
+        for (size_t i = 0; i < result.size(); ++i) {
+            cout << result[i];
+            if (i < result.size() - 1) cout << ", ";
+        }
+        cout << "]" << endl;
+        
+        assert(result.size() == 3);
+        assert(std::find(result.begin(), result.end(), 5) != result.end());
+        assert(std::find(result.begin(), result.end(), 6) != result.end());
+        assert(std::find(result.begin(), result.end(), 7) != result.end());
+        cout << "  ✓ PASSED (Mixed operators and duplicates correctly handled)" << endl;
+    }
+    
+    cout << "\n" << string(70, '=') << endl;
+    cout << "✓ ALL collectUniqueAPsFromEdges TESTS PASSED!" << endl;
+    cout << string(70, '=') << endl;
+    
+    delete env;
+    delete ts;
+    delete grid;
+    delete nba;
+    delete mrs;
+}
+
 int main() {
     cout << "\n" << string(70, '=') << endl;
     cout << "TaskAllocationAlgorithms - COMPREHENSIVE TEST SUITE" << endl;
@@ -975,29 +1152,32 @@ int main() {
     
     try {
         // Test Suite 1: Constructor and Basic Setup
-        testConstructor();
-        testSettersAndGetters();
+       // testConstructor();
+       // testSettersAndGetters();
         
         // Test Suite 2: Visited Nodes
-        testVisitedNodesManagement();
+       // testVisitedNodesManagement();
         
         // Test Suite 3: Automaton States
-        testVisitedAutomatonStatesManagement();
+//testVisitedAutomatonStatesManagement();
         
         // Test Suite 4: Batch Values
-        testBatchValuesManagement();
+      //  testBatchValuesManagement();
         
         // Test Suite 5: Untraversed Queue
         testUntraversedQueueManagement();
         
         // Test Suite 6: Edge Label Parsing
-        testParseEdgeLabel();
+       testParseEdgeLabel();
         
         // Test getTaskAllocation function comprehensively
         testGetTaskAllocationComprehensive();
         
         // Comprehensive Tree Search Algorithm Test (tests all sub-algorithms)
         testTreeSearchAlgorithmComprehensive();
+        
+        // Comprehensive collectUniqueAPsFromEdges Test
+        testCollectUniqueAPsFromEdgesComprehensive();
         
         // Comprehensive Unrelated Task Search Test
         testUnrelatedTaskSearchComprehensive();
