@@ -56,6 +56,7 @@ class Tree_Node {
         void setTimes(const std::vector<uint16_t>& newTimes);
         void setBatch(int8_t newBatch);
         void setProgress(TASK_PROGRESS curProg);
+        void setId(uint32_t newId);
         
         // Sorting methods
         // Returns vector of (robotIndex, time) pairs sorted by time in ascending order

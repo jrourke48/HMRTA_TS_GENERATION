@@ -7,6 +7,7 @@
 #include "../Transition_Systems/GeneralTransitionSystem.h"
 #include "MultiRobotSystem/MultiRobotSystem.h"
 #include <vector>
+#include <queue>
 #include <memory>
 #include <string>
 #include <spot/tl/formula.hh>
@@ -128,24 +129,18 @@ class TaskAllocationAlgorithms {
             Tree_Node* newNode,
             Node* TSState,
             Tree_Node* currentNode);
-
-private:
-        /**
-         * findRobotPermutationsSatisfyingCapabilities
-         * Finds all combinations of robots whose union of capabilities satisfies all required capabilities
-         * Uses bitmask to generate all 2^n combinations of robots
-         */
-        std::vector<std::vector<Robot*>> findRobotPermutationsSatisfyingCapabilities(
-            std::vector<Robot*>& robots,
-            const std::vector<bool>& requiredCapabilities);
+        PlanningDecisionTree* pruneSubtree(PlanningDecisionTree* subtree);
         
         /**
-         * calculateTotalTimeForPermutation
-         * Calculates the maximum time needed for a robot permutation to complete the task
-         * Returns the max time across all robots in the permutation
+         * getTaskAllocation
+         * Greedily selects minimum set of robots that satisfy all required capabilities
+         * Returns (task allocation vector, max time of selected robots)
          */
-        uint16_t calculateTotalTimeForPermutation(
-            const std::vector<Robot*>& permutation,
-            const std::vector<uint16_t>& robotTimes);
+        std::pair<std::vector<bool>, uint16_t> getTaskAllocation(
+            const std::vector<Robot*>& robots,
+            const std::vector<bool>& requiredCapabilities,
+            const std::vector<std::pair<uint16_t, uint16_t>>& sortedTimes);
+
+private:
 };
 #endif // TASK_ALLOCATION_ALGORITHMS_H

@@ -163,6 +163,13 @@ void Tree_Node::setProgress(TASK_PROGRESS curProg) {
 }
 
 /**
+ * setId - Set the unique identifier
+ */
+void Tree_Node::setId(uint32_t newId) {
+    id = newId;
+}
+
+/**
  * getSortedTimes - Returns times sorted by value with robot indices preserved
  * Returns vector of (robotIndex, time) pairs sorted by time in ascending order
  * Does NOT modify the original times vector

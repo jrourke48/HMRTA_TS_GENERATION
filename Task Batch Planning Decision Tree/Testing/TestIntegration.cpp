@@ -271,7 +271,6 @@ void testComponentCreation() {
     
     Robot* r1 = new Robot(1, "Rover_1", Point(0, 0));
     r1->initializeCapabilities(13);
-    r1->enableCapability(RobotCapability::MOVEMENT_GROUND);
     r1->enableCapability(RobotCapability::SENSOR_GPS);
     mrs.addRobot(r1);
     
@@ -279,19 +278,23 @@ void testComponentCreation() {
     r2->initializeCapabilities(13);
     r2->enableCapability(RobotCapability::MOVEMENT_GROUND);
     mrs.addRobot(r2);
+    Robot* r3 = new Robot(3, "Rover_3", Point(2, 2));
+    r3->initializeCapabilities(13);
+    r3->enableCapability(RobotCapability::SENSOR_CAMERA);
+    mrs.addRobot(r3);
     
-    std::cout << "✓ MultiRobotSystem created with 2 robots" << std::endl;
+    std::cout << "✓ MultiRobotSystem created with 3 robots" << std::endl;
     std::cout << "✓ All components created successfully" << std::endl;
 
     // Create LTL Formula
-    std::string ltl_str = "G(\"p0\" -> F \"p1\")";
-    std::cout << "Creating LTL formula: " << ltl_str << std::endl;
+    std::string ltl2_str = "F\"p0\" && F \"p1\"";  // always eventually p0 and eventually p1
+    std::cout << "Creating LTL formula: " << ltl2_str << std::endl;
     
     std::vector<BatchAtomicProposition> batchAPs;
-    batchAPs.push_back(BatchAtomicProposition(0, {true, false, false, false, false, false, false, false, false, false, false, false, false}, 0));
-    batchAPs.push_back(BatchAtomicProposition(1, {false, true, false, false, false, false, false, false, false, false, false, false, false}, 1));
+    batchAPs.push_back(BatchAtomicProposition(1, {true, false, false, false, false, false, false, false, false, false, false, false, false}, 0));
+    batchAPs.push_back(BatchAtomicProposition(2, {false, false, false, true, false, true, false, false, false, false, false, false, false}, 1));
     
-    LTLFormula ltlFormula(ltl_str, batchAPs);
+    LTLFormula ltlFormula(ltl2_str, batchAPs);
     std::cout << "✓ LTL Formula created" << std::endl;
     
     // Create Büchi automaton from formula

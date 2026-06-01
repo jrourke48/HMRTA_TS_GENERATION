@@ -90,6 +90,18 @@ void LTLFormula::addBatchAtomicProposition(const BatchAtomicProposition& ap) {
     batchAPs->push_back(ap);
 }
 
+// Get batch atomic propositions vector
+std::vector<BatchAtomicProposition>& LTLFormula::getBatchAtomicPropositions() {
+    if (!batchAPs) batchAPs = new std::vector<BatchAtomicProposition>();
+    return *batchAPs;
+}
+
+// Get atomic propositions (alias for getBatchAtomicPropositions)
+std::vector<BatchAtomicProposition>& LTLFormula::getAtomicPropositions() {
+    if (!batchAPs) batchAPs = new std::vector<BatchAtomicProposition>();
+    return *batchAPs;
+}
+
 // Get the batch value for a specific AP ID
 int8_t LTLFormula::getBatchVal(uint16_t apId) const {
     if (!batchAPs) throw std::runtime_error("BatchAPs vector is null");
