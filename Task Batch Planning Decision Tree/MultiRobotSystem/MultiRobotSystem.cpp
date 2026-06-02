@@ -137,16 +137,36 @@ std::vector<Robot*> MultiRobotSystem::getRobotsWithAnyCapability(const std::vect
 }
 
 /**
- * updateAllRobotTimes - Update the times for all robots to reach a target position
+ * updateRobotTimesToGoal - Update the times for ALL robots to reach a target position (called earlier)
  */
-std::vector<uint16_t> MultiRobotSystem::updateAllRobotTimes(const std::vector<Robot*>& robotsVec, const std::vector<uint16_t>& currentTimes, const Point& targetPosition) {
+std::vector<uint16_t> MultiRobotSystem::updateRobotTimesToGoal(const std::vector<uint16_t>& currentTimes, const Point& targetPosition) {
     std::vector<uint16_t> updatedTimes;
-    for (size_t i = 0; i < robotsVec.size(); ++i) {
+    for (size_t i = 0; i < robots.size(); ++i) {
         if (i < currentTimes.size()) {
-            updatedTimes.push_back(robotsVec[i]->getUpdatedTime(currentTimes[i], targetPosition));
+            updatedTimes.push_back(robots[i]->getUpdatedTime(currentTimes[i], targetPosition));
         } else {
             updatedTimes.push_back(0); // Default time if not enough currentTimes provided
         }
+    }
+    return updatedTimes;
+}
+
+/**
+ * updateAllocatedRobotTimes - Update the times only for allocated robots to reach a target position
+ * Non-allocated robots keep their current times unchanged
+ */
+std::vector<uint16_t> MultiRobotSystem::updateAllocatedRobotTimes(
+    const std::vector<uint16_t>& currentTimes, 
+    const std::vector<bool>& taskAllocation,
+    const Point& targetPosition) {
+    std::vector<uint16_t> updatedTimes = currentTimes;  // Start with current times
+    
+    for (size_t i = 0; i < robots.size() && i < taskAllocation.size(); ++i) {
+        if (taskAllocation[i]) {
+            // Only update allocated robots
+            updatedTimes[i] = robots[i]->getUpdatedTime(currentTimes[i], targetPosition);
+        }
+        // Non-allocated robots keep their current time (no change)
     }
     return updatedTimes;
 }

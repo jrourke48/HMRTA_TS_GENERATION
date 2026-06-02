@@ -100,13 +100,13 @@ PlanningDecisionTree* TaskAllocationAlgorithms::intensiveInterTaskRelationshipTr
     Environment* envPtr,
     MultiRobotSystem* multiRobotSystemPtr) {
     
-    // Get initial automaton state (typically state 0)
-    Node* initialAutomatonState = nbaPtr->getNode(0);
+    // Get initial automaton state from the Büchi automaton
+    Node* initialAutomatonState = nbaPtr->getNode(nbaPtr->getInitialState());
     // Get environment initial state ID
     uint16_t initialEnvStateId = envPtr->getInitialState();
 
-    Node initialEnvNode(initialEnvStateId);
-    Node* initialEnvNodePtr = &initialEnvNode;
+    // Allocate on heap to avoid dangling pointer
+    Node* initialEnvNodePtr = new Node(initialEnvStateId);
     
     // Create initial task allocation and times vectors
     std::vector<bool> initialAllocation;
@@ -121,7 +121,7 @@ PlanningDecisionTree* TaskAllocationAlgorithms::intensiveInterTaskRelationshipTr
     // Initialize planning tree with initial state
     PlanningDecisionTree* tree = new PlanningDecisionTree(                             // rootId
         initialAutomatonState,          // automaton state
-        initialEnvNodePtr,              // ts state node (using pointer to stack-allocated node)
+        initialEnvNodePtr,              // ts state node (heap-allocated)
         initialAllocation,              // task allocation
         initialTimes,                   // times
         0,                              // batch
@@ -247,7 +247,7 @@ void TaskAllocationAlgorithms::unrelatedTaskSearch(
     uint16_t tsStateId = TSState->getId();
     // Get task location from environment mapping p_an
     Point taskLocation = environment->TSStateIdToGridCenter(tsStateId);
-    std::vector<uint16_t> updatedtimes = MultiRobotSystem::updateAllRobotTimes(multiRobotSystem->getRobots(), currentNode->getTimes(), taskLocation);
+    std::vector<uint16_t> updatedtimes = multiRobotSystem->updateRobotTimesToGoal(currentNode->getTimes(), taskLocation);
 
     // Get the sort of the times vector and get the corresponding robot indices to find the best robot assignment
     std::vector<std::pair<uint16_t, uint16_t>> sortedTimes = Tree_Node::getSortedTimes(updatedtimes);
@@ -280,12 +280,7 @@ void TaskAllocationAlgorithms::unrelatedTaskSearch(
     if (!hasAllocation) {
         return;
     }
-
-    // Update all robot times based on current positions and travel to task location
-    std::vector<uint16_t> curtimes = newNode->getTimes();
-    
-    std::vector<uint16_t> updatedTimes = MultiRobotSystem::updateAllRobotTimes(multiRobotSystem->getRobots(), curtimes, taskLocation);
-    
+    std::vector<uint16_t> updatedTimes = currentNode->getTimes();
     // Set all allocated robots to the max time of allocated robots, leave others unchanged
     for (size_t i = 0; i < taskAllocation.size() && i < updatedTimes.size(); ++i) {
         if (taskAllocation[i]) {
@@ -717,7 +712,7 @@ std::pair<std::vector<bool>, uint16_t> TaskAllocationAlgorithms::getTaskAllocati
         
         ++it;
     }
-    
+
     return {taskAllocation, maxTime};
 }
 //helper method to prune subtree

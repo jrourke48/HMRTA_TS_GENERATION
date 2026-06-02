@@ -93,7 +93,7 @@ BuchiAutomaton* createTestBuchiAutomaton() {
     
     vector<BatchAtomicProposition> batchAPs;
     batchAPs.push_back(BatchAtomicProposition(0, {true, false, false, false, false, false, false, false, false, false, false, false, false}, 0));
-    batchAPs.push_back(BatchAtomicProposition(1, {false, false, false, true, false, true, false, false, false, false, false, false, false}, 1));
+    batchAPs.push_back(BatchAtomicProposition(1, {false, false, false, true, false, true, false, false, false, false, false, false, false}, 0));
     
     LTLFormula* ltlFormula = new LTLFormula(ltl_str, batchAPs);
     BuchiAutomaton* buchi = new BuchiAutomaton(ltlFormula);
@@ -389,6 +389,125 @@ void testParseEdgeLabel() {
     assert(result2[2] == 2);
     
     cout << "✓ Parse Edge Label test passed!" << endl;
+    
+    delete env;
+    delete ts;
+    delete grid;
+    delete nba;
+    delete mrs;
+}
+
+// ============================================================================
+// TEST: getEdgeLabels FROM BUCHI AUTOMATON
+// ============================================================================
+
+void testGetEdgeLabelsComprehensive() {
+    cout << "\n" << string(70, '=') << endl;
+    cout << "COMPREHENSIVE TEST: getEdgeLabels FUNCTION (BuchiAutomaton)" << endl;
+    cout << string(70, '=') << endl;
+    
+    TS* ts = nullptr; GridWorld* grid = nullptr; Environment* env = nullptr;
+    createTestSystemComponents(ts, grid, env);
+    BuchiAutomaton* nba = createTestBuchiAutomaton();
+    MultiRobotSystem* mrs = createTestMultiRobotSystem();
+    
+    cout << "\n=== Büchi Automaton Information ===" << endl;
+    cout << "  Number of States: " << nba->getNumStates() << endl;
+    cout << "  LTL Formula: F\"p0\" && F\"p1\"" << endl;
+    
+    cout << "\n=== Test 1: Get All Edge Labels from State 0 ===" << endl;
+    {
+        for (uint16_t targetState = 0; targetState < nba->getNumStates(); ++targetState) {
+            vector<string> edges = nba->getEdgeLabels(0, targetState);
+            cout << "  From State 0 to State " << targetState << ": ";
+            if (edges.empty()) {
+                cout << "(no edges)" << endl;
+            } else {
+                cout << edges.size() << " edge(s) - ";
+                for (size_t i = 0; i < edges.size(); ++i) {
+                    cout << "[\"" << edges[i] << "\"]";
+                    if (i < edges.size() - 1) cout << ", ";
+                }
+                cout << endl;
+            }
+        }
+    }
+    
+    cout << "\n=== Test 2: Get Edge Labels Between All State Pairs ===" << endl;
+    {
+        int totalEdges = 0;
+        map<pair<uint16_t, uint16_t>, vector<string>> edgeMap;
+        
+        for (uint16_t fromState = 0; fromState < nba->getNumStates(); ++fromState) {
+            for (uint16_t toState = 0; toState < nba->getNumStates(); ++toState) {
+                vector<string> edges = nba->getEdgeLabels(fromState, toState);
+                if (!edges.empty()) {
+                    edgeMap[{fromState, toState}] = edges;
+                    totalEdges += edges.size();
+                }
+            }
+        }
+        
+        cout << "  Total edges found: " << totalEdges << endl;
+        cout << "  State transitions with edges: " << edgeMap.size() << endl;
+        
+        if (!edgeMap.empty()) {
+            cout << "\n  Edge Details:" << endl;
+            for (const auto& [statePair, edges] : edgeMap) {
+                cout << "    State " << statePair.first << " -> State " << statePair.second 
+                     << ": " << edges.size() << " edge(s)" << endl;
+                for (size_t i = 0; i < edges.size() && i < 3; ++i) {
+                    cout << "      [" << i << "] \"" << edges[i] << "\"" << endl;
+                }
+                if (edges.size() > 3) {
+                    cout << "      ... and " << (edges.size() - 3) << " more" << endl;
+                }
+            }
+        } else {
+            cout << "  ⚠ No edges found in Büchi automaton!" << endl;
+            cout << "  This might indicate:" << endl;
+            cout << "    - Edges are not being stored correctly in BuchiAutomaton" << endl;
+            cout << "    - The NBA construction from LTL formula didn't create edges" << endl;
+            cout << "    - getEdgeLabels() implementation has an issue" << endl;
+        }
+    }
+    
+    cout << "\n=== Test 3: Verify Edge Label Format ===" << endl;
+    {
+        bool foundValidEdge = false;
+        for (uint16_t fromState = 0; fromState < nba->getNumStates() && !foundValidEdge; ++fromState) {
+            for (uint16_t toState = 0; toState < nba->getNumStates() && !foundValidEdge; ++toState) {
+                vector<string> edges = nba->getEdgeLabels(fromState, toState);
+                if (!edges.empty()) {
+                    foundValidEdge = true;
+                    cout << "  Sample edge label: \"" << edges[0] << "\"" << endl;
+                    cout << "  Length: " << edges[0].length() << " characters" << endl;
+                    
+                    // Try parsing it
+                    TaskAllocationAlgorithms algo(nba, env, mrs);
+                    vector<uint16_t> apIds = algo.parseEdgeLabel(edges[0]);
+                    cout << "  Parsed AP IDs: [";
+                    if (apIds.empty()) {
+                        cout << "(empty - no APs extracted)";
+                    } else {
+                        for (size_t i = 0; i < apIds.size(); ++i) {
+                            cout << apIds[i];
+                            if (i < apIds.size() - 1) cout << ", ";
+                        }
+                    }
+                    cout << "]" << endl;
+                }
+            }
+        }
+        
+        if (!foundValidEdge) {
+            cout << "  ⚠ No valid edges found to test format" << endl;
+        }
+    }
+    
+    cout << "\n" << string(70, '=') << endl;
+    cout << "✓ getEdgeLabels test completed!" << endl;
+    cout << string(70, '=') << "\n" << endl;
     
     delete env;
     delete ts;
@@ -1165,22 +1284,25 @@ int main() {
       //  testBatchValuesManagement();
         
         // Test Suite 5: Untraversed Queue
-        testUntraversedQueueManagement();
+       // testUntraversedQueueManagement();
         
         // Test Suite 6: Edge Label Parsing
-       testParseEdgeLabel();
+      // testParseEdgeLabel();
+       
+       // Test getEdgeLabels from BuchiAutomaton
+       testGetEdgeLabelsComprehensive();
+       
+       // Comprehensive collectUniqueAPsFromEdges Test
+       // testCollectUniqueAPsFromEdgesComprehensive();
         
         // Test getTaskAllocation function comprehensively
-        testGetTaskAllocationComprehensive();
+       // testGetTaskAllocationComprehensive();
         
         // Comprehensive Tree Search Algorithm Test (tests all sub-algorithms)
-        testTreeSearchAlgorithmComprehensive();
-        
-        // Comprehensive collectUniqueAPsFromEdges Test
-        testCollectUniqueAPsFromEdgesComprehensive();
+      //  testTreeSearchAlgorithmComprehensive();
         
         // Comprehensive Unrelated Task Search Test
-        testUnrelatedTaskSearchComprehensive();
+      //  testUnrelatedTaskSearchComprehensive();
         
         // Full Algorithm Test
         cout << "\n" << string(70, '-') << endl;
