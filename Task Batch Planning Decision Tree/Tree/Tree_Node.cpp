@@ -97,6 +97,15 @@ uint16_t Tree_Node::getTimeForRobot(uint16_t robotIndex) const {
     }
     return times[robotIndex];
 }
+/**
+ * getMaxTime - Get the maximum time across all robots
+ */
+uint16_t Tree_Node::getMaxTime() const {
+    if (times.empty()) {
+        return 0;
+    }
+    return *std::max_element(times.begin(), times.end());
+}
 
 /**
  * getBatch - Get the batch number

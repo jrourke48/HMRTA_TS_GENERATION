@@ -583,22 +583,22 @@ void testFullAlgorithmIntensiveInterTaskRelationshipSearch() {
             cout << "\n=== Planning Tree Statistics ===" << endl;
             cout << "  Total Nodes in Tree: " << allNodes.size() << endl;
             
-            // Get frontier nodes
-            const vector<Tree_Node*>& frontierNodes = resultTree->getFrontierNodes();
-            cout << "  Frontier Nodes: " << frontierNodes.size() << endl;
+            // Get leaf nodes
+            const vector<Tree_Node*> leafNodes = resultTree->getLeafNodes();
+            cout << "  Leaf Nodes: " << leafNodes.size() << endl;
             
-            // Print some frontier node details
-            if (!frontierNodes.empty()) {
-                cout << "\n  Frontier Node Details:" << endl;
-                for (size_t i = 0; i < std::min(size_t(5), frontierNodes.size()); ++i) {
-                    Tree_Node* node = frontierNodes[i];
+            // Print some leaf node details
+            if (!leafNodes.empty()) {
+                cout << "\n  Leaf Node Details:" << endl;
+                for (size_t i = 0; i < std::min(size_t(5), leafNodes.size()); ++i) {
+                    Tree_Node* node = leafNodes[i];
                     cout << "    [" << i << "] ID=" << node->getId() 
                          << ", NBA=" << (node->getAutomatonState() ? node->getAutomatonState()->getId() : -1)
                          << ", TS=" << (node->getTSState() ? node->getTSState()->getId() : -1)
                          << ", Batch=" << (int)node->getBatch() << endl;
                 }
-                if (frontierNodes.size() > 5) {
-                    cout << "    ... and " << (frontierNodes.size() - 5) << " more frontier nodes" << endl;
+                if (leafNodes.size() > 5) {
+                    cout << "    ... and " << (leafNodes.size() - 5) << " more leaf nodes" << endl;
                 }
             }
             
@@ -1001,11 +1001,11 @@ void testTreeSearchAlgorithmComprehensive() {
             cout << "\n✓ Tree search completed successfully" << endl;
             
             vector<Tree_Node*> allNodes = resultTree->getAllNodes();
-            const vector<Tree_Node*>& frontierNodes = resultTree->getFrontierNodes();
+            const vector<Tree_Node*> leafNodes = resultTree->getLeafNodes();
             
             cout << "\n=== Tree Structure Results ===" << endl;
             cout << "  Total nodes created: " << allNodes.size() << endl;
-            cout << "  Frontier nodes (to expand): " << frontierNodes.size() << endl;
+            cout << "  Leaf nodes (to expand): " << leafNodes.size() << endl;
             cout << "  Root node ID: " << (resultTree->getRoot() ? resultTree->getRoot()->getId() : 0) << endl;
             
             // Analyze batch value distribution (tests algorithm routing)
@@ -1036,13 +1036,13 @@ void testTreeSearchAlgorithmComprehensive() {
             cout << "\n=== Task Allocation Results ===" << endl;
             cout << "  Nodes with task allocations: " << nodesWithAllocation << "/" << allNodes.size() << endl;
             
-            // Sample output from frontier nodes
-            if (!frontierNodes.empty()) {
-                cout << "\n=== Sample Frontier Nodes (showing algorithm output) ===" << endl;
-                size_t sampleCount = std::min(size_t(3), frontierNodes.size());
+            // Sample output from leaf nodes
+            if (!leafNodes.empty()) {
+                cout << "\n=== Sample Leaf Nodes (showing algorithm output) ===" << endl;
+                size_t sampleCount = std::min(size_t(3), leafNodes.size());
                 for (size_t i = 0; i < sampleCount; ++i) {
-                    Tree_Node* node = frontierNodes[i];
-                    cout << "\n  Frontier Node [" << i << "]:" << endl;
+                    Tree_Node* node = leafNodes[i];
+                    cout << "\n  Leaf Node [" << i << "]:" << endl;
                     cout << "    ID: " << node->getId() << endl;
                     cout << "    Batch: " << (int)node->getBatch() << endl;
                     
@@ -1062,8 +1062,8 @@ void testTreeSearchAlgorithmComprehensive() {
                     }
                     cout << "]" << endl;
                 }
-                if (frontierNodes.size() > sampleCount) {
-                    cout << "\n  ... and " << (frontierNodes.size() - sampleCount) << " more frontier nodes" << endl;
+                if (leafNodes.size() > sampleCount) {
+                    cout << "\n  ... and " << (leafNodes.size() - sampleCount) << " more frontier nodes" << endl;
                 }
             }
             

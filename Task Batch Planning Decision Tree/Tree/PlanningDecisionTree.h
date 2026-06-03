@@ -21,6 +21,9 @@ class PlanningDecisionTree {
         // Empty constructor
         PlanningDecisionTree();
         
+        // Constructor with existing node
+        PlanningDecisionTree(Tree_Node* existingNode);
+        
         // Destructor
         ~PlanningDecisionTree();
         
@@ -29,22 +32,21 @@ class PlanningDecisionTree {
                               std::vector<bool> taskAllocation, std::vector<uint16_t> times,
                               int8_t batch, Tree_Node::TASK_PROGRESS prog);
         Tree_Node* insertNode(Tree_Node* newNode);
-        
-        /**
-         * insertSubtree - Attach an entire subtree as a child of an existing node
-         * This method attaches subtree's root as a child of parentNode
-         * Updates frontier nodes to include all new leaf nodes from the subtree
-         * All nodes in the subtree are connected through parent pointers
-         */
-        std::vector<Tree_Node*> getAllNodes();
         Tree_Node* insertSubtree(Tree_Node* parentNode, PlanningDecisionTree* subtree);
         
-        // Frontier nodes management
+        // Tree traversal
+        std::vector<Tree_Node*> getAllNodes();
+        std::vector<Tree_Node*> getLeafNodes();
+        
+        // Frontier management
         void addFrontierNode(Tree_Node* node);
         void removeFrontierNode(Tree_Node* node);
         const std::vector<Tree_Node*>& getFrontierNodes() const;
         void clearFrontierNodes();
-        
+        Tree_Node* getOptimalFrontierNode() const; // Returns the frontier node with the lowest max time (heuristic)
+        std::vector<Tree_Node*> getPathtoFrontierNode(Tree_Node* frontierNode);
+
+        // Tree manipulation
         void deleteSubtree(Tree_Node* node);
         
         // Getter methods
@@ -54,6 +56,7 @@ class PlanningDecisionTree {
         // Utility methods
         void clearTree();
         bool isEmpty() const;
+        void reassignNodeIds();  // Reassign IDs in tree hierarchy order (BFS from root)
 };
 
 #endif // PLANNING_DECISION_TREE_H

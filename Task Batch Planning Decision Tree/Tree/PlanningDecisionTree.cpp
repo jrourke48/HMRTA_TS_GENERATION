@@ -15,7 +15,21 @@ PlanningDecisionTree::PlanningDecisionTree(Node* automatonState, Node* tsState,
     nodeCount = 1;
     frontierNodes.push_back(root);  // Root is initially the frontier
 }
-PlanningDecisionTree::PlanningDecisionTree() : root(nullptr), nodeCount(0), frontierNodes() {};
+/**
+ * PlanningDecisionTree - Empty Constructor
+ */
+PlanningDecisionTree::PlanningDecisionTree() : root(nullptr), nodeCount(0), frontierNodes() {}
+
+/**
+ * PlanningDecisionTree - Constructor with existing node
+ */
+PlanningDecisionTree::PlanningDecisionTree(Tree_Node* existingNode) 
+    : root(existingNode), nodeCount(1), frontierNodes() {
+    if (existingNode != nullptr) {
+        frontierNodes.push_back(existingNode);
+    }
+}
+
 
 /**
  * PlanningDecisionTree - Destructor
@@ -69,6 +83,11 @@ Tree_Node* PlanningDecisionTree::insertNode(Tree_Node* newNode) {
     newNode->setId(nodeId);
     nodeCount++;
     
+    // If tree is empty and node has no parent, this node becomes the root
+    if (root == nullptr && newNode->getParent() == nullptr) {
+        root = newNode;
+    }
+    
     // Frontier management: if node has a parent, remove parent from frontier
     Tree_Node* parent = newNode->getParent();
     if (parent != nullptr) {
@@ -86,6 +105,7 @@ Tree_Node* PlanningDecisionTree::insertNode(Tree_Node* newNode) {
  * This method attaches subtreeRoot as a child of parentNode
  * Manages frontier: removes parentNode from frontier and adds all subtree frontier nodes
  * All nodes in the subtree are incorporated into this tree
+ * Special case: if subtreeRoot == parentNode, node is already in tree; only add new descendants
  */
 Tree_Node* PlanningDecisionTree::insertSubtree(Tree_Node* parentNode, PlanningDecisionTree* subtree) {
     if (parentNode == nullptr || subtree == nullptr) {
@@ -97,18 +117,32 @@ Tree_Node* PlanningDecisionTree::insertSubtree(Tree_Node* parentNode, PlanningDe
         return nullptr;
     }
     
-    // Update the subtree root's parent to point to parentNode
-    subtreeRoot->setParent(parentNode);
+    // Special case: if subtreeRoot == parentNode, the node is already in our tree
+    // Only add the count of new children (don't double-count the node itself)
+    if (subtreeRoot != parentNode) {
+        // Normal case: attach a separate subtree
+        subtreeRoot->setParent(parentNode);
+        nodeCount += subtree->getNodeCount();
+    } else {
+        // Special case: parentNode is the root of the subtree being attached
+        // Add only the NEW nodes (subtree children), not the root itself
+        size_t newNodeCount = subtree->getNodeCount() - 1;  // Exclude root from count
+        nodeCount += newNodeCount;
+    }
     
-    // Update node count to include all nodes from the subtree
-    nodeCount += subtree->getNodeCount();
-    
-    // Frontier management: parentNode is no longer a leaf
-    removeFrontierNode(parentNode);
-    
-    // Add all frontier nodes from the subtree to our frontier
+    // Add all frontier nodes from the subtree to our frontier (except parentNode itself)
+    std::vector<Tree_Node*> newFrontierNodes;
     for (Tree_Node* frontierNode : subtree->getFrontierNodes()) {
-        addFrontierNode(frontierNode);
+        if (frontierNode != parentNode) {
+            newFrontierNodes.push_back(frontierNode);
+            addFrontierNode(frontierNode);
+        }
+    }
+    
+    // Only remove parentNode from frontier if it has new children
+    // If all children were pruned, keep parent in frontier (it's a dead-end leaf)
+    if (!newFrontierNodes.empty()) {
+        removeFrontierNode(parentNode);
     }
     
     return subtreeRoot;
@@ -116,16 +150,52 @@ Tree_Node* PlanningDecisionTree::insertSubtree(Tree_Node* parentNode, PlanningDe
 
 /**
  * deleteSubtree - Delete a subtree rooted at the given node
+ * Removes the node from frontier and deletes it and all descendants from memory
  */
 void PlanningDecisionTree::deleteSubtree(Tree_Node* node) {
     if (node == nullptr) {
         return;
     }
     
-    // Recursively delete children if we maintain a children vector
-    // For now, this just deletes the node itself
-    delete node;
-    nodeCount--;
+    // Remove from frontier if present
+    removeFrontierNode(node);
+    
+    // Collect all descendants by backward traversal from frontier
+    std::vector<Tree_Node*> toDelete;
+    std::set<Tree_Node*> visited;
+    
+    // Start from frontier nodes that are descendants of 'node'
+    for (Tree_Node* frontierNode : frontierNodes) {
+        Tree_Node* current = frontierNode;
+        while (current != nullptr) {
+            if (current == node) {
+                // This frontier node is a descendant of 'node', collect path
+                Tree_Node* temp = frontierNode;
+                while (temp != node && temp != nullptr) {
+                    if (visited.find(temp) == visited.end()) {
+                        toDelete.push_back(temp);
+                        visited.insert(temp);
+                    }
+                    temp = temp->getParent();
+                }
+                break;
+            }
+            current = current->getParent();
+        }
+    }
+    
+    // Add the node itself
+    if (visited.find(node) == visited.end()) {
+        toDelete.push_back(node);
+        visited.insert(node);
+    }
+    
+    // Delete all collected nodes
+    for (Tree_Node* deleteNode : toDelete) {
+        removeFrontierNode(deleteNode);
+        delete deleteNode;
+        nodeCount--;
+    }
 }
 
 /**
@@ -164,18 +234,27 @@ bool PlanningDecisionTree::isEmpty() const {
 /**
  * getAllNodes - Get all nodes in the tree by traversing backward from frontier nodes
  * Traverses from each frontier node back to root, collecting all unique nodes
+ * Defensive: also uses frontier nodes if root is somehow still null
  */
 std::vector<Tree_Node*> PlanningDecisionTree::getAllNodes() {
     std::vector<Tree_Node*> allNodes;
     std::set<Tree_Node*> visited;
     
-    // If tree is empty, return empty vector
-    if (root == nullptr) {
+    // If tree is empty (no root and no frontier), return empty vector
+    if (root == nullptr && frontierNodes.empty()) {
         return allNodes;
     }
     
-    // If frontier is empty, start from root
-    std::vector<Tree_Node*> startNodes = frontierNodes.empty() ? std::vector<Tree_Node*>{root} : frontierNodes;
+    // Determine starting nodes: use frontier if available, otherwise use root
+    // This handles edge cases and ensures we get all nodes even if root somehow isn't set
+    std::vector<Tree_Node*> startNodes;
+    if (!frontierNodes.empty()) {
+        startNodes = frontierNodes;
+    } else if (root != nullptr) {
+        startNodes = {root};
+    } else {
+        return allNodes;  // Truly empty
+    }
     
     // Traverse backward from each frontier node to root
     for (Tree_Node* leaf : startNodes) {
@@ -225,4 +304,75 @@ const std::vector<Tree_Node*>& PlanningDecisionTree::getFrontierNodes() const {
  */
 void PlanningDecisionTree::clearFrontierNodes() {
     frontierNodes.clear();
+}
+
+/**
+ * getLeafNodes - Get all leaf nodes (frontier nodes) in the tree
+ * In frontier-based representation, frontier nodes ARE the leaf nodes
+ * Returns vector of nodes that are currently frontier nodes
+ */
+std::vector<Tree_Node*> PlanningDecisionTree::getLeafNodes() {
+    return frontierNodes;
+}
+
+/**
+ * getOptimalFrontierNode - Get the frontier node with the lowest max time (heuristic for optimality)
+ * Returns the frontier node with the best cost for expansion
+ */
+Tree_Node* PlanningDecisionTree::getOptimalFrontierNode() const {
+    if (frontierNodes.empty()) {
+        return nullptr;
+    }
+    
+    Tree_Node* optimal = frontierNodes[0];
+    uint16_t minMaxTime = optimal->getMaxTime();
+    
+    for (Tree_Node* node : frontierNodes) {
+        uint16_t nodeMaxTime = node->getMaxTime();
+        if (nodeMaxTime < minMaxTime) {
+            minMaxTime = nodeMaxTime;
+            optimal = node;
+        }
+    }
+    
+    return optimal;
+}
+
+/**
+ * reassignNodeIds - Reassign all node IDs in tree hierarchy order
+ * This ensures root has ID 0, and IDs increment in order
+ * Useful after tree modifications (insertSubtree, etc.)
+ */
+void PlanningDecisionTree::reassignNodeIds() {
+    if (root == nullptr) {
+        return;
+    }
+    
+    // Get all nodes via backward traversal
+    std::vector<Tree_Node*> allNodes = getAllNodes();
+    
+    // Assign IDs in order
+    uint32_t nextId = 0;
+    for (Tree_Node* node : allNodes) {
+        node->setId(nextId++);
+    }
+}
+
+
+
+std::vector<Tree_Node*> PlanningDecisionTree::getPathtoFrontierNode(Tree_Node* frontierNode) {
+    std::vector<Tree_Node*> path;
+    if (frontierNode == nullptr) {
+        return path;
+    }
+    
+    Tree_Node* current = frontierNode;
+    while (current != nullptr) {
+        path.push_back(current);
+        current = current->getParent();
+    }
+    
+    // Reverse to get path from root to frontier node
+    std::reverse(path.begin(), path.end());
+    return path;
 }

@@ -10,11 +10,13 @@ OUT_DIR = Testing
 OUT_BIN = $(OUT_DIR)/TestIntegration
 TREE_BIN = $(OUT_DIR)/TreeBuildingTests
 TASK_ALLOC_BIN = $(OUT_DIR)/TestTaskAllocation
+PLANNING_TREE_BIN = $(OUT_DIR)/TestPlanningTreeComprehensive
 
 # Source files
 TEST_SRC = Testing/TestIntegration.cpp
 TREE_TEST_SRC = Testing/TreeBuildingTests.cpp
 TASK_ALLOC_SRC = Testing/TestTaskAllocationAlgorithms_new.cpp
+PLANNING_TREE_TEST_SRC = Testing/TestPlanningTreeComprehensive.cpp
 # TaskAllocationAlgorithms - algorithms for task allocation
 TASK_ALLOC_SRCS = TaskAllocationAlgorithms.cpp
 
@@ -36,14 +38,15 @@ COMMON_SRCS = \
 TEST_OBJ = $(TEST_SRC:.cpp=.o)
 TREE_TEST_OBJ = $(TREE_TEST_SRC:.cpp=.o)
 TASK_ALLOC_OBJ = $(TASK_ALLOC_SRC:.cpp=.o)
+PLANNING_TREE_TEST_OBJ = $(PLANNING_TREE_TEST_SRC:.cpp=.o)
 COMMON_OBJS = $(COMMON_SRCS:.cpp=.o)
 TASK_ALLOC_OBJS = $(TASK_ALLOC_SRCS:.cpp=.o)
-ALL_OBJS = $(TEST_OBJ) $(TREE_TEST_OBJ) $(TASK_ALLOC_OBJ) $(COMMON_OBJS) $(TASK_ALLOC_OBJS)
+ALL_OBJS = $(TEST_OBJ) $(TREE_TEST_OBJ) $(TASK_ALLOC_OBJ) $(PLANNING_TREE_TEST_OBJ) $(COMMON_OBJS) $(TASK_ALLOC_OBJS)
 
 # Targets
-.PHONY: all clean run rebuild help test test-tree test-task test-all tree-only task-only
+.PHONY: all clean run rebuild help test test-tree test-task test-planning-tree test-all tree-only task-only planning-tree-only
 
-all: $(OUT_BIN) $(TREE_BIN) $(TASK_ALLOC_BIN)
+all: $(OUT_BIN) $(TREE_BIN) $(TASK_ALLOC_BIN) $(PLANNING_TREE_BIN)
 
 # Build the test executable
 $(OUT_BIN): $(TEST_OBJ) $(COMMON_OBJS)
@@ -62,6 +65,12 @@ $(TASK_ALLOC_BIN): $(TASK_ALLOC_OBJ) $(COMMON_OBJS) $(TASK_ALLOC_OBJS)
 	@mkdir -p $(OUT_DIR)
 	$(CXX) $(CXXFLAGS) $(INCLUDES) $^ -o $@ $(LIBS)
 	@echo "✓ Build successful: $(TASK_ALLOC_BIN)"
+
+# Build the planning tree comprehensive tests executable
+$(PLANNING_TREE_BIN): $(PLANNING_TREE_TEST_OBJ) $(COMMON_OBJS)
+	@mkdir -p $(OUT_DIR)
+	$(CXX) $(CXXFLAGS) $(INCLUDES) $^ -o $@ $(LIBS)
+	@echo "✓ Build successful: $(PLANNING_TREE_BIN)"
 
 # Compile object files
 %.o: %.cpp
@@ -82,14 +91,22 @@ test-task: $(TREE_BIN)
 	@echo "Running tree building tests..."
 	@$(TREE_BIN)
 
+# Run planning tree comprehensive tests
+test-planning-tree: $(PLANNING_TREE_BIN)
+	@echo "Running planning tree comprehensive tests..."
+	@$(PLANNING_TREE_BIN)
+
 # Shortcut to run only tree tests
 tree-only: test-tree
 
 # Shortcut to run only task allocation tests
 task-only: test-task
 
+# Shortcut to run only planning tree tests
+planning-tree-only: test-planning-tree
+
 # Run all tests
-test-all: run test-tree test-task
+test-all: run test-tree test-task test-planning-tree
 
 # Run tests and show output
 test: test-all

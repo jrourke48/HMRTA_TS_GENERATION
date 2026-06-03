@@ -45,6 +45,7 @@ class Tree_Node {
         const std::vector<bool>& getRoboTaskAllocation() const;
         bool isRobotAllocated(uint16_t robotIndex) const;
         const std::vector<uint16_t>& getTimes() const;
+        uint16_t getMaxTime() const;
         uint16_t getTimeForRobot(uint16_t robotIndex) const;
         int8_t getBatch() const;
         TASK_PROGRESS getProgress() const;

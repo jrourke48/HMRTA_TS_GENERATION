@@ -139,10 +139,16 @@ PlanningDecisionTree* TaskAllocationAlgorithms::intensiveInterTaskRelationshipTr
     
     // Process nodes from untraversed queue until empty
     Tree_Node* currentNode = nullptr;
+    int iterationCount = 0;
     while ((currentNode = getNextUntraversedNode()) != nullptr) {
+        iterationCount++;
+        std::cout << "\n=== ITERATION " << iterationCount << " ===" << std::endl;
+        std::cout << "[DEBUG] Current node - NBA state: " << currentNode->getAutomatonState()->getId() 
+                  << ", TS state: " << currentNode->getTSState()->getId()
+                  << ", Progress: " << static_cast<int>(currentNode->getProgress()) << std::endl;
         
         // Create subtree for current node
-        PlanningDecisionTree* subtree = new PlanningDecisionTree();
+        PlanningDecisionTree* subtree = new PlanningDecisionTree(currentNode);
         uint16_t buchisize = nbaPtr->getNumStates();
         std::cout << "[DEBUG] Processing " << buchisize << " automaton states from current node (state " 
                   << currentNode->getAutomatonState()->getId() << ")" << std::endl;
@@ -199,33 +205,96 @@ PlanningDecisionTree* TaskAllocationAlgorithms::intensiveInterTaskRelationshipTr
                     
                     // Add to subtree (insertNode will auto-assign the correct nodeId)
                     subtree->insertNode(newNode);
+                    visitedNodes.push_back(newNode); // Mark new node as visited
+                    std::cout << "        [DEBUG] Added node to subtree (NBA: " << nbaId << ")" << std::endl;
                 }
             }
         }
         
-        // Prune subtree (TODO: implement pruning logic)
+        // Show subtree state before pruning
+        std::vector<Tree_Node*> subtreeNodesBefore = subtree->getAllNodes();
+        std::cout << "[DEBUG] Subtree before pruning: " << subtreeNodesBefore.size() << " nodes" << std::endl;
+        for (const auto& node : subtreeNodesBefore) {
+            std::cout << "  - NBA: " << node->getAutomatonState()->getId() 
+                      << ", Progress: " << static_cast<int>(node->getProgress()) << std::endl;
+        }
+        
+        // Prune subtree
+        std::cout << "[DEBUG] Calling pruneSubtree..." << std::endl;
         PlanningDecisionTree* pruningResult = pruneSubtree(subtree);
         
+        // Show tree state after pruning
+        std::vector<Tree_Node*> subtreeNodesAfter = pruningResult->getAllNodes();
+        std::cout << "[DEBUG] Subtree after pruning: " << subtreeNodesAfter.size() << " nodes" << std::endl;
+        for (const auto& node : subtreeNodesAfter) {
+            std::cout << "  - NBA: " << node->getAutomatonState()->getId() 
+                      << ", Progress: " << static_cast<int>(node->getProgress()) << std::endl;
+        }
+        
         // After pruning, add all remaining nodes in subtree to untraversed queue (except currentNode)
-        std::vector<Tree_Node*> remainingNodes = pruningResult->getAllNodes();  // Assumes this method exists
+        std::cout << "[DEBUG] Adding nodes to untraversed queue..." << std::endl;
+        std::vector<Tree_Node*> remainingNodes = pruningResult->getAllNodes();
         for (Tree_Node* node : remainingNodes) {
             if (node != currentNode) {
                 addUntraversedPlanningNode(node);
+                std::cout << "  [DEBUG] Added to untraversed: NBA " << node->getAutomatonState()->getId() << std::endl;
             }
         }
         
+        // Show planning tree state before inserting subtree
+        std::vector<Tree_Node*> planningTreeNodesBefore = planningTree->getAllNodes();
+        std::cout << "[DEBUG] Planning tree before insert: " << planningTreeNodesBefore.size() << " nodes" << std::endl;
         // Attach subtree to planning tree
-        if (currentNode->getParent()) {
-            planningTree->insertSubtree(currentNode->getParent(), pruningResult);
-        }
-        else {
-            // If currentNode is root, insert subtree differently
-            planningTree->insertSubtree(currentNode, pruningResult);
-        }
-        
+        // currentNode is the root of the subtree, so attach pruned subtree as children of currentNode
+        planningTree->insertSubtree(currentNode, pruningResult);
+        // Show planning tree state after inserting subtree
+        std::vector<Tree_Node*> planningTreeNodesAfter = planningTree->getAllNodes();
+        std::cout << "[DEBUG] Planning tree after insert: " << planningTreeNodesAfter.size() << " nodes" << std::endl;
         // Add currentNode to traversed tree
         traversedTree->insertNode(currentNode);
+        std::cout << "[DEBUG] Added current node to traversed tree" << std::endl;
+        std::cout << "[DEBUG] Untraversed queue size: " << std::endl;
+        // Peek at queue size (we can't directly access it, but we can note this for observation)
     }
+    std::cout << "\n=== SEARCH COMPLETE ===" << std::endl;
+    
+    Tree_Node* finalOptimalNode = planningTree->getOptimalFrontierNode(); // Final optimal node after search completion
+    if (finalOptimalNode) {
+        uint16_t cost = finalOptimalNode->getMaxTime(); 
+        std::cout << "Optimal frontier node found with cost (max time): " << cost << std::endl;
+        std::cout << "Optimal frontier node - NBA state: " << finalOptimalNode->
+        getAutomatonState()->getId() << ", TS state: " << finalOptimalNode->getTSState()->getId() 
+                  << ", Progress: " << static_cast<int>(finalOptimalNode->getProgress()) << std::endl;
+        
+        // Manually traverse from frontier node to root to avoid infinite loop issues
+        std::cout << "Path to optimal node:" << std::endl;
+        std::vector<Tree_Node*> path;
+        Tree_Node* current = finalOptimalNode;
+        size_t maxDepth = 1000;  // Safety check to prevent infinite loops
+        size_t depth = 0;
+        while (current != nullptr && depth < maxDepth) {
+            path.push_back(current);
+            Tree_Node* parent = current->getParent();
+            if (parent == current) {
+                std::cout << "  WARNING: Circular parent reference detected at node!" << std::endl;
+                break;
+            }
+            current = parent;
+            depth++;
+        }
+        
+        // Print path from root to frontier
+        std::reverse(path.begin(), path.end());
+        for (Tree_Node* node : path) {
+            std::cout << "  - NBA: " << node->getAutomatonState()->getId() 
+                      << ", TS: " << node->getTSState()->getId() 
+                      << ", Progress: " << static_cast<int>(node->getProgress()) << std::endl;
+        }
+    }
+    
+    // Final tree state
+    // Reassign node IDs to ensure proper hierarchy order (root = 0, then by depth)
+    tree->reassignNodeIds();
     
     return tree;
 }
@@ -502,42 +571,23 @@ void TaskAllocationAlgorithms::clearUntraversedQueue() {
 std::vector<uint16_t> TaskAllocationAlgorithms::parseEdgeLabel(const std::string& label) const {
     std::vector<uint16_t> apIds;
     
-    std::cout << "[parseEdgeLabel] ===== ENTRY =====" << std::endl;
-    std::cout << "[parseEdgeLabel] Input label: \"" << label << "\"" << std::endl;
-    std::cout << "[parseEdgeLabel] Label length: " << label.length() << " characters" << std::endl;
-    
     // Remove acceptance marks {0}
     std::string cleaned = label;
     size_t pos = cleaned.find("{0}");
     if (pos != std::string::npos) {
-        std::cout << "[parseEdgeLabel] Found acceptance mark {0} at position " << pos << ", removing..." << std::endl;
         cleaned.erase(pos, 3);
-        std::cout << "[parseEdgeLabel] After removing {0}: \"" << cleaned << "\"" << std::endl;
-    } else {
-        std::cout << "[parseEdgeLabel] No acceptance marks {0} found" << std::endl;
     }
     
     // Replace | with & to have single delimiter
-    int pipeCount = 0;
     for (size_t i = 0; i < cleaned.length(); ++i) {
         if (cleaned[i] == '|') {
-            pipeCount++;
             cleaned[i] = '&';
         }
-    }
-    if (pipeCount > 0) {
-        std::cout << "[parseEdgeLabel] Replaced " << pipeCount << " pipe(s) (|) with ampersand(&)" << std::endl;
-        std::cout << "[parseEdgeLabel] After replacement: \"" << cleaned << "\"" << std::endl;
-    } else {
-        std::cout << "[parseEdgeLabel] No pipes (|) to replace" << std::endl;
     }
     
     // Split by &
     size_t start = 0;
     size_t end = cleaned.find('&');
-    int tokenCount = 0;
-    
-    std::cout << "[parseEdgeLabel] Starting tokenization..." << std::endl;
     
     while (start < cleaned.length()) {
         // Extract token
@@ -545,36 +595,21 @@ std::vector<uint16_t> TaskAllocationAlgorithms::parseEdgeLabel(const std::string
                            cleaned.substr(start) : 
                            cleaned.substr(start, end - start);
         
-        std::cout << "[parseEdgeLabel]   Token[" << tokenCount << "] (raw): \"" << token << "\"" << std::endl;
-        
         // Trim whitespace and quotes
         token.erase(0, token.find_first_not_of(" \t\n\r\""));
         token.erase(token.find_last_not_of(" \t\n\r\"") + 1);
         
-        std::cout << "[parseEdgeLabel]   Token[" << tokenCount << "] (trimmed): \"" << token << "\"" << std::endl;
-        
         // Skip if empty or negated (starts with !)
-        if (token.empty()) {
-            std::cout << "[parseEdgeLabel]   Token[" << tokenCount << "] - SKIPPED (empty)" << std::endl;
-        } else if (token[0] == '!') {
-            std::cout << "[parseEdgeLabel]   Token[" << tokenCount << "] - SKIPPED (negated, starts with !)" << std::endl;
-        } else {
+        if (!token.empty() && token[0] != '!') {
             try {
                 // Extract number from "p0", "p1", etc. (skip 'p' prefix)
                 if (token[0] == 'p' && token.length() > 1) {
-                    std::cout << "[parseEdgeLabel]   Token[" << tokenCount << "] - Format OK (starts with 'p')" << std::endl;
                     std::string numStr = token.substr(1);
-                    std::cout << "[parseEdgeLabel]   Extracting number from: \"" << numStr << "\"" << std::endl;
                     uint16_t apId = static_cast<uint16_t>(std::stoul(numStr));
-                    std::cout << "[parseEdgeLabel]   Parsed AP ID: " << apId << std::endl;
                     apIds.push_back(apId);
-                } else if (token[0] != 'p') {
-                    std::cout << "[parseEdgeLabel]   Token[" << tokenCount << "] - SKIPPED (doesn't start with 'p')" << std::endl;
-                } else {
-                    std::cout << "[parseEdgeLabel]   Token[" << tokenCount << "] - SKIPPED (starts with 'p' but no number)" << std::endl;
                 }
             } catch (const std::exception& e) {
-                std::cerr << "[parseEdgeLabel] ERROR parsing AP from token \"" << token << "\": " << e.what() << std::endl;
+                // Silent catch
             }
         }
         
@@ -582,20 +617,7 @@ std::vector<uint16_t> TaskAllocationAlgorithms::parseEdgeLabel(const std::string
         if (end == std::string::npos) break;
         start = end + 1;
         end = cleaned.find('&', start);
-        tokenCount++;
     }
-    
-    std::cout << "[parseEdgeLabel] Final Result: " << apIds.size() << " AP ID(s) extracted: [";
-    if (apIds.empty()) {
-        std::cout << "(empty)";
-    } else {
-        for (size_t i = 0; i < apIds.size(); ++i) {
-            std::cout << apIds[i];
-            if (i < apIds.size() - 1) std::cout << ", ";
-        }
-    }
-    std::cout << "]" << std::endl;
-    std::cout << "[parseEdgeLabel] ===== EXIT =====" << std::endl;
     
     return apIds;
 }
@@ -603,62 +625,58 @@ std::vector<uint16_t> TaskAllocationAlgorithms::parseEdgeLabel(const std::string
 std::vector<uint16_t> TaskAllocationAlgorithms::collectUniqueAPsFromEdges(const std::vector<std::string>& edges) const {
     std::vector<uint16_t> allApIds;
     
-    std::cout << "[collectUniqueAPsFromEdges] ===== ENTRY =====" << std::endl;
-    std::cout << "[collectUniqueAPsFromEdges] Input: " << edges.size() << " edge(s)" << std::endl;
-    
-    // Log all input edges
-    for (size_t i = 0; i < edges.size(); ++i) {
-        std::cout << "[collectUniqueAPsFromEdges]   Edge[" << i << "]: \"" << edges[i] << "\"" << std::endl;
-    }
-    
     // Process each edge label string
-    for (size_t edgeIdx = 0; edgeIdx < edges.size(); ++edgeIdx) {
-        const auto& edgeLabel = edges[edgeIdx];
-        std::cout << "[collectUniqueAPsFromEdges] Processing Edge[" << edgeIdx << "]: \"" << edgeLabel << "\"" << std::endl;
-        
-        // Parse the edge label to extract AP IDs
-        // Edge labels are typically formatted like: "p0", "p0 | p1", "p0 & p1", etc.
-        std::vector<uint16_t> apIds = parseEdgeLabel(edgeLabel);
-        std::cout << "[collectUniqueAPsFromEdges]   Parsed " << apIds.size() << " AP(s) from this edge: ";
-        if (apIds.empty()) {
-            std::cout << "(empty)" << std::endl;
-        } else {
-            for (size_t i = 0; i < apIds.size(); ++i) {
-                std::cout << apIds[i];
-                if (i < apIds.size() - 1) std::cout << ", ";
+    for (const auto& edgeLabel : edges) {
+        // Filter out edges with multiple positive APs or multiple negated APs
+        // Valid: "p0" "!p0" "p0 & !p1" (one positive, one negated)
+        // Invalid: "p0 & p1" (two positive) or "!p0 & !p1" (two negated)
+        if (edgeLabel.find('&') != std::string::npos) {
+            // Count positive vs negated APs in this edge
+            int positiveCount = 0, negatedCount = 0;
+            
+            // Split by '&' and check each token
+            std::string cleaned = edgeLabel;
+            for (size_t i = 0; i < cleaned.length(); ++i) {
+                if (cleaned[i] == '|') cleaned[i] = '&';
             }
-            std::cout << std::endl;
+            
+            size_t start = 0, end = cleaned.find('&');
+            while (start < cleaned.length()) {
+                std::string token = (end == std::string::npos) ? 
+                    cleaned.substr(start) : cleaned.substr(start, end - start);
+                token.erase(0, token.find_first_not_of(" \t\n\r\""));
+                token.erase(token.find_last_not_of(" \t\n\r\"") + 1);
+                
+                if (!token.empty() && token[0] == 'p' && token.length() > 1) {
+                    positiveCount++;
+                } else if (token.length() > 1 && token[0] == '!' && token[1] == 'p') {
+                    negatedCount++;
+                }
+                
+                if (end == std::string::npos) break;
+                start = end + 1;
+                end = cleaned.find('&', start);
+            }
+            
+            // Skip if multiple positive APs or multiple negated APs
+            if (positiveCount > 1 || negatedCount > 1) {
+                continue;
+            }
         }
         
+        // Parse the edge label to extract AP IDs
+        std::vector<uint16_t> apIds = parseEdgeLabel(edgeLabel);
+        
         // Merge parsed AP IDs into the result, avoiding duplicates
-        // This ensures each unique AP ID appears only once in the final result
         for (uint16_t apId : apIds) {
             // Check if this AP ID is already in the collection
             auto it = std::find(allApIds.begin(), allApIds.end(), apId);
             if (it == allApIds.end()) {
                 // Add only if not already present
-                std::cout << "[collectUniqueAPsFromEdges]     Adding AP " << apId << " to collection (NEW)" << std::endl;
                 allApIds.push_back(apId);
-            } else {
-                // Already exists, skip
-                std::cout << "[collectUniqueAPsFromEdges]     AP " << apId << " already in collection (DUPLICATE, skipped)" << std::endl;
             }
         }
     }
-    
-    std::cout << "[collectUniqueAPsFromEdges] Final Result:" << std::endl;
-    std::cout << "[collectUniqueAPsFromEdges]   Total unique AP(s): " << allApIds.size() << std::endl;
-    std::cout << "[collectUniqueAPsFromEdges]   Collection: [";
-    if (allApIds.empty()) {
-        std::cout << "(empty)";
-    } else {
-        for (size_t i = 0; i < allApIds.size(); ++i) {
-            std::cout << allApIds[i];
-            if (i < allApIds.size() - 1) std::cout << ", ";
-        }
-    }
-    std::cout << "]" << std::endl;
-    std::cout << "[collectUniqueAPsFromEdges] ===== EXIT =====" << std::endl;
     
     return allApIds;
 }
@@ -724,9 +742,14 @@ PlanningDecisionTree* TaskAllocationAlgorithms::pruneSubtree(PlanningDecisionTre
     std::vector<Tree_Node*> nodesToRemove;
     std::vector<Tree_Node*> subtreeNodes = subtree->getAllNodes();
     
+    std::cout << "    [PRUNE] Starting pruneSubtree with " << subtreeNodes.size() << " nodes" << std::endl;
+    
     // Rule 1: Remove nodes with OTH progress (terminal nodes)
+    std::cout << "    [PRUNE] Rule 1: Checking for OTH progress nodes..." << std::endl;
     for (Tree_Node* node : subtreeNodes) {
         if (node->getProgress() == Tree_Node::TASK_PROGRESS::OTH) {
+            std::cout << "      [PRUNE] Marking for removal: NBA " << node->getAutomatonState()->getId() 
+                      << " (OTH progress)" << std::endl;
             nodesToRemove.push_back(node);
         }
     }
@@ -734,6 +757,7 @@ PlanningDecisionTree* TaskAllocationAlgorithms::pruneSubtree(PlanningDecisionTre
     // Rule 2: Remove nodes with traversed (automaton state, progress) pairs
     // If we've already visited (state S, progress P) in traversedTree, don't sample it again
     std::vector<Tree_Node*> traversedNodes = traversedTree->getAllNodes();
+    std::cout << "    [PRUNE] Rule 2: Checking traversed tree (" << traversedNodes.size() << " nodes)..." << std::endl;
     
     for (Tree_Node* node : subtreeNodes) {
         // Skip if already marked for removal
@@ -748,17 +772,22 @@ PlanningDecisionTree* TaskAllocationAlgorithms::pruneSubtree(PlanningDecisionTre
                 node->getAutomatonState()->getId() == traversedNode->getAutomatonState()->getId() &&
                 node->getProgress() == traversedNode->getProgress()) {
                 foundInTraversed = true;
+                std::cout << "      [PRUNE] Found duplicate in traversed tree: NBA " << node->getAutomatonState()->getId() 
+                          << " with progress " << static_cast<int>(node->getProgress()) << std::endl;
                 break;
             }
         }
         
         if (foundInTraversed) {
+            std::cout << "      [PRUNE] Marking for removal: NBA " << node->getAutomatonState()->getId() 
+                      << " (duplicate in traversed)" << std::endl;
             nodesToRemove.push_back(node);
         }
     }
     
     // Rule 3: For nodes with same automaton state and progress, keep only minimum cost
     // Cost is calculated as sum of all robot execution times
+    std::cout << "    [PRUNE] Rule 3: Checking for duplicate states (same NBA + Progress)..." << std::endl;
     std::map<std::pair<uint32_t, int>, std::vector<Tree_Node*>> nodeGroups;
     
     // Group remaining nodes by (automaton state ID, progress)
@@ -777,12 +806,16 @@ PlanningDecisionTree* TaskAllocationAlgorithms::pruneSubtree(PlanningDecisionTre
     // Within each group with duplicates, keep only the minimum cost node
     for (auto& [key, nodes] : nodeGroups) {
         if (nodes.size() > 1) {
+            std::cout << "      [PRUNE] Found " << nodes.size() << " nodes with same NBA " << key.first 
+                      << " and progress " << key.second << " - selecting min cost" << std::endl;
+            
             // Calculate cost for each node (sum of all robot times)
             Tree_Node* minCostNode = nodes[0];
             uint32_t minCost = 0;
             for (uint16_t time : minCostNode->getTimes()) {
                 minCost += time;
             }
+            std::cout << "        Initial min cost: " << minCost << std::endl;
             
             // Find minimum cost node and mark all others for removal
             for (size_t i = 1; i < nodes.size(); ++i) {
@@ -791,26 +824,35 @@ PlanningDecisionTree* TaskAllocationAlgorithms::pruneSubtree(PlanningDecisionTre
                     nodeCost += time;
                 }
                 
+                std::cout << "        Node " << i << " cost: " << nodeCost << std::endl;
+                
                 if (nodeCost < minCost) {
                     // Current node is better, mark previous min for removal
+                    std::cout << "          -> Marking previous min for removal" << std::endl;
                     nodesToRemove.push_back(minCostNode);
                     minCostNode = nodes[i];
                     minCost = nodeCost;
                 } else {
                     // Current node is worse or equal, mark for removal
+                    std::cout << "          -> Marking for removal (higher cost)" << std::endl;
                     nodesToRemove.push_back(nodes[i]);
                 }
             }
+            std::cout << "        Keeping node with cost: " << minCost << std::endl;
         }
     }
     
+    std::cout << "    [PRUNE] Total nodes marked for removal: " << nodesToRemove.size() << std::endl;
+    std::cout << "    [PRUNE] Nodes remaining in subtree: " << (subtreeNodes.size() - nodesToRemove.size()) << std::endl;
+    
     // Remove all marked nodes from subtree and add to traversedTree
-    // Note: PlanningDecisionTree doesn't have removeNode/addNode methods
-    // For now, we skip the actual removal. TODO: implement proper node pruning
-    // for (Tree_Node* node : nodesToRemove) {
-    //     subtree->deleteSubtree(node);
-    //     traversedTree->insertNode(node);
-    // }
+    // Transfer nodes from subtree to traversedTree (don't delete, just move)
+    for (Tree_Node* node : nodesToRemove) {
+        // Add to traversedTree first (while node still exists in memory)
+        traversedTree->insertNode(node);
+        // Remove from subtree's frontier (transfers ownership semantically)
+        subtree->removeFrontierNode(node);
+    } 
     
     return subtree;
 }
