@@ -55,7 +55,7 @@ $(OUT_BIN): $(TEST_OBJ) $(COMMON_OBJS)
 	@echo "✓ Build successful: $(OUT_BIN)"
 
 # Build the tree building tests executable
-$(TREE_BIN): $(TREE_TEST_OBJ) $(COMMON_OBJS)
+$(TREE_BIN): $(TREE_TEST_OBJ) $(COMMON_OBJS) $(TASK_ALLOC_OBJS)
 	@mkdir -p $(OUT_DIR)
 	$(CXX) $(CXXFLAGS) $(INCLUDES) $^ -o $@ $(LIBS)
 	@echo "✓ Build successful: $(TREE_BIN)"

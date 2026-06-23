@@ -1,6 +1,7 @@
 #include <iostream>
 #include <vector>
 #include <memory>
+#include <cstdlib>
 #include "../TaskAllocationAlgorithms.h"
 #include "../LTLFormula/LTLFormula.h"
 #include "../LTLFormula/BatchAtomicProposition.h"
@@ -18,13 +19,22 @@ void testAlgorithm1_IntensiveInterTaskSearch() {
     //Step 1: Create LTL formula with batch atomic propositions representing tasks and their relationships
     // Create LTL formula with batch atomic propositions
     std::vector<BatchAtomicProposition> batchAPs;
-    batchAPs.push_back(BatchAtomicProposition(1, {true, false, true, false}, 1));
-    batchAPs.push_back(BatchAtomicProposition(2, {true, true, false, false}, 2));
+    batchAPs.push_back(BatchAtomicProposition(1, {true, false, true, false}, 0));
+    batchAPs.push_back(BatchAtomicProposition(2, {true, true, false, false}, 0));
     
     LTLFormula formula("G(\"p1\" -> F \"p2\")", batchAPs);
     
     // Create Buchi automaton from LTL formula
     BuchiAutomaton nba(&formula);
+    
+    // Export automaton to DOT and PNG
+    std::cout << "\n=== Exporting Büchi Automaton ===" << std::endl;
+    try {
+        nba.visualize("../output/buchi_automaton_tree_test");
+        std::cout << "✓ Exported to DOT and PNG: ../output/buchi_automaton_tree_test.*" << std::endl;
+    } catch (const std::exception& e) {
+        std::cout << "⚠ Export failed: " << e.what() << std::endl;
+    }
     
     std::cout << "LTL Formula: " << formula.toString() << std::endl;
     std::cout << "Automaton states: " << nba.getNumStates() << std::endl;
@@ -96,6 +106,15 @@ void testAlgorithm2_UnrelatedTaskSearch() {
     
     LTLFormula formula("G(\"p0\" -> F \"p1\")", batchAPs);
     BuchiAutomaton nba(&formula);
+    
+    // Export automaton to DOT and PNG
+    std::cout << "\n=== Exporting Büchi Automaton ===" << std::endl;
+    try {
+        nba.visualize("../output/buchi_automaton_unrelated_test");
+        std::cout << "✓ Exported to DOT and PNG: ../output/buchi_automaton_unrelated_test.*" << std::endl;
+    } catch (const std::exception& e) {
+        std::cout << "⚠ Export failed: " << e.what() << std::endl;
+    }
     
     GridWorld gridWorld(10, 10);
     TS ts;

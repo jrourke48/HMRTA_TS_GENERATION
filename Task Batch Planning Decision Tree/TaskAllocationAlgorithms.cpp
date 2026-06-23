@@ -130,13 +130,14 @@ PlanningDecisionTree* TaskAllocationAlgorithms::intensiveInterTaskRelationshipTr
     setPlanningTree(tree);
     setTraversedTree(new PlanningDecisionTree());
     
+    
     // Initialize untraversed queue with root node
     addUntraversedPlanningNode(tree->getRoot());
     
     //add root to the visited nodes and visited automaton states
     addVisitedNode(tree->getRoot());
     addVisitedAutomatonState(initialAutomatonState->getId());
-    
+
     // Process nodes from untraversed queue until empty
     Tree_Node* currentNode = nullptr;
     int iterationCount = 0;
@@ -200,6 +201,10 @@ PlanningDecisionTree* TaskAllocationAlgorithms::intensiveInterTaskRelationshipTr
                         addVisitedAutomatonState(nbaState->getId());
                     }
                     else {
+                        clearVisitedAutomatonStates();
+                    }
+                    if (currentNode->getParent() == nullptr && nba->isAccepting(currentNode->getAutomatonState()->getId())) {
+                        std::cout << "        [DEBUG] Current node is root and accepting, clearing visited automaton states for new batch..." << std::endl;
                         clearVisitedAutomatonStates();
                     }
                     
@@ -266,6 +271,7 @@ PlanningDecisionTree* TaskAllocationAlgorithms::intensiveInterTaskRelationshipTr
         getAutomatonState()->getId() << ", TS state: " << finalOptimalNode->getTSState()->getId() 
                   << ", Progress: " << static_cast<int>(finalOptimalNode->getProgress()) << std::endl;
         
+        
         // Manually traverse from frontier node to root to avoid infinite loop issues
         std::cout << "Path to optimal node:" << std::endl;
         std::vector<Tree_Node*> path;
@@ -288,7 +294,13 @@ PlanningDecisionTree* TaskAllocationAlgorithms::intensiveInterTaskRelationshipTr
         for (Tree_Node* node : path) {
             std::cout << "  - NBA: " << node->getAutomatonState()->getId() 
                       << ", TS: " << node->getTSState()->getId() 
-                      << ", Progress: " << static_cast<int>(node->getProgress()) << std::endl;
+                      << ", Progress: " << static_cast<int>(node->getProgress());  
+            std::cout << "Task Allocation Result: [";
+            for (size_t i = 0; i < node->getRoboTaskAllocation().size(); ++i) {
+                std::cout << (node->getRoboTaskAllocation()[i] ? "1" : "0");
+                if (i < node->getRoboTaskAllocation().size() - 1) std::cout << ", ";
+            }
+            std::cout << "]" << std::endl;
         }
     }
     
@@ -347,6 +359,7 @@ void TaskAllocationAlgorithms::unrelatedTaskSearch(
     }
     
     if (!hasAllocation) {
+        std::cout << "No valid task allocation found for this node." << std::endl;
         return;
     }
     std::vector<uint16_t> updatedTimes = currentNode->getTimes();
@@ -360,13 +373,21 @@ void TaskAllocationAlgorithms::unrelatedTaskSearch(
     // Update newNode with the task allocation and updated times
     newNode->setRoboTaskAllocation(taskAllocation);
     newNode->setTimes(updatedTimes);
-    if (TSState && nba) {
-        bool isAcceptingState = nba->isAccepting(newNode->getAutomatonState()->getId());
+    
+    // Check if the new node is an accepting state (increment progress when entering accepting)
+    if (newNode && nba) {
+        bool acceptingState = nba->isAccepting(newNode->getAutomatonState()->getId());
         std::cout << "Automaton State " << newNode->getAutomatonState()->getId() 
-                  << " is " << (isAcceptingState ? "ACCEPTING" : "NON-ACCEPTING") << std::endl;
-        if (isAcceptingState) {
-            newNode->setProgress(currentNode->getProgress());    // If accepting state, increment progress
-            std::cout << "Progress updated" << std::endl;
+                  << " which is " << (acceptingState ? "ACCEPTING" : "NON-ACCEPTING") << std::endl;
+        if (acceptingState) {
+            // Increment progress when entering accepting state
+            int newProgressInt = static_cast<int>(currentNode->getProgress()) + 1;
+            Tree_Node::TASK_PROGRESS newProgress = static_cast<Tree_Node::TASK_PROGRESS>(newProgressInt);
+            newNode->setProgress(newProgress);
+            std::cout << "Progress incremented to " << static_cast<int>(newProgress) << " (entering accepting)" << std::endl;
+        } else {
+            // Not entering accepting: keep progress the same
+            newNode->setProgress(currentNode->getProgress());
         }
     }
     
@@ -627,41 +648,66 @@ std::vector<uint16_t> TaskAllocationAlgorithms::collectUniqueAPsFromEdges(const 
     
     // Process each edge label string
     for (const auto& edgeLabel : edges) {
-        // Filter out edges with multiple positive APs or multiple negated APs
-        // Valid: "p0" "!p0" "p0 & !p1" (one positive, one negated)
-        // Invalid: "p0 & p1" (two positive) or "!p0 & !p1" (two negated)
-        if (edgeLabel.find('&') != std::string::npos) {
-            // Count positive vs negated APs in this edge
-            int positiveCount = 0, negatedCount = 0;
+        // Remove acceptance marks {0}
+        std::string cleaned = edgeLabel;
+        size_t pos = cleaned.find("{0}");
+        if (pos != std::string::npos) {
+            cleaned.erase(pos, 3);
+        }
+        
+        // Check if there are 2+ true APs connected by AND (not OR)
+        // Split by OR first to get independent clauses
+        bool hasMultipleTrueAPsInAndClause = false;
+        
+        size_t orStart = 0;
+        size_t orEnd = cleaned.find('|');
+        
+        while (orStart < cleaned.length() && !hasMultipleTrueAPsInAndClause) {
+            // Extract OR-separated clause
+            std::string orClause = (orEnd == std::string::npos) ? 
+                                   cleaned.substr(orStart) : 
+                                   cleaned.substr(orStart, orEnd - orStart);
             
-            // Split by '&' and check each token
-            std::string cleaned = edgeLabel;
-            for (size_t i = 0; i < cleaned.length(); ++i) {
-                if (cleaned[i] == '|') cleaned[i] = '&';
-            }
+            // Count true APs in this AND-clause (don't replace | with &)
+            int trueApCount = 0;
+            size_t andStart = 0;
+            size_t andEnd = orClause.find('&');
             
-            size_t start = 0, end = cleaned.find('&');
-            while (start < cleaned.length()) {
-                std::string token = (end == std::string::npos) ? 
-                    cleaned.substr(start) : cleaned.substr(start, end - start);
+            while (andStart < orClause.length()) {
+                // Extract token
+                std::string token = (andEnd == std::string::npos) ? 
+                                   orClause.substr(andStart) : 
+                                   orClause.substr(andStart, andEnd - andStart);
+                
+                // Trim whitespace and quotes
                 token.erase(0, token.find_first_not_of(" \t\n\r\""));
                 token.erase(token.find_last_not_of(" \t\n\r\"") + 1);
                 
-                if (!token.empty() && token[0] == 'p' && token.length() > 1) {
-                    positiveCount++;
-                } else if (token.length() > 1 && token[0] == '!' && token[1] == 'p') {
-                    negatedCount++;
+                // Count if this is a true (non-negated) AP
+                if (!token.empty() && token[0] != '!') {
+                    trueApCount++;
                 }
                 
-                if (end == std::string::npos) break;
-                start = end + 1;
-                end = cleaned.find('&', start);
+                // Move to next token
+                if (andEnd == std::string::npos) break;
+                andStart = andEnd + 1;
+                andEnd = orClause.find('&', andStart);
             }
             
-            // Skip if multiple positive APs or multiple negated APs
-            if (positiveCount > 1 || negatedCount > 1) {
-                continue;
+            // If 2+ true APs AND-ed together, skip this edge
+            if (trueApCount >= 2) {
+                hasMultipleTrueAPsInAndClause = true;
             }
+            
+            // Move to next OR clause
+            if (orEnd == std::string::npos) break;
+            orStart = orEnd + 1;
+            orEnd = cleaned.find('|', orStart);
+        }
+        
+        // Skip edges with 2+ true APs connected by AND
+        if (hasMultipleTrueAPsInAndClause) {
+            continue;
         }
         
         // Parse the edge label to extract AP IDs
@@ -712,9 +758,9 @@ std::pair<std::vector<bool>, uint16_t> TaskAllocationAlgorithms::getTaskAllocati
                 std::vector<bool> robotCapabilities = robot->getCapabilities();
                 bool robotContributesCapability = false;
                 
-                // Check if this robot contributes any required capabilities
+                // Check if this robot contributes any NEW required capabilities (not already accumulated)
                 for (size_t j = 0; j < requiredCapabilities.size() && j < robotCapabilities.size(); ++j) {
-                    if (requiredCapabilities[j] && robotCapabilities[j]) {
+                    if (requiredCapabilities[j] && robotCapabilities[j] && !accumulatedCapabilities[j]) {
                         accumulatedCapabilities[j] = true;
                         robotContributesCapability = true;
                     }

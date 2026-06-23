@@ -159,15 +159,12 @@ void Tree_Node::setBatch(int8_t newBatch) {
 /**
  * setProgress - Set the progress type
  */
-void Tree_Node::setProgress(TASK_PROGRESS curProg) {
-    if (curProg == TASK_PROGRESS::PRE) {
-        prog = TASK_PROGRESS::TRA;
-    }
-    else if (curProg == TASK_PROGRESS::TRA) {
-        prog = TASK_PROGRESS::SUF;
+void Tree_Node::setProgress(TASK_PROGRESS prog) {
+    if (prog <= TASK_PROGRESS::OTH) {
+        this->prog = prog;
     }
     else {
-        prog = TASK_PROGRESS::OTH;
+        this->prog = TASK_PROGRESS::OTH; // Default to OTH if invalid value is provided
     }
 }
 

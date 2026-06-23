@@ -1,5 +1,6 @@
 #include "PlanningDecisionTree.h"
 #include <algorithm>
+#include <iostream>
 
 /**
  * PlanningDecisionTree - Constructor
@@ -317,6 +318,7 @@ std::vector<Tree_Node*> PlanningDecisionTree::getLeafNodes() {
 
 /**
  * getOptimalFrontierNode - Get the frontier node with the lowest max time (heuristic for optimality)
+ * Only considers frontier nodes at TRANSITION progress (TRA)
  * Returns the frontier node with the best cost for expansion
  */
 Tree_Node* PlanningDecisionTree::getOptimalFrontierNode() const {
@@ -324,11 +326,25 @@ Tree_Node* PlanningDecisionTree::getOptimalFrontierNode() const {
         return nullptr;
     }
     
-    Tree_Node* optimal = frontierNodes[0];
-    uint16_t minMaxTime = optimal->getMaxTime();
-    
+    // Filter frontier nodes to only those at TRANSITION progress
+    std::vector<Tree_Node*> transitionNodes;
     for (Tree_Node* node : frontierNodes) {
+        if (node->getProgress() == Tree_Node::TASK_PROGRESS::TRA) {
+            transitionNodes.push_back(node);
+        }
+    }
+    
+    // If no transition nodes, return null
+    if (transitionNodes.empty()) {
+        return nullptr;
+    }
+    
+    Tree_Node* optimal = transitionNodes[0];
+    uint16_t minMaxTime = optimal->getMaxTime();
+
+    for (Tree_Node* node : transitionNodes) {
         uint16_t nodeMaxTime = node->getMaxTime();
+        std::cout << "Max Time for Node NBA: node " << node->getId() << " = " << nodeMaxTime << std::endl;
         if (nodeMaxTime < minMaxTime) {
             minMaxTime = nodeMaxTime;
             optimal = node;
