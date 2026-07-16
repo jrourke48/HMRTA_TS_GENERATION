@@ -43,7 +43,7 @@ class PlanningDecisionTree {
         void removeFrontierNode(Tree_Node* node);
         const std::vector<Tree_Node*>& getFrontierNodes() const;
         void clearFrontierNodes();
-        Tree_Node* getOptimalFrontierNode() const; // Returns the frontier node with the lowest max time (heuristic)
+        Tree_Node* getOptimalFrontierNode(bool finite_nba) const; // Returns the frontier node with the lowest max time (heuristic)
         std::vector<Tree_Node*> getPathtoFrontierNode(Tree_Node* frontierNode);
 
         // Tree manipulation

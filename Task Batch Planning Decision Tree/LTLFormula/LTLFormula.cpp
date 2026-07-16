@@ -96,6 +96,12 @@ std::vector<BatchAtomicProposition>& LTLFormula::getBatchAtomicPropositions() {
     return *batchAPs;
 }
 
+// Get batch atomic propositions vector (const version)
+const std::vector<BatchAtomicProposition>& LTLFormula::getBatchAtomicPropositions() const {
+    if (!batchAPs) throw std::runtime_error("BatchAPs vector is null");
+    return *batchAPs;
+}
+
 // Get atomic propositions (alias for getBatchAtomicPropositions)
 std::vector<BatchAtomicProposition>& LTLFormula::getAtomicPropositions() {
     if (!batchAPs) batchAPs = new std::vector<BatchAtomicProposition>();
@@ -106,11 +112,11 @@ std::vector<BatchAtomicProposition>& LTLFormula::getAtomicPropositions() {
 int8_t LTLFormula::getBatchVal(uint16_t apId) const {
     if (!batchAPs) throw std::runtime_error("BatchAPs vector is null");
     for (const auto& batchAP : *batchAPs) {
-        if (batchAP.getAP() == apId) {
+        if (batchAP.getAPId() == apId) {
             return batchAP.getBatch();
         }
     }
-    throw std::out_of_range("Atomic proposition ID not found");
+    throw std::out_of_range("AP ID not found");
 }
 
 // Check if formula is valid

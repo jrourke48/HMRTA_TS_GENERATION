@@ -1,0 +1,32 @@
+digraph "" {
+  rankdir=LR
+  label="[Büchi]"
+  labelloc="t"
+  node [shape="circle"]
+  I [label="", style=invis, width=0]
+  I -> 2
+  0 [label="0", peripheries=2]
+  0 -> 0 [label="1"]
+  1 [label="1"]
+  1 -> 0 [label="p1 & p4"]
+  1 -> 1 [label="!p1 & !p4"]
+  1 -> 4 [label="!p1 & p4"]
+  2 [label="2"]
+  2 -> 0 [label="p1 & p3 & p4"]
+  2 -> 1 [label="!p1 & p3 & !p4"]
+  2 -> 2 [label="!p1 & !p3 & !p4"]
+  2 -> 3 [label="p1 & !p3 & p4"]
+  2 -> 4 [label="!p1 & p3 & p4"]
+  2 -> 5 [label="!p1 & !p3 & p4"]
+  3 [label="3"]
+  3 -> 0 [label="p3"]
+  3 -> 3 [label="!p3"]
+  4 [label="4"]
+  4 -> 0 [label="p1"]
+  4 -> 4 [label="!p1"]
+  5 [label="5"]
+  5 -> 0 [label="p1 & p3"]
+  5 -> 3 [label="p1 & !p3"]
+  5 -> 4 [label="!p1 & p3"]
+  5 -> 5 [label="!p1 & !p3"]
+}

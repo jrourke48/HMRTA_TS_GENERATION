@@ -321,28 +321,40 @@ std::vector<Tree_Node*> PlanningDecisionTree::getLeafNodes() {
  * Only considers frontier nodes at TRANSITION progress (TRA)
  * Returns the frontier node with the best cost for expansion
  */
-Tree_Node* PlanningDecisionTree::getOptimalFrontierNode() const {
+Tree_Node* PlanningDecisionTree::getOptimalFrontierNode(bool finite_nba) const {
     if (frontierNodes.empty()) {
         return nullptr;
     }
-    
-    // Filter frontier nodes to only those at TRANSITION progress
-    std::vector<Tree_Node*> transitionNodes;
-    for (Tree_Node* node : frontierNodes) {
-        if (node->getProgress() == Tree_Node::TASK_PROGRESS::TRA) {
-            transitionNodes.push_back(node);
+    //list of nodes that have completed the progress through the nba
+    std::vector<Tree_Node*> completeNodes;
+    //first check if the nba is finite, if it is not finite.
+    if (finite_nba) {
+        // Filter frontier nodes to only those at TRANSITION progress
+        for (Tree_Node* node : frontierNodes) {
+            if (node->getProgress() == Tree_Node::TASK_PROGRESS::TRA) {
+                completeNodes.push_back(node);
+            }
         }
     }
-    
-    // If no transition nodes, return null
-    if (transitionNodes.empty()) {
+    else {
+        // if the nba is infinte Filter frontier nodes to only those at Other progress
+        for (Tree_Node* node : frontierNodes) {
+            if (node->getProgress() == Tree_Node::TASK_PROGRESS::OTH) {
+                completeNodes.push_back(node);
+            }
+        }
+    }
+        
+    // If no transition nodes or oth nodes, return null
+    if (completeNodes.empty()) {
         return nullptr;
     }
     
-    Tree_Node* optimal = transitionNodes[0];
+    //else return the node with the lowest max time
+    Tree_Node* optimal = completeNodes[0];
     uint16_t minMaxTime = optimal->getMaxTime();
 
-    for (Tree_Node* node : transitionNodes) {
+    for (Tree_Node* node : completeNodes) {
         uint16_t nodeMaxTime = node->getMaxTime();
         std::cout << "Max Time for Node NBA: node " << node->getId() << " = " << nodeMaxTime << std::endl;
         if (nodeMaxTime < minMaxTime) {

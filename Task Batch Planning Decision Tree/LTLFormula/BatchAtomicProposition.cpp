@@ -32,3 +32,4 @@ std::string BatchAtomicProposition::capabilityToString(RobotCapability cap) cons
             return "UNKNOWN";
     }
 }
+

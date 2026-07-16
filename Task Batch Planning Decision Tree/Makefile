@@ -11,12 +11,14 @@ OUT_BIN = $(OUT_DIR)/TestIntegration
 TREE_BIN = $(OUT_DIR)/TreeBuildingTests
 TASK_ALLOC_BIN = $(OUT_DIR)/TestTaskAllocation
 PLANNING_TREE_BIN = $(OUT_DIR)/TestPlanningTreeComprehensive
+OPTIMAL_PATH_BIN = $(OUT_DIR)/OptimalPathTest
 
 # Source files
 TEST_SRC = Testing/TestIntegration.cpp
 TREE_TEST_SRC = Testing/TreeBuildingTests.cpp
-TASK_ALLOC_SRC = Testing/TestTaskAllocationAlgorithms_new.cpp
+TASK_ALLOC_SRC = Testing/TestTaskAllocationAlgorithms.cpp
 PLANNING_TREE_TEST_SRC = Testing/TestPlanningTreeComprehensive.cpp
+OPTIMAL_PATH_SRC = Testing/Optimal_Path_Test.cpp
 # TaskAllocationAlgorithms - algorithms for task allocation
 TASK_ALLOC_SRCS = TaskAllocationAlgorithms.cpp
 
@@ -39,14 +41,15 @@ TEST_OBJ = $(TEST_SRC:.cpp=.o)
 TREE_TEST_OBJ = $(TREE_TEST_SRC:.cpp=.o)
 TASK_ALLOC_OBJ = $(TASK_ALLOC_SRC:.cpp=.o)
 PLANNING_TREE_TEST_OBJ = $(PLANNING_TREE_TEST_SRC:.cpp=.o)
+OPTIMAL_PATH_OBJ = $(OPTIMAL_PATH_SRC:.cpp=.o)
 COMMON_OBJS = $(COMMON_SRCS:.cpp=.o)
 TASK_ALLOC_OBJS = $(TASK_ALLOC_SRCS:.cpp=.o)
-ALL_OBJS = $(TEST_OBJ) $(TREE_TEST_OBJ) $(TASK_ALLOC_OBJ) $(PLANNING_TREE_TEST_OBJ) $(COMMON_OBJS) $(TASK_ALLOC_OBJS)
+ALL_OBJS = $(TEST_OBJ) $(TREE_TEST_OBJ) $(TASK_ALLOC_OBJ) $(PLANNING_TREE_TEST_OBJ) $(OPTIMAL_PATH_OBJ) $(COMMON_OBJS) $(TASK_ALLOC_OBJS)
 
 # Targets
-.PHONY: all clean run rebuild help test test-tree test-task test-planning-tree test-all tree-only task-only planning-tree-only
+.PHONY: all clean run rebuild help test test-tree test-task test-planning-tree test-optimal-path test-all tree-only task-only planning-tree-only optimal-path-only
 
-all: $(OUT_BIN) $(TREE_BIN) $(TASK_ALLOC_BIN) $(PLANNING_TREE_BIN)
+all: $(OUT_BIN) $(TREE_BIN) $(TASK_ALLOC_BIN) $(PLANNING_TREE_BIN) $(OPTIMAL_PATH_BIN)
 
 # Build the test executable
 $(OUT_BIN): $(TEST_OBJ) $(COMMON_OBJS)
@@ -72,6 +75,12 @@ $(PLANNING_TREE_BIN): $(PLANNING_TREE_TEST_OBJ) $(COMMON_OBJS)
 	$(CXX) $(CXXFLAGS) $(INCLUDES) $^ -o $@ $(LIBS)
 	@echo "✓ Build successful: $(PLANNING_TREE_BIN)"
 
+# Build the optimal path tests executable
+$(OPTIMAL_PATH_BIN): $(OPTIMAL_PATH_OBJ) $(COMMON_OBJS) $(TASK_ALLOC_OBJS)
+	@mkdir -p $(OUT_DIR)
+	$(CXX) $(CXXFLAGS) $(INCLUDES) $^ -o $@ $(LIBS)
+	@echo "✓ Build successful: $(OPTIMAL_PATH_BIN)"
+
 # Compile object files
 %.o: %.cpp
 	$(CXX) $(CXXFLAGS) $(INCLUDES) -c $< -o $@
@@ -96,6 +105,11 @@ test-planning-tree: $(PLANNING_TREE_BIN)
 	@echo "Running planning tree comprehensive tests..."
 	@$(PLANNING_TREE_BIN)
 
+# Run optimal path tests
+test-optimal-path: $(OPTIMAL_PATH_BIN)
+	@echo "Running optimal path tests..."
+	@$(OPTIMAL_PATH_BIN)
+
 # Shortcut to run only tree tests
 tree-only: test-tree
 
@@ -105,8 +119,11 @@ task-only: test-task
 # Shortcut to run only planning tree tests
 planning-tree-only: test-planning-tree
 
+# Shortcut to run only optimal path tests
+optimal-path-only: test-optimal-path
+
 # Run all tests
-test-all: run test-tree test-task test-planning-tree
+test-all: run test-tree test-task test-planning-tree test-optimal-path
 
 # Run tests and show output
 test: test-all
@@ -127,22 +144,26 @@ help:
 	@echo "Planning Tree Integration Test Makefile"
 	@echo "========================================"
 	@echo "Targets:"
-	@echo "  make all              - Build all test executables (default)"
-	@echo "  make run              - Build and run the integration test"
-	@echo "  make test-tree        - Build and run the tree building tests"
-	@echo "  make test-task        - Build and run the task allocation tests"
-	@echo "  make tree-only        - Shortcut for 'make test-tree'"
-	@echo "  make task-only        - Shortcut for 'make test-task'"
-	@echo "  make test             - Run all tests (integration, tree, task)"
-	@echo "  make test-all         - Run all tests (explicit)"
-	@echo "  make rebuild          - Clean and rebuild all"
-	@echo "  make clean            - Remove build artifacts"
-	@echo "  make help             - Show this help message"
+	@echo "  make all                 - Build all test executables (default)"
+	@echo "  make run                 - Build and run the integration test"
+	@echo "  make test-tree           - Build and run the tree building tests"
+	@echo "  make test-task           - Build and run the task allocation tests"
+	@echo "  make test-planning-tree  - Build and run planning tree tests"
+	@echo "  make test-optimal-path   - Build and run optimal path visualization tests"
+	@echo "  make tree-only           - Shortcut for 'make test-tree'"
+	@echo "  make task-only           - Shortcut for 'make test-task'"
+	@echo "  make planning-tree-only  - Shortcut for 'make test-planning-tree'"
+	@echo "  make optimal-path-only   - Shortcut for 'make test-optimal-path'"
+	@echo "  make test                - Run all tests"
+	@echo "  make test-all            - Run all tests (explicit)"
+	@echo "  make rebuild             - Clean and rebuild all"
+	@echo "  make clean               - Remove build artifacts"
+	@echo "  make help                - Show this help message"
 	@echo ""
 	@echo "Examples:"
-	@echo "  make                  # Build all tests"
-	@echo "  make run              # Build and run integration test"
-	@echo "  make test-tree        # Build and run tree tests"
-	@echo "  make test-task        # Build and run task allocation tests"
-	@echo "  make test             # Build and run all tests"
-	@echo "  make clean && make    # Rebuild from scratch"
+	@echo "  make                        # Build all tests"
+	@echo "  make run                    # Build and run integration test"
+	@echo "  make test-tree              # Build and run tree tests"
+	@echo "  make test-optimal-path      # Build and run optimal path tests"
+	@echo "  make test                   # Build and run all tests"
+	@echo "  make clean && make          # Rebuild from scratch"

@@ -1,0 +1,8 @@
+digraph PlanningTree {
+  rankdir=TB;
+  node [shape=box, style=filled, fontname=Arial, fontsize=10];
+  edge [fontname=Arial, fontsize=9];
+
+  node_0 [label="Node 0\nNBA: 0, TS: 0\nProgress: PRE\nMax Time: 0\nBatch: 0\nRobots: [0,0,0,0,0,0]", fillcolor="#FFE6E6"];
+
+}

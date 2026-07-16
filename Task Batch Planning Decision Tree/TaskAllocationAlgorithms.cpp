@@ -4,6 +4,8 @@
 #include <limits>
 #include <cmath>
 #include <map>
+#include <fstream>
+#include <iostream>
 
 /**
  * TaskAllocationAlgorithms - Constructor
@@ -159,18 +161,49 @@ PlanningDecisionTree* TaskAllocationAlgorithms::intensiveInterTaskRelationshipTr
             Node* nbaState = nbaPtr->getNode(i);
             uint16_t nbaId = nbaState->getId();
             
-            if (!isAutomatonStateVisited(nbaId)) {
-                std::cout << "  [DEBUG] Automaton state " << nbaId << " not visited, processing..." << std::endl;
-                // Only process if this automaton state has NOT been visited in this task stage
-                // Get edge labels from current automaton state to this state
-                std::vector<std::string> edges = nbaPtr->getEdgeLabels(currentNode->getAutomatonState()->getId(), nbaId);
-                std::cout << "    [DEBUG] Found " << edges.size() << " edge(s)" << std::endl;
-                std::vector<uint16_t> apIds = collectUniqueAPsFromEdges(edges);
-                std::cout << "    [DEBUG] Collected " << apIds.size() << " unique AP(s): ";
-                for (auto apId : apIds) std::cout << apId << " ";
+            // Get edge labels from current automaton state to this state
+            std::vector<std::string> edges = nbaPtr->getEdgeLabels(currentNode->getAutomatonState()->getId(), nbaId);
+            std::cout << "    [DEBUG] Found " << edges.size() << " edge(s)" << std::endl;
+            for (size_t ei = 0; ei < edges.size(); ++ei) {
+                std::cout << "      [DEBUG] Edge " << ei << ": \"" << edges[ei] << "\"" << std::endl;
+            }
+            std::vector<uint16_t> apIds = collectUniqueAPsFromEdges(edges);
+            std::cout << "    [DEBUG] Collected " << apIds.size() << " unique AP(s): ";
+            for (auto apId : apIds) std::cout << apId << " ";
+            std::cout << std::endl;
+            
+            // DEBUG: Verify extracted apIds match BatchAtomicProposition ap_ids
+            std::cout << "    [DEBUG] Verifying apIds against LTL formula APs:" << std::endl;
+            try {
+                const auto& batchAPs = nbaPtr->getLTLFormula()->getBatchAtomicPropositions();
+                std::cout << "    [DEBUG] Available APs in formula: ";
+                for (const auto& bap : batchAPs) {
+                    std::cout << bap.getAPId() << " ";
+                }
                 std::cout << std::endl;
                 
                 for (uint16_t apId : apIds) {
+                    bool found = false;
+                    for (const auto& bap : batchAPs) {
+                        if (bap.getAPId() == apId) {
+                            found = true;
+                            std::cout << "      ✓ apId " << apId << " found in formula" << std::endl;
+                            break;
+                        }
+                    }
+                    if (!found) {
+                        std::cout << "      ✗ apId " << apId << " NOT found in formula!" << std::endl;
+                    }
+                }
+            } catch (const std::exception& e) {
+                std::cout << "    [DEBUG] Exception checking APs: " << e.what() << std::endl;
+            }
+            
+            for (uint16_t apId : apIds) {
+                // Solution 1: Check (state, AP) pair instead of just state
+                if (!isStateAPPairVisited(nbaId, apId)) {
+                    std::cout << "      [DEBUG] AP " << apId << " not visited with state " << nbaId << ", processing..." << std::endl;
+                    
                     int8_t batchVal = nbaPtr->getLTLFormula()->getBatchVal(apId);
                     std::cout << "      [DEBUG] AP " << apId << " has batch value " << static_cast<int>(batchVal) << std::endl;
                     Node* TSState = envPtr->getTransitionSystem()->getNode(apId);
@@ -180,38 +213,54 @@ PlanningDecisionTree* TaskAllocationAlgorithms::intensiveInterTaskRelationshipTr
                     Tree_Node* newNode = new Tree_Node(0, currentNode, nbaState, 
                                                        TSState, batchVal);
                     
-                    // Route based on batch value
-                    if (!isBatchValueInTree(batchVal) || batchVal == 0) {
-                        std::cout << "        [DEBUG] Routing to unrelatedTaskSearch" << std::endl;
-                        unrelatedTaskSearch(newNode, TSState, currentNode);
+                    // Route based on batch value - don't use isBatchValueInTree() for routing!
+                    // batchVal = 0: unrelated tasks
+                    // batchVal > 0: compatible tasks (same batch)
+                    // batchVal < 0: exclusive tasks (conflicting batch)
+                    if (batchVal == 0) {
+                        std::cout << "        [DEBUG] Routing to unrelatedTaskSearch (batch=0)" << std::endl;
+                        unrelatedTaskSearch(newNode, TSState, currentNode, apId);
                     }
                     else if (batchVal > 0) {
-                        std::cout << "        [DEBUG] Routing to compatibleTaskSearch" << std::endl;
+                        std::cout << "        [DEBUG] Routing to compatibleTaskSearch (batch=" << static_cast<int>(batchVal) << ")" << std::endl;
                         // TODO: compatible task search needs to consider sub tasks and main tasks
                         compatibleTaskSearch(newNode, TSState, currentNode);
                     }
                     else {
-                        std::cout << "        [DEBUG] Routing to exclusiveTaskSearch" << std::endl;
+                        std::cout << "        [DEBUG] Routing to exclusiveTaskSearch (batch=" << static_cast<int>(batchVal) << ")" << std::endl;
                         // TODO: exclusive task search needs to consider sub tasks and main tasks
                         exclusiveTaskSearch(newNode, TSState, currentNode);
                     }
                     
-                    // Track visited automaton states based on progress
+                    // Now track that we've seen this batch value
+                    if (batchVal != 0) {
+                        isBatchValueInTree(batchVal);  // Side effect: adds to tree tracking
+                    }
+                    
+                    // Solution 1: Track (state, AP) pair as visited
+                    addVisitedStateAPPair(nbaId, apId);
+                    
+                    // Solution 2: Clear visited pairs when progress changes
                     if (currentNode->getProgress() == newNode->getProgress()) {
-                        addVisitedAutomatonState(nbaState->getId());
+                        // Same progress - keep tracking
                     }
                     else {
-                        clearVisitedAutomatonStates();
+                        // Progress changed - Solution 2: Clear for new batch context
+                        std::cout << "        [DEBUG] Progress changed, clearing visited (state,AP) pairs for new batch..." << std::endl;
+                        clearVisitedStateAPPairs();
                     }
+                    
                     if (currentNode->getParent() == nullptr && nba->isAccepting(currentNode->getAutomatonState()->getId())) {
-                        std::cout << "        [DEBUG] Current node is root and accepting, clearing visited automaton states for new batch..." << std::endl;
-                        clearVisitedAutomatonStates();
+                        std::cout << "        [DEBUG] Current node is root and accepting, clearing visited (state,AP) pairs for new batch..." << std::endl;
+                        clearVisitedStateAPPairs();
                     }
                     
                     // Add to subtree (insertNode will auto-assign the correct nodeId)
                     subtree->insertNode(newNode);
                     visitedNodes.push_back(newNode); // Mark new node as visited
-                    std::cout << "        [DEBUG] Added node to subtree (NBA: " << nbaId << ")" << std::endl;
+                    std::cout << "        [DEBUG] Added node to subtree (NBA: " << nbaId << ", AP: " << apId << ")" << std::endl;
+                } else {
+                    std::cout << "      [DEBUG] (State " << nbaId << ", AP " << apId << ") pair already visited, skipping..." << std::endl;
                 }
             }
         }
@@ -263,7 +312,7 @@ PlanningDecisionTree* TaskAllocationAlgorithms::intensiveInterTaskRelationshipTr
     }
     std::cout << "\n=== SEARCH COMPLETE ===" << std::endl;
     
-    Tree_Node* finalOptimalNode = planningTree->getOptimalFrontierNode(); // Final optimal node after search completion
+    Tree_Node* finalOptimalNode = planningTree->getOptimalFrontierNode(nba->isFinite()); // Final optimal node after search completion
     if (finalOptimalNode) {
         uint16_t cost = finalOptimalNode->getMaxTime(); 
         std::cout << "Optimal frontier node found with cost (max time): " << cost << std::endl;
@@ -314,11 +363,15 @@ PlanningDecisionTree* TaskAllocationAlgorithms::intensiveInterTaskRelationshipTr
  * Algorithm 2: Unrelated-Task Search (US)
  * Searches for unrelated tasks that can be executed independently
  * Mutates newNode with search results
+ * 
+ * NOTE: Uses apId (unique AP identifier) instead of tsStateId for capability lookup
+ * This is critical because multiple APs can map to the same TS state but require different capabilities
  */
 void TaskAllocationAlgorithms::unrelatedTaskSearch(
     Tree_Node* newNode,
     Node* TSState,
-    Tree_Node* currentNode) {
+    Tree_Node* currentNode,
+    uint16_t apId) {
     
     if (!newNode || !TSState || !multiRobotSystem || !nba || !environment) {
         return;
@@ -333,8 +386,9 @@ void TaskAllocationAlgorithms::unrelatedTaskSearch(
     // Get the sort of the times vector and get the corresponding robot indices to find the best robot assignment
     std::vector<std::pair<uint16_t, uint16_t>> sortedTimes = Tree_Node::getSortedTimes(updatedtimes);
     
-    // Get required capabilities from the BatchAtomicProposition
-    BatchAtomicProposition batchAP = nba->getLTLFormula()->getAP(tsStateId);
+    // Get required capabilities from the BatchAtomicProposition using apId (not tsStateId)
+    // CRITICAL: Different APs can map to same TS state but have different required capabilities
+    BatchAtomicProposition batchAP = nba->getLTLFormula()->getAP(apId);
     std::vector<bool> requiredCapabilities = batchAP.getCapabilities();
     
     // Find all permutations of robots that satisfy all required capabilities
@@ -495,31 +549,83 @@ void TaskAllocationAlgorithms::clearVisitedNodes() {
 }
 
 /**
- * addVisitedAutomatonState - Add an automaton state to the visited states collection
+ * addVisitedStateAPPair - Add a (automatonState, AP) pair to visited collection
+ * Solution 1: Track (state, AP) pairs instead of just states
+ */
+void TaskAllocationAlgorithms::addVisitedStateAPPair(uint16_t automatonStateId, uint16_t apId) {
+    auto pair = std::make_pair(automatonStateId, apId);
+    if (std::find(visitedStateAPPairs.begin(), visitedStateAPPairs.end(), pair) == visitedStateAPPairs.end()) {
+        visitedStateAPPairs.push_back(pair);
+    }
+}
+
+/**
+ * isStateAPPairVisited - Check if a specific (automatonState, AP) pair has been visited
+ * Solution 1: Check exact pair, not just automaton state
+ */
+bool TaskAllocationAlgorithms::isStateAPPairVisited(uint16_t automatonStateId, uint16_t apId) const {
+    auto pair = std::make_pair(automatonStateId, apId);
+    return std::find(visitedStateAPPairs.begin(), visitedStateAPPairs.end(), pair) != visitedStateAPPairs.end();
+}
+
+/**
+ * getVisitedStateAPPairs - Get all visited (state, AP) pairs
+ */
+std::vector<std::pair<uint16_t, uint16_t>>& TaskAllocationAlgorithms::getVisitedStateAPPairs() {
+    return visitedStateAPPairs;
+}
+
+/**
+ * clearVisitedStateAPPairs - Clear all visited (state, AP) pairs
+ * Solution 2: Call this when progress level changes to allow re-exploring APs in new batch
+ */
+void TaskAllocationAlgorithms::clearVisitedStateAPPairs() {
+    visitedStateAPPairs.clear();
+}
+
+/**
+ * addVisitedAutomatonState - LEGACY: Kept for backward compatibility
+ * Now adds all APs with this state as visited
  */
 void TaskAllocationAlgorithms::addVisitedAutomatonState(uint16_t state) {
-    visitedAutomatonStates.push_back(state);
+    // For backward compatibility - mark state as visited implicitly
+    // In new code, use addVisitedStateAPPair directly
+    (void)state;  // Suppress unused warning
 }
 
 /**
- * isAutomatonStateVisited - Check if an automaton state has been visited
+ * isAutomatonStateVisited - LEGACY: Check if any (state, AP) pair exists for this state
  */
 bool TaskAllocationAlgorithms::isAutomatonStateVisited(uint16_t state) const {
-    return std::find(visitedAutomatonStates.begin(), visitedAutomatonStates.end(), state) != visitedAutomatonStates.end();
+    // Check if this automaton state appears in ANY (state, AP) pair
+    for (const auto& pair : visitedStateAPPairs) {
+        if (pair.first == state) {
+            return true;
+        }
+    }
+    return false;
 }
 
 /**
- * getVisitedAutomatonStates - Get the collection of visited automaton states
+ * getVisitedAutomatonStates - LEGACY: Extract unique automaton states from visited pairs
  */
 std::vector<uint16_t>& TaskAllocationAlgorithms::getVisitedAutomatonStates() {
-    return visitedAutomatonStates;
+    static std::vector<uint16_t> legacyStates;
+    legacyStates.clear();
+    
+    for (const auto& pair : visitedStateAPPairs) {
+        if (std::find(legacyStates.begin(), legacyStates.end(), pair.first) == legacyStates.end()) {
+            legacyStates.push_back(pair.first);
+        }
+    }
+    return legacyStates;
 }
 
 /**
- * clearVisitedAutomatonStates - Clear all visited automaton states
+ * clearVisitedAutomatonStates - LEGACY: Clears the visited (state, AP) pairs
  */
 void TaskAllocationAlgorithms::clearVisitedAutomatonStates() {
-    visitedAutomatonStates.clear();
+    clearVisitedStateAPPairs();
 }
 
 /**
@@ -901,4 +1007,485 @@ PlanningDecisionTree* TaskAllocationAlgorithms::pruneSubtree(PlanningDecisionTre
     } 
     
     return subtree;
+}
+
+/**
+ * visualizeTree - Creates a Graphviz visualization of the entire planning tree
+ * Shows all nodes colored by progress level and batch value
+ * Displays robot allocations for each node
+ */
+void TaskAllocationAlgorithms::visualizeTree(const std::string& filename) const {
+    if (!planningTree || !planningTree->getRoot()) {
+        std::cerr << "Error: Planning tree is empty or not initialized" << std::endl;
+        return;
+    }
+    
+    // Helper lambda to escape special characters for DOT format
+    auto escapeDotLabel = [](const std::string& str) -> std::string {
+        std::string result;
+        for (size_t i = 0; i < str.length(); ++i) {
+            char c = str[i];
+            // Only escape double quotes - leave \\n and other sequences alone
+            if (c == '"') {
+                result += "\\\"";
+            } else if (c == '\\' && i + 1 < str.length() && str[i + 1] == 'n') {
+                // Keep \\n as-is for DOT newlines
+                result += "\\n";
+                ++i;  // Skip the 'n'
+            } else if (c != '\r') {  // Skip carriage returns
+                result += c;
+            }
+        }
+        return result;
+    };
+    
+    std::string dotFile = filename + ".dot";
+    std::string pngFile = filename + ".png";
+    
+    std::ofstream file(dotFile);
+    if (!file.is_open()) {
+        std::cerr << "Error: Failed to open file: " << dotFile << std::endl;
+        return;
+    }
+    
+    // Write DOT header
+    file << "digraph PlanningTree {\n";
+    file << "  rankdir=TB;\n";
+    file << "  node [shape=box, style=filled, fontname=Arial, fontsize=10];\n";
+    file << "  edge [fontname=Arial, fontsize=9];\n\n";
+    
+    // Color mapping for progress levels
+    auto getProgressColor = [](Tree_Node::TASK_PROGRESS prog) -> std::string {
+        switch(prog) {
+            case Tree_Node::TASK_PROGRESS::PRE: return "#FFE6E6";  // Light red
+            case Tree_Node::TASK_PROGRESS::TRA: return "#FFFFCC";  // Light yellow
+            case Tree_Node::TASK_PROGRESS::SUF: return "#E6F3FF";  // Light blue
+            case Tree_Node::TASK_PROGRESS::OTH: return "#E6FFE6";  // Light green
+            default: return "#FFFFFF";                              // White
+        }
+    };
+    
+    auto getProgressLabel = [](Tree_Node::TASK_PROGRESS prog) -> std::string {
+        switch(prog) {
+            case Tree_Node::TASK_PROGRESS::PRE: return "PRE";
+            case Tree_Node::TASK_PROGRESS::TRA: return "TRA";
+            case Tree_Node::TASK_PROGRESS::SUF: return "SUF";
+            case Tree_Node::TASK_PROGRESS::OTH: return "OTH";
+            default: return "?";
+        }
+    };
+    
+    // Get all nodes from the tree
+    std::vector<Tree_Node*> allNodes = planningTree->getAllNodes();
+    
+    // Write nodes
+    for (Tree_Node* node : allNodes) {
+        if (!node || !node->getAutomatonState() || !node->getTSState()) continue;
+        
+        std::string nodeId = "node_" + std::to_string(node->getId());
+        uint16_t nbaId = node->getAutomatonState()->getId();
+        uint16_t tsId = node->getTSState()->getId();
+        std::string progLabel = getProgressLabel(node->getProgress());
+        uint16_t maxTime = node->getMaxTime();
+        
+        // Create label with node information
+        std::string label = "Node " + std::to_string(node->getId()) + "\\n";
+        label += "NBA: " + std::to_string(nbaId) + ", TS: " + std::to_string(tsId) + "\\n";
+        label += "Progress: " + progLabel + "\\n";
+        label += "Max Time: " + std::to_string(maxTime) + "\\n";
+        label += "Batch: " + std::to_string((int)node->getBatch()) + "\\n";
+        
+        // Add robot allocation info
+        label += "Robots: [";
+        const auto& allocation = node->getRoboTaskAllocation();
+        for (size_t i = 0; i < allocation.size(); ++i) {
+            label += (allocation[i] ? "1" : "0");
+            if (i < allocation.size() - 1) label += ",";
+        }
+        label += "]";
+        
+        // Escape label for DOT format
+        label = escapeDotLabel(label);
+        
+        // Determine node color based on progress
+        std::string color = getProgressColor(node->getProgress());
+        
+        // Check if this is the optimal frontier node
+        Tree_Node* optimalNode = planningTree->getOptimalFrontierNode(nba->isFinite());
+        if (node == optimalNode) {
+            file << "  " << nodeId << " [label=\"" << label << "\", fillcolor=\"#FF6B6B\", "
+                 << "penwidth=3, color=red];\n";
+        } else {
+            file << "  " << nodeId << " [label=\"" << label << "\", fillcolor=\"" << color 
+                 << "\"];\n";
+        }
+    }
+    
+    // Write edges
+    file << "\n";
+    for (Tree_Node* node : allNodes) {
+        if (!node) continue;
+        
+        // Find all children by checking which nodes have this node as parent
+        for (Tree_Node* otherNode : allNodes) {
+            if (otherNode && otherNode->getParent() == node) {
+                std::string fromId = "node_" + std::to_string(node->getId());
+                std::string toId = "node_" + std::to_string(otherNode->getId());
+                uint16_t edgeCost = otherNode->getMaxTime();
+                
+                file << "  " << fromId << " -> " << toId 
+                     << " [label=\"cost=" << edgeCost << "\"];\n";
+            }
+        }
+    }
+    
+    file << "}\n";
+    file.close();
+    
+    std::cout << "✓ DOT file generated: " << dotFile << std::endl;
+    
+    // Convert DOT to PNG using Graphviz
+    std::string command = "dot -Tpng \"" + dotFile + "\" -o \"" + pngFile + "\"";
+    int result = system(command.c_str());
+    
+    if (result == 0) {
+        std::cout << "✓ Visualization created: " << pngFile << std::endl;
+    } else {
+        std::cerr << "Warning: Failed to convert DOT to PNG. Make sure Graphviz is installed." << std::endl;
+        std::cerr << "  Command: " << command << std::endl;
+        std::cerr << "  But DOT file is still available at: " << dotFile << std::endl;
+    }
+}
+
+/**
+ * visualizeOptimalPath - Creates a comprehensive visualization of the optimal path
+ * Integrates gridworld, tasks, constraints, robots, capabilities, LTL formula, and optimal path
+ */
+void TaskAllocationAlgorithms::visualizeOptimalPath(const std::string& filename) const {
+    if (!planningTree || !planningTree->getRoot() || !environment || !multiRobotSystem || !nba) {
+        std::cerr << "Error: Required components not initialized" << std::endl;
+        return;
+    }
+    
+    // Helper lambda to escape special characters for DOT format
+    auto escapeDotLabel = [](const std::string& str) -> std::string {
+        std::string result;
+        for (size_t i = 0; i < str.length(); ++i) {
+            char c = str[i];
+            // Only escape double quotes - leave \\n and other sequences alone
+            if (c == '"') {
+                result += "\\\"";
+            } else if (c == '\\' && i + 1 < str.length() && str[i + 1] == 'n') {
+                // Keep \\n as-is for DOT newlines
+                result += "\\n";
+                ++i;  // Skip the 'n'
+            } else if (c != '\r') {  // Skip carriage returns
+                result += c;
+            }
+        }
+        return result;
+    };
+    
+    // Helper lambda to get capability name
+    auto getRobotCapabilityName = [](RobotCapability cap) -> std::string {
+        switch (cap) {
+            case RobotCapability::MOVEMENT_GROUND:      return "Movement_Ground";
+            case RobotCapability::MOVEMENT_AERIAL:      return "Movement_Aerial";
+            case RobotCapability::MOVEMENT_AQUATIC:     return "Movement_Aquatic";
+            case RobotCapability::SENSOR_CAMERA:        return "Sensor_Camera";
+            case RobotCapability::SENSOR_LIDAR:         return "Sensor_LIDAR";
+            case RobotCapability::SENSOR_GPS:           return "Sensor_GPS";
+            case RobotCapability::SENSOR_IMU:           return "Sensor_IMU";
+            case RobotCapability::SENSOR_PROXIMITY:     return "Sensor_Proximity";
+            case RobotCapability::MANIPULATION_GRIPPER: return "Manipulation_Gripper";
+            case RobotCapability::MANIPULATION_TOOL:    return "Manipulation_Tool";
+            case RobotCapability::COMMUNICATION_WIFI:   return "Communication_WiFi";
+            case RobotCapability::COMMUNICATION_4G:     return "Communication_4G";
+            case RobotCapability::CAPABILITY_PAYLOAD:   return "Capability_Payload";
+            default:                                     return "Unknown";
+        }
+    };
+    
+    Tree_Node* optimalNode = planningTree->getOptimalFrontierNode(nba->isFinite());
+    if (!optimalNode) {
+        std::cerr << "Error: No optimal frontier node found" << std::endl;
+        return;
+    }
+    
+    std::string dotFile = filename + ".dot";
+    std::string pngFile = filename + ".png";
+    
+    std::ofstream file(dotFile);
+    if (!file.is_open()) {
+        std::cerr << "Error: Failed to open file: " << dotFile << std::endl;
+        return;
+    }
+    
+    // Trace path from optimal node back to root
+    std::vector<Tree_Node*> optimalPath;
+    Tree_Node* current = optimalNode;
+    size_t maxDepth = 1000;
+    size_t depth = 0;
+    
+    while (current != nullptr && depth < maxDepth) {
+        optimalPath.push_back(current);
+        Tree_Node* parent = current->getParent();
+        if (parent == current) {
+            std::cerr << "Warning: Circular parent reference detected" << std::endl;
+            break;
+        }
+        current = parent;
+        depth++;
+    }
+    std::reverse(optimalPath.begin(), optimalPath.end());
+    
+    // Write DOT header
+    file << "digraph ComprehensiveOptimalPath {\n";
+    file << "  rankdir=TB;\n";
+    file << "  concentrate=true;\n";
+    file << "  node [fontname=Arial];\n";
+    file << "  edge [fontname=Arial, fontsize=9];\n\n";
+    
+    // ===== ENVIRONMENT & GRIDWORLD CLUSTER =====
+    file << "  subgraph cluster_environment {\n";
+    file << "    label=\"Environment & Gridworld\";\n";
+    file << "    style=filled;\n";
+    file << "    fillcolor=\"#F0F0F0\";\n";
+    file << "    color=black;\n\n";
+    
+    if (environment->getGridWorld()) {
+        GridWorld* grid = environment->getGridWorld();
+        uint16_t width = grid->getWidth();
+        uint16_t height = grid->getHeight();
+        
+        std::string gridInfo = "GridWorld: " + std::to_string(width) + "x" + std::to_string(height) + "\\n";
+        gridInfo += "Total States: " + std::to_string(environment->getNumStates()) + "\\n";
+        gridInfo += "Initial State: " + std::to_string(environment->getInitialState()) + "\\n";
+        
+        file << "    env_info [shape=box, label=\"" << escapeDotLabel(gridInfo) << "\", fillcolor=\"#E8F4F8\"];\n\n";
+        
+        // Show task locations
+        file << "    env_tasks [shape=plaintext, label=<\n";
+        file << "      <TABLE BORDER=\"1\" CELLBORDER=\"1\" CELLSPACING=\"0\">\n";
+        file << "        <TR><TD COLSPAN=\"3\"><B>Task Locations</B></TD></TR>\n";
+        file << "        <TR><TD><B>State ID</B></TD><TD><B>Position</B></TD><TD><B>Type</B></TD></TR>\n";
+        
+        TS* ts = environment->getTransitionSystem();
+        if (ts) {
+            for (uint16_t i = 0; i < environment->getNumStates() && i < 10; ++i) {
+                Point taskPos = environment->TSStateIdToGridCenter(i);
+                file << "        <TR><TD>" << i << "</TD><TD>(" << taskPos.getX() << "," << taskPos.getY() 
+                     << ")</TD><TD>Task</TD></TR>\n";
+            }
+        }
+        file << "      </TABLE>\n";
+        file << "    >];\n";
+    }
+    
+    file << "  }\n\n";
+    
+    // ===== ROBOT TEAM CLUSTER =====
+    file << "  subgraph cluster_robots {\n";
+    file << "    label=\"Robot Team & Capabilities\";\n";
+    file << "    style=filled;\n";
+    file << "    fillcolor=\"#F0F8F0\";\n";
+    file << "    color=black;\n\n";
+    
+    uint16_t teamSize = (multiRobotSystem) ? multiRobotSystem->getNumRobots() : 0;
+    std::string teamInfo = "Team Size: " + std::to_string(teamSize) + " robots\\n";
+    file << "    team_info [shape=box, label=\"" << escapeDotLabel(teamInfo) << "\", fillcolor=\"#E8F8E8\"];\n\n";
+    
+    // Robot capabilities table
+    file << "    robot_caps [shape=plaintext, label=<\n";
+    file << "      <TABLE BORDER=\"1\" CELLBORDER=\"1\" CELLSPACING=\"0\">\n";
+    file << "        <TR><TD COLSPAN=\"3\"><B>Robot Capabilities</B></TD></TR>\n";
+    file << "        <TR><TD><B>Robot ID</B></TD><TD><B>Name</B></TD><TD><B>Capabilities</B></TD></TR>\n";
+    
+    const auto& robots = multiRobotSystem->getRobots();
+    for (const auto* robot : robots) {
+        if (!robot) continue;
+        
+        std::string capsList;
+        const auto& robotCaps = robot->getCapabilities();
+        bool hasAny = false;
+        for (size_t c = 0; c < robotCaps.size(); ++c) {
+            if (robotCaps[c]) {
+                if (hasAny) capsList += ", ";
+                capsList += getRobotCapabilityName(static_cast<RobotCapability>(c));
+                hasAny = true;
+            }
+        }
+        if (capsList.empty()) capsList = "None";
+        
+        file << "        <TR><TD>R" << robot->getRobotId() << "</TD>";
+        file << "<TD>" << robot->getName() << "</TD>";
+        file << "<TD>" << capsList << "</TD></TR>\n";
+    }
+    
+    file << "      </TABLE>\n";
+    file << "    >];\n";
+    file << "  }\n\n";
+    
+    // ===== LTL FORMULA CLUSTER =====
+    file << "  subgraph cluster_ltl {\n";
+    file << "    label=\"LTL Formula & Task Constraints\";\n";
+    file << "    style=filled;\n";
+    file << "    fillcolor=\"#F8F0F0\";\n";
+    file << "    color=black;\n\n";
+    
+    if (nba && nba->getLTLFormula()) {
+        auto formula = nba->getLTLFormula();
+        std::string formulaInfo = "LTL Formula Details:\\n";
+        formulaInfo += "Automaton States: " + std::to_string(nba->getNumStates()) + "\\n";
+        formulaInfo += "Accepting States: ";
+        int acceptingCount = 0;
+        for (uint16_t i = 0; i < nba->getNumStates(); ++i) {
+            if (nba->isAccepting(i)) acceptingCount++;
+        }
+        formulaInfo += std::to_string(acceptingCount) + "\\n";
+        
+        file << "    ltl_info [shape=box, label=\"" << escapeDotLabel(formulaInfo) << "\", fillcolor=\"#F8E8E8\"];\n\n";
+        
+        // Task requirements table
+        file << "    ltl_tasks [shape=plaintext, label=<\n";
+        file << "      <TABLE BORDER=\"1\" CELLBORDER=\"1\" CELLSPACING=\"0\">\n";
+        file << "        <TR><TD COLSPAN=\"3\"><B>Task Requirements (LTL APs)</B></TD></TR>\n";
+        file << "        <TR><TD><B>AP ID</B></TD><TD><B>Batch Value</B></TD><TD><B>Required Capabilities</B></TD></TR>\n";
+        
+        try {
+            const auto& batchAPs = formula->getBatchAtomicPropositions();
+            uint16_t count = 0;
+            for (const auto& batchAP : batchAPs) {
+                if (count >= 12) break;  // Limit to 12 rows
+                uint16_t apId = batchAP.getAP();
+                int8_t batchVal = batchAP.getBatch();
+                std::string batchType = (batchVal > 0) ? "Compatible" : (batchVal < 0) ? "Exclusive" : "Unrelated";
+                
+                // Get required capabilities
+                std::string capsList;
+                const auto& caps = batchAP.getCapabilities();
+                bool hasAny = false;
+                for (size_t c = 0; c < caps.size(); ++c) {
+                    if (caps[c]) {
+                        if (hasAny) capsList += ", ";
+                        capsList += getRobotCapabilityName(static_cast<RobotCapability>(c));
+                        hasAny = true;
+                    }
+                }
+                if (capsList.empty()) capsList = "None";
+                
+                file << "        <TR><TD>AP" << apId << "</TD>";
+                file << "<TD>" << static_cast<int>(batchVal) << " (" << batchType << ")</TD>";
+                file << "<TD>" << capsList << "</TD></TR>\n";
+                count++;
+            }
+        } catch (const std::exception& e) {
+            file << "        <TR><TD COLSPAN=\"3\">Error loading task information</TD></TR>\n";
+        }
+        
+        file << "      </TABLE>\n";
+        file << "    >];\n";
+    }
+    
+    file << "  }\n\n";
+    
+    // ===== OPTIMAL PATH CLUSTER =====
+    file << "  subgraph cluster_path {\n";
+    file << "    label=\"Optimal Execution Path\";\n";
+    file << "    style=filled;\n";
+    file << "    fillcolor=\"#FFF8F0\";\n";
+    file << "    color=darkred;\n";
+    file << "    penwidth=2;\n\n";
+    
+    // Path summary
+    std::string pathSummary = "Optimal Path Summary\\n";
+    pathSummary += "Total Steps: " + std::to_string(optimalPath.size()) + "\\n";
+    pathSummary += "Final Cost: " + std::to_string(optimalNode->getMaxTime()) + "\\n";
+    uint32_t totalCostSum = 0;
+    for (uint16_t t : optimalNode->getTimes()) totalCostSum += t;
+    pathSummary += "Total Execution Time: " + std::to_string(totalCostSum) + "s\\n";
+    
+    file << "    path_summary [shape=note, label=\"" << escapeDotLabel(pathSummary) << "\", fillcolor=\"#FFFFCC\", penwidth=2];\n\n";
+    
+    // Path nodes with detailed information
+    for (size_t i = 0; i < optimalPath.size(); ++i) {
+        Tree_Node* node = optimalPath[i];
+        if (!node || !node->getAutomatonState() || !node->getTSState()) continue;
+        
+        std::string nodeId = "opt_" + std::to_string(i);
+        uint16_t nbaId = node->getAutomatonState()->getId();
+        uint16_t tsId = node->getTSState()->getId();
+        uint16_t maxTime = node->getMaxTime();
+        uint16_t totalCost = 0;
+        for (uint16_t t : node->getTimes()) totalCost += t;
+        
+        // Create detailed label
+        std::string label = "Step " + std::to_string(i) + "\\n";
+        label += "NBA: " + std::to_string(nbaId) + " | TS: " + std::to_string(tsId) + "\\n";
+        label += "Cost: " + std::to_string(maxTime) + "s | Total: " + std::to_string(totalCost) + "s\\n";
+        label += "-----\\n";
+        label += "Allocated Robots:\\n";
+        
+        const auto& allocation = node->getRoboTaskAllocation();
+        const auto& times = node->getTimes();
+        const auto& robots = multiRobotSystem->getRobots();
+        
+        for (size_t r = 0; r < allocation.size(); ++r) {
+            if (allocation[r]) {
+                uint32_t robotId = (r < robots.size() && robots[r]) ? robots[r]->getRobotId() : r + 1;
+                label += "  R" + std::to_string(robotId) + ": " + std::to_string(times[r]) + "s\\n";
+            }
+        }
+        
+        // Escape and write node
+        label = escapeDotLabel(label);
+        
+        // Highlight final optimal node
+        if (i == optimalPath.size() - 1) {
+            file << "    " << nodeId << " [shape=box, label=\"" << label << "\", fillcolor=\"#FF6B6B\", "
+                 << "penwidth=3, color=darkred, fontweight=bold, fontsize=11];\n";
+        } else {
+            file << "    " << nodeId << " [shape=box, label=\"" << label << "\", fillcolor=\"#B3E5FC\", penwidth=1.5];\n";
+        }
+    }
+    
+    // Path edges
+    file << "\n";
+    for (size_t i = 0; i < optimalPath.size() - 1; ++i) {
+        std::string fromId = "opt_" + std::to_string(i);
+        std::string toId = "opt_" + std::to_string(i + 1);
+        
+        Tree_Node* fromNode = optimalPath[i];
+        Tree_Node* toNode = optimalPath[i + 1];
+        
+        uint16_t costDelta = toNode->getMaxTime() - fromNode->getMaxTime();
+        
+        file << "    " << fromId << " -> " << toId 
+             << " [label=\"Δ=" << costDelta << "s\", penwidth=2, color=darkred];\n";
+    }
+    
+    file << "  }\n\n";
+    
+    // ===== INTERCONNECTIONS =====
+    file << "  // Connections between clusters\n";
+    file << "  env_info -> path_summary [style=dashed, color=gray, label=\"tasks\"];\n";
+    file << "  team_info -> path_summary [style=dashed, color=gray, label=\"robots\"];\n";
+    file << "  ltl_info -> path_summary [style=dashed, color=gray, label=\"constraints\"];\n\n";
+    
+    file << "}\n";
+    file.close();
+    
+    std::cout << "✓ Comprehensive optimal path DOT file generated: " << dotFile << std::endl;
+    
+    // Convert DOT to PNG using Graphviz
+    std::string command = "dot -Tpng \"" + dotFile + "\" -o \"" + pngFile + "\"";
+    int result = system(command.c_str());
+    
+    if (result == 0) {
+        std::cout << "✓ Comprehensive visualization created: " << pngFile << std::endl;
+    } else {
+        std::cerr << "Warning: Failed to convert DOT to PNG. Make sure Graphviz is installed." << std::endl;
+        std::cerr << "  Command: " << command << std::endl;
+        std::cerr << "  But DOT file is still available at: " << dotFile << std::endl;
+    }
 }

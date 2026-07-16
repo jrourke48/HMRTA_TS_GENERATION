@@ -188,8 +188,8 @@ BuchiAutomaton* createTestBuchiAutomaton() {
     string ltl_str = "(F\"p1\" && F\"p2\")";
     
     vector<BatchAtomicProposition> batchAPs;
-    batchAPs.push_back(BatchAtomicProposition(1, {true, false, false, false, false, false, false, false, false, false, false, false, false}, 0));
-    batchAPs.push_back(BatchAtomicProposition(2, {false, false, false, true, false, true, false, false, false, false, false, false, false}, 0));
+    batchAPs.push_back(BatchAtomicProposition(0, 0, {true, false, false, false, false, false, false, false, false, false, false, false, false}, 0));
+    batchAPs.push_back(BatchAtomicProposition(1, 1, {false, false, false, true, false, true, false, false, false, false, false, false, false}, 0));
     
     LTLFormula* ltlFormula = new LTLFormula(ltl_str, batchAPs);
     BuchiAutomaton* buchi = new BuchiAutomaton(ltlFormula);
@@ -204,10 +204,13 @@ BuchiAutomaton* createTestBuchiAutomaton2() {
     string ltl_str = "(F\"p1\" && F\"p4\" && F\"p5\" && F\"p3\")";
     
     vector<BatchAtomicProposition> batchAPs;
-    batchAPs.push_back(BatchAtomicProposition(1, {true, false, false, false, false, true, false, false, false, false, false, false, false}, 0));
-    batchAPs.push_back(BatchAtomicProposition(3, {true, false, false, false, false, true, false, false, false, false, false, false, false}, 0));
-    batchAPs.push_back(BatchAtomicProposition(4, {false, false, false, true, false, true, false, false, false, false, false, false, false}, 0));
-    batchAPs.push_back(BatchAtomicProposition(5, {true, false, false, true, false, true, false, false, false, false, false, false, false}, 0));
+    // Use only capabilities that robots actually have: indices 0, 3, 5
+    batchAPs.push_back(BatchAtomicProposition(0, 0, {true, false, false, false, false, true, false, false, false, false, false, false, false}, 0));   // p0: needs 0,5
+    batchAPs.push_back(BatchAtomicProposition(1, 1, {true, false, false, false, false, true, false, false, false, false, false, false, false}, 0));   // p1: needs 0,5
+    batchAPs.push_back(BatchAtomicProposition(2, 2, {false, false, false, true, false, true, false, false, false, false, false, false, false}, 0));   // p2: needs 3,5
+    batchAPs.push_back(BatchAtomicProposition(3, 3, {true, false, false, true, false, true, false, false, false, false, false, false, false}, 0));    // p3: needs 0,3,5
+    batchAPs.push_back(BatchAtomicProposition(4, 4, {false, false, false, true, false, true, false, false, false, false, false, false, false}, 0));   // p4: needs 3,5 (was 1, now fixed)
+    batchAPs.push_back(BatchAtomicProposition(5, 5, {true, false, false, false, false, true, false, false, false, false, false, false, false}, 0));   // p5: needs 0,5 (was 2, now fixed)
 
     LTLFormula* ltlFormula = new LTLFormula(ltl_str, batchAPs);
     BuchiAutomaton* buchi = new BuchiAutomaton(ltlFormula);
@@ -642,8 +645,14 @@ void testFullAlgorithmIntensiveInterTaskRelationshipSearch() {
     
     TS* ts = nullptr; GridWorld* grid = nullptr; Environment* env = nullptr;
     createTestSystemComponents2(ts, grid, env);
+    
+    cout << "[DEBUG] Creating Büchi automaton..." << endl;
     BuchiAutomaton* nba = createTestBuchiAutomaton2();
+    cout << "[DEBUG] Büchi automaton created" << endl;
+    
+    cout << "[DEBUG] Creating multi-robot system..." << endl;
     MultiRobotSystem* mrs = createTestMultiRobotSystem2();
+    cout << "[DEBUG] Multi-robot system created" << endl;
     
     cout << "\n=== Algorithm Configuration ===" << endl;
     cout << "  TS States: " << ts->getNumStates() << endl;
@@ -651,11 +660,15 @@ void testFullAlgorithmIntensiveInterTaskRelationshipSearch() {
     cout << "  Büchi States: " << nba->getNumStates() << endl;
     cout << "  LTL Formula: F\"p0\" && F\"p1\"" << endl;
     
+    cout << "[DEBUG] Creating TaskAllocationAlgorithms..." << endl;
     TaskAllocationAlgorithms algo(nba, env, mrs);
+    cout << "[DEBUG] TaskAllocationAlgorithms created" << endl;
     
     cout << "\n=== Starting Tree Search ===" << endl;
     try {
+        cout << "[DEBUG] Calling intensiveInterTaskRelationshipTreeSearch..." << endl;
         PlanningDecisionTree* resultTree = algo.intensiveInterTaskRelationshipTreeSearch(nba, env, mrs);
+        cout << "[DEBUG] Tree search returned, checking result..." << endl;
         
         if (resultTree) {
             cout << "\n✓ Tree search completed successfully" << endl;
@@ -747,6 +760,17 @@ void testFullAlgorithmIntensiveInterTaskRelationshipSearch() {
             }
             
             cout << "\n✓ Full Algorithm Test PASSED!" << endl;
+            
+            // Visualize the planning tree and optimal path
+            cout << "\n=== Generating Visualizations ===" << endl;
+            try {
+                algo.visualizeTree("output/planning_tree");
+                // TODO: visualizeOptimalPath needs debugging - causes segfault
+                // algo.visualizeOptimalPath("output/optimal_path");
+            } catch (const exception& e) {
+                cout << "Warning: Visualization generation failed: " << e.what() << endl;
+            }
+            
         } else {
             cout << "\n✗ Tree search returned nullptr" << endl;
         }
@@ -997,7 +1021,7 @@ void testUnrelatedTaskSearchComprehensive() {
     
     try {
         cout << "\n  Executing unrelatedTaskSearch()..." << endl;
-        algo.unrelatedTaskSearch(newNode, ts->getNode(0), parentNode);
+        algo.unrelatedTaskSearch(newNode, ts->getNode(0), parentNode, 1);  // apId=1 (first AP)
         
         cout << "\n  Output After Execution:" << endl;
         
@@ -1069,7 +1093,8 @@ void testUnrelatedTaskSearchComprehensive() {
         cout << "    Input Times: [2, 3, 4]" << endl;
         
         try {
-            algo.unrelatedTaskSearch(nNode, ts->getNode(stateIdx), pNode);
+            uint16_t apId = (stateIdx == 0) ? 1 : 2;  // Use apId 1 or 2 based on state index
+            algo.unrelatedTaskSearch(nNode, ts->getNode(stateIdx), pNode, apId);
             
             const auto& alloc = nNode->getRoboTaskAllocation();
             const auto& times = nNode->getTimes();

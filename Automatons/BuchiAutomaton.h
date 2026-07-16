@@ -62,6 +62,8 @@ public:
             acceptingStates.push_back(stateId);
         }
     };
+    // Check if the buchi automaton is finite
+    bool isFinite() const;
     // Check if a state is an accepting state
     bool isAcceptingState(uint16_t stateId) const {
         return std::find(acceptingStates.begin(), acceptingStates.end(), stateId) != acceptingStates.end();
@@ -97,6 +99,7 @@ public:
         initialState = 0;  // Default to state 0
         std::map<unsigned, std::vector<std::pair<unsigned, std::string>>> edges;  // src -> [(dst, label)]
         std::set<unsigned> seenNodes;
+        std::set<unsigned> acceptingNodeIds;  // Track nodes with peripheries=2
         
         while (std::getline(stream, line)) {
             // Trim line
@@ -105,18 +108,21 @@ public:
             
             if (line.empty() || line[0] == '}' || line[0] == '#') continue;
             
-            // Check for initial state indicator: I -> <state>
-            if (line.find("I ->") == 0) {
-                size_t state_start = line.find_last_of(" \t");
-                if (state_start != std::string::npos) {
-                    std::string stateStr = line.substr(state_start + 1);
-                    std::istringstream iss(stateStr);
-                    iss >> initialState;  // Store the initial state
+            // Check for initial state indicator: I -> <state> or I-><state>
+            if (line.find("I") == 0 && line.find("->") != std::string::npos) {
+                size_t arrow_pos = line.find("->");
+                std::string stateStr = line.substr(arrow_pos + 2);
+                stateStr.erase(0, stateStr.find_first_not_of(" \t"));  // Trim leading whitespace
+                stateStr.erase(stateStr.find_last_not_of(" \t\n") + 1);  // Trim trailing whitespace
+                
+                std::istringstream iss(stateStr);
+                if (iss >> initialState) {  // Successfully parsed
+                    // initialState is set
                 }
                 continue;
             }
             
-            // Check for node definition: <id> [label="..."]
+            // Check for node definition: <id> [label="..." peripheries=2 ...]
             size_t bracket_start = line.find('[');
             if (bracket_start != std::string::npos && line.find("->") == std::string::npos) {
                 unsigned nodeId;
@@ -125,6 +131,11 @@ public:
                     // Check if this is the invisible initial node
                     if (nodeId != UINT_MAX) {  // Skip if parsing failed
                         seenNodes.insert(nodeId);
+                        
+                        // Check for accepting state marker: peripheries=2 (standard DOT format)
+                        if (line.find("peripheries=2") != std::string::npos) {
+                            acceptingNodeIds.insert(nodeId);
+                        }
                     }
                 }
                 continue;
@@ -177,6 +188,11 @@ public:
         for (unsigned nodeId : seenNodes) {
             Node* node = new Node(nodeId);
             add_Node(node);
+        }
+        
+        // Mark nodes as accepting if they have peripheries=2 (standard DOT format)
+        for (unsigned nodeId : acceptingNodeIds) {
+            setAccepting(nodeId);
         }
         
         // Add edges

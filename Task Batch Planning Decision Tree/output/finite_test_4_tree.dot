@@ -1,0 +1,16 @@
+digraph PlanningTree {
+  rankdir=TB;
+  node [shape=box, style=filled, fontname=Arial, fontsize=10];
+  edge [fontname=Arial, fontsize=9];
+
+  node_0 [label="Node 0\nNBA: 0, TS: 0\nProgress: TRA\nMax Time: 21\nBatch: 0\nRobots: [0,1,0,0,0,0]", fillcolor="#FFFFCC"];
+  node_1 [label="Node 1\nNBA: 1, TS: 1\nProgress: PRE\nMax Time: 18\nBatch: 0\nRobots: [1,0,1,0,0,0]", fillcolor="#FFE6E6"];
+  node_2 [label="Node 2\nNBA: 2, TS: 0\nProgress: PRE\nMax Time: 0\nBatch: 0\nRobots: [0,0,0,0,0,0]", fillcolor="#FFE6E6"];
+  node_3 [label="Node 3\nNBA: 0, TS: 1\nProgress: TRA\nMax Time: 21\nBatch: 0\nRobots: [1,0,1,0,0,0]", fillcolor="#FFFFCC"];
+  node_4 [label="Node 4\nNBA: 3, TS: 0\nProgress: PRE\nMax Time: 21\nBatch: 0\nRobots: [0,1,0,0,0,0]", fillcolor="#FFE6E6"];
+
+  node_1 -> node_0 [label="cost=21"];
+  node_2 -> node_1 [label="cost=18"];
+  node_2 -> node_4 [label="cost=21"];
+  node_4 -> node_3 [label="cost=21"];
+}

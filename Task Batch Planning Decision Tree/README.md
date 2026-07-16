@@ -145,6 +145,102 @@ Task Batch Planning Decision Tree/
 - Map between discrete transition system states and continuous grid coordinates
 - Support cost-aware planning decisions
 
+## LTL Formula Syntax & Operator Precedence
+
+### Overview
+Linear Temporal Logic (LTL) formulas describe the behavior and requirements of the robotic system. The SPOT library converts these high-level specifications into Büchi automata for formal verification and planning.
+
+### Basic Operators (in order of precedence, highest to lowest)
+
+| Operator | Name | Example |
+|----------|------|---------|
+| `!` | NOT (negation) | `!p` - NOT p |
+| `&` | AND | `p & q` - p AND q |
+| `\|` | OR | `p \| q` - p OR q |
+| `^` | XOR | `p ^ q` - p XOR q |
+| `i` | IMPLIES | `p i q` - p IMPLIES q |
+| `e` | EQUIVALENT | `p e q` - p EQUIVALENT q |
+
+### Temporal Operators (always lower precedence than logical operators)
+
+| Operator | Name | Meaning |
+|----------|------|---------|
+| `F` | Eventually | `F p` - p becomes true eventually |
+| `G` | Globally/Always | `G p` - p is always true |
+| `X` | Next | `X p` - p is true in the next state |
+| `U` | Until (strong) | `p U q` - p holds until q becomes true |
+| `V` | Release (weak) | `p V q` - p holds unless q becomes true |
+| `W` | Weak Until | `p W q` - p holds until q (weak version) |
+| `M` | Strong Release | `p M q` - strong version of release |
+
+### Operator Precedence Rules
+
+1. **Logical operators bind tighter than temporal operators**
+   - `F(a & b)` ≠ `(F a) & (F b)`
+   - `F(a & b)` means "eventually both a AND b together"
+   - `(F a) & (F b)` means "eventually a" AND "eventually b" (can be at different times)
+
+2. **Use parentheses for clarity**
+   - Always group temporal operators with operands: `G(F p)` not `G F p`
+   - Helps override default precedence and improves readability
+
+3. **Key patterns**
+   - `G(F p)` - Infinitely often p (infinite repetition, creates cycles)
+   - `F p & F q` - Both p and q eventually (finite, one-time satisfaction)
+   - `G(p i F q)` - Whenever p, eventually q (reactive specification)
+
+### Examples from Test Suite
+
+**FINITE AUTOMATA** (No G operator - eventuality, can terminate):
+
+```ltl
+(F"p0" & F"p1")
+  → Eventually visit p0, and eventually visit p1
+  → Once both satisfied, mission completes
+  
+(F"p0" & F"p1" & F"p2" & F"p3")
+  → Visit four locations in any order
+  → All must eventually occur, then execution ends
+```
+
+**INFINITE AUTOMATA** (Has G operator - liveness, cannot terminate):
+
+```ltl
+G(F"p0")
+  → Infinitely often visit p0
+  → Must repeatedly return to location p0
+  → Creates cycles, cannot terminate
+  
+G((F"p0") & (F"p1") & (F"p2"))
+  → Always eventually p0, p1, and p2
+  → All three locations visited infinitely often
+  → Patrol pattern that repeats forever
+```
+
+### Finite vs. Infinite Automata
+
+| Pattern | Type | Behavior | Use Case |
+|---------|------|----------|----------|
+| `F p & F q & ...` | Finite | Tasks complete when all conditions met | One-time missions |
+| `G(F p)` | Infinite | Infinite repetition of condition | Surveillance, patrol |
+| `!(F X p)` | Finite | Negated eventuality | Avoidance tasks |
+| `G !(obstacle)` | Infinite | Always avoid obstacle | Safety constraints |
+
+### Quick Reference: Identifying Automaton Type
+
+- **No G operator** → FINITE automaton (unless negated F)
+- **Has G operator** → INFINITE automaton (liveness requirement)
+- **Uncertain?** → Use `isFinite()` method for precise DFS cycle detection
+
+### Syntax Rules
+
+- Use double quotes for atomic propositions: `"p0"`, `"p1"`, etc.
+- Use `&` not `&&` for conjunction
+- Use `|` not `||` for disjunction
+- Use `!` prefix for negation: `!"p"` not `p!`
+- Use `i` for implication, not `→` or `->`
+- Use `e` for equivalence, not `<->`
+
 ## Usage Example
 
 ```cpp

@@ -7,15 +7,17 @@
 
 class BatchAtomicProposition {
 private:
+    uint16_t ap_id; // Unique identifier for the atomic proposition (AP index)
     uint16_t ap;
     std::vector<bool> capabilities; // Indices of bools representing the presence of capabilities necessary
     // to complete this task
     int8_t batch; // Batch number this atomic proposition belongs to 
     std::string name; // name for the LTL formula (e.g., "R0", "R1", etc.)
 public:
-    BatchAtomicProposition(const uint16_t ap, const std::vector<bool>& capabilities, int8_t batch)
-        : ap(ap), capabilities(capabilities), batch(batch), name("R" + std::to_string(ap)) {}
+    BatchAtomicProposition(const uint16_t id, const uint16_t ap, const std::vector<bool>& capabilities, int8_t batch)
+        : ap_id(id), ap(ap), capabilities(capabilities), batch(batch), name("R" + std::to_string(ap)) {}
     uint16_t getAP() const { return ap; }
+    uint16_t getAPId() const { return ap_id; }
     const std::vector<bool>& getCapabilities() const { return capabilities; }
     int8_t getBatch() const { return batch; }
     bool requiresCapability(RobotCapability cap) const {

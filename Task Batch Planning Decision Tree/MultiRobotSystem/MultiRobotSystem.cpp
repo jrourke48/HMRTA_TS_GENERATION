@@ -25,6 +25,7 @@ MultiRobotSystem::~MultiRobotSystem() {
 void MultiRobotSystem::addRobot(Robot* robot) {
     if (!robot) return;
     robots.push_back(robot);
+    numRobots = getNumRobots()+1;  // Update the count of robots
 }
 
 /**
