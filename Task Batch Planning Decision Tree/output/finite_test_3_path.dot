@@ -1,0 +1,95 @@
+digraph ComprehensiveOptimalPath {
+  rankdir=TB;
+  concentrate=true;
+  node [fontname=Arial];
+  edge [fontname=Arial, fontsize=9];
+
+  subgraph cluster_environment {
+    label="Environment & Gridworld";
+    style=filled;
+    fillcolor="#F0F0F0";
+    color=black;
+
+    env_info [shape=box, label="GridWorld: 21x21\nTotal States: 6\nInitial State: 0\n", fillcolor="#E8F4F8"];
+
+    env_tasks [shape=plaintext, label=<
+      <TABLE BORDER="1" CELLBORDER="1" CELLSPACING="0">
+        <TR><TD COLSPAN="3"><B>Task Locations</B></TD></TR>
+        <TR><TD><B>State ID</B></TD><TD><B>Position</B></TD><TD><B>Type</B></TD></TR>
+        <TR><TD>0</TD><TD>(18,14)</TD><TD>Task</TD></TR>
+        <TR><TD>1</TD><TD>(18,4)</TD><TD>Task</TD></TR>
+        <TR><TD>2</TD><TD>(10,10)</TD><TD>Task</TD></TR>
+        <TR><TD>3</TD><TD>(5,3)</TD><TD>Task</TD></TR>
+        <TR><TD>4</TD><TD>(5,10)</TD><TD>Task</TD></TR>
+        <TR><TD>5</TD><TD>(5,15)</TD><TD>Task</TD></TR>
+      </TABLE>
+    >];
+  }
+
+  subgraph cluster_robots {
+    label="Robot Team & Capabilities";
+    style=filled;
+    fillcolor="#F0F8F0";
+    color=black;
+
+    team_info [shape=box, label="Team Size: 6 robots\n", fillcolor="#E8F8E8"];
+
+    robot_caps [shape=plaintext, label=<
+      <TABLE BORDER="1" CELLBORDER="1" CELLSPACING="0">
+        <TR><TD COLSPAN="3"><B>Robot Capabilities</B></TD></TR>
+        <TR><TD><B>Robot ID</B></TD><TD><B>Name</B></TD><TD><B>Capabilities</B></TD></TR>
+        <TR><TD>R1</TD><TD>Rover_1</TD><TD>Sensor_GPS</TD></TR>
+        <TR><TD>R2</TD><TD>Rover_2</TD><TD>Movement_Ground</TD></TR>
+        <TR><TD>R3</TD><TD>Rover_3</TD><TD>Sensor_Camera</TD></TR>
+        <TR><TD>R4</TD><TD>Rover_4</TD><TD>Sensor_GPS</TD></TR>
+        <TR><TD>R5</TD><TD>Rover_5</TD><TD>Movement_Ground</TD></TR>
+        <TR><TD>R6</TD><TD>Rover_6</TD><TD>Sensor_Camera</TD></TR>
+      </TABLE>
+    >];
+  }
+
+  subgraph cluster_ltl {
+    label="LTL Formula & Task Constraints";
+    style=filled;
+    fillcolor="#F8F0F0";
+    color=black;
+
+    ltl_info [shape=box, label="LTL Formula Details:\nAutomaton States: 12\nAccepting States: 1\n", fillcolor="#F8E8E8"];
+
+    ltl_tasks [shape=plaintext, label=<
+      <TABLE BORDER="1" CELLBORDER="1" CELLSPACING="0">
+        <TR><TD COLSPAN="3"><B>Task Requirements (LTL APs)</B></TD></TR>
+        <TR><TD><B>AP ID</B></TD><TD><B>Batch Value</B></TD><TD><B>Required Capabilities</B></TD></TR>
+        <TR><TD>AP4</TD><TD>0 (Unrelated)</TD><TD>Movement_Ground</TD></TR>
+        <TR><TD>AP1</TD><TD>0 (Unrelated)</TD><TD>Movement_Ground, Sensor_GPS</TD></TR>
+        <TR><TD>AP2</TD><TD>0 (Unrelated)</TD><TD>Sensor_Camera, Sensor_GPS</TD></TR>
+        <TR><TD>AP1</TD><TD>0 (Unrelated)</TD><TD>Movement_Aerial, Sensor_GPS</TD></TR>
+      </TABLE>
+    >];
+  }
+
+  subgraph cluster_path {
+    label="Optimal Execution Path";
+    style=filled;
+    fillcolor="#FFF8F0";
+    color=darkred;
+    penwidth=2;
+
+    path_summary [shape=note, label="Optimal Path Summary\nTotal Steps: 5\nFinal Cost: 12\nTotal Execution Time: 28s\n", fillcolor="#FFFFCC", penwidth=2];
+
+    opt_0 [shape=box, label="Step 0\nNBA: 3 | TS: 0\nCost: 0s | Total: 0s\n-----\nAllocated Robots:\n", fillcolor="#B3E5FC", penwidth=1.5];
+    opt_1 [shape=box, label="Step 1\nNBA: 7 | TS: 4\nCost: 12s | Total: 12s\n-----\nAllocated Robots:\n  R2: 12s\n", fillcolor="#B3E5FC", penwidth=1.5];
+    opt_4 [shape=box, label="Step 4\nNBA: 0 | TS: 2\nCost: 12s | Total: 28s\n-----\nAllocated Robots:\n  R1: 8s\n  R6: 8s\n", fillcolor="#FF6B6B", penwidth=3, color=darkred, fontweight=bold, fontsize=11];
+
+    opt_0 -> opt_1 [label="Δ=12s", penwidth=2, color=darkred];
+    opt_1 -> opt_2 [label="Δ=0s", penwidth=2, color=darkred];
+    opt_2 -> opt_3 [label="Δ=0s", penwidth=2, color=darkred];
+    opt_3 -> opt_4 [label="Δ=0s", penwidth=2, color=darkred];
+  }
+
+  // Connections between clusters
+  env_info -> path_summary [style=dashed, color=gray, label="tasks"];
+  team_info -> path_summary [style=dashed, color=gray, label="robots"];
+  ltl_info -> path_summary [style=dashed, color=gray, label="constraints"];
+
+}

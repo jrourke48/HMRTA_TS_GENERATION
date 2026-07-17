@@ -9,10 +9,11 @@
  */
 PlanningDecisionTree::PlanningDecisionTree(Node* automatonState, Node* tsState,
                                            std::vector<bool> taskAllocation, std::vector<uint16_t> times,
+                                           std::vector<Point> robotPositions,
                                            int8_t batch, Tree_Node::TASK_PROGRESS prog)
     : nodeCount(0) {
     // Root node always gets ID 0
-    root = new Tree_Node(0, nullptr, automatonState, tsState, taskAllocation, times, batch, prog);
+    root = new Tree_Node(0, nullptr, automatonState, tsState, taskAllocation, times, robotPositions, batch, prog);
     nodeCount = 1;
     frontierNodes.push_back(root);  // Root is initially the frontier
 }
@@ -48,7 +49,7 @@ PlanningDecisionTree::~PlanningDecisionTree() {
  */
 Tree_Node* PlanningDecisionTree::insertNode(Tree_Node* parent, Node* automatonState,
                                             Node* tsState, std::vector<bool> taskAllocation,
-                                            std::vector<uint16_t> times, int8_t batch,
+                                            std::vector<uint16_t> times, std::vector<Point> positions, int8_t batch,
                                             Tree_Node::TASK_PROGRESS prog) {
     if (parent == nullptr) {
         return nullptr;
@@ -56,7 +57,7 @@ Tree_Node* PlanningDecisionTree::insertNode(Tree_Node* parent, Node* automatonSt
 
     // Auto-assign nodeId based on current node count
     uint32_t nodeId = static_cast<uint32_t>(nodeCount);
-    Tree_Node* newNode = new Tree_Node(nodeId, parent, automatonState, tsState, taskAllocation, times, batch, prog);
+    Tree_Node* newNode = new Tree_Node(nodeId, parent, automatonState, tsState, taskAllocation, times, positions, batch, prog);
     nodeCount++;
     
     // Frontier management: parent is no longer a leaf

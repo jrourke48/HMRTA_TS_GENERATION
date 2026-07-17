@@ -113,6 +113,7 @@ PlanningDecisionTree* TaskAllocationAlgorithms::intensiveInterTaskRelationshipTr
     // Create initial task allocation and times vectors
     std::vector<bool> initialAllocation;
     std::vector<uint16_t> initialTimes;
+    std::vector<Point> initialPositions = multiRobotSystemPtr ? multiRobotSystemPtr->getRobotPositions() : std::vector<Point>();
     if (multiRobotSystemPtr) {
         for (size_t i = 0; i < multiRobotSystemPtr->getRobots().size(); ++i) {
             initialAllocation.push_back(false);
@@ -126,6 +127,7 @@ PlanningDecisionTree* TaskAllocationAlgorithms::intensiveInterTaskRelationshipTr
         initialEnvNodePtr,              // ts state node (heap-allocated)
         initialAllocation,              // task allocation
         initialTimes,                   // times
+        initialPositions,               // robot positions
         0,                              // batch
         Tree_Node::TASK_PROGRESS::PRE   // progress
     );
@@ -142,19 +144,11 @@ PlanningDecisionTree* TaskAllocationAlgorithms::intensiveInterTaskRelationshipTr
 
     // Process nodes from untraversed queue until empty
     Tree_Node* currentNode = nullptr;
-    int iterationCount = 0;
     while ((currentNode = getNextUntraversedNode()) != nullptr) {
-        iterationCount++;
-        std::cout << "\n=== ITERATION " << iterationCount << " ===" << std::endl;
-        std::cout << "[DEBUG] Current node - NBA state: " << currentNode->getAutomatonState()->getId() 
-                  << ", TS state: " << currentNode->getTSState()->getId()
-                  << ", Progress: " << static_cast<int>(currentNode->getProgress()) << std::endl;
         
         // Create subtree for current node
         PlanningDecisionTree* subtree = new PlanningDecisionTree(currentNode);
         uint16_t buchisize = nbaPtr->getNumStates();
-        std::cout << "[DEBUG] Processing " << buchisize << " automaton states from current node (state " 
-                  << currentNode->getAutomatonState()->getId() << ")" << std::endl;
         
         // Iterate through all automaton states
         for (uint16_t i = 0; i < buchisize; ++i) {
@@ -163,49 +157,12 @@ PlanningDecisionTree* TaskAllocationAlgorithms::intensiveInterTaskRelationshipTr
             
             // Get edge labels from current automaton state to this state
             std::vector<std::string> edges = nbaPtr->getEdgeLabels(currentNode->getAutomatonState()->getId(), nbaId);
-            std::cout << "    [DEBUG] Found " << edges.size() << " edge(s)" << std::endl;
-            for (size_t ei = 0; ei < edges.size(); ++ei) {
-                std::cout << "      [DEBUG] Edge " << ei << ": \"" << edges[ei] << "\"" << std::endl;
-            }
             std::vector<uint16_t> apIds = collectUniqueAPsFromEdges(edges);
-            std::cout << "    [DEBUG] Collected " << apIds.size() << " unique AP(s): ";
-            for (auto apId : apIds) std::cout << apId << " ";
-            std::cout << std::endl;
-            
-            // DEBUG: Verify extracted apIds match BatchAtomicProposition ap_ids
-            std::cout << "    [DEBUG] Verifying apIds against LTL formula APs:" << std::endl;
-            try {
-                const auto& batchAPs = nbaPtr->getLTLFormula()->getBatchAtomicPropositions();
-                std::cout << "    [DEBUG] Available APs in formula: ";
-                for (const auto& bap : batchAPs) {
-                    std::cout << bap.getAPId() << " ";
-                }
-                std::cout << std::endl;
-                
-                for (uint16_t apId : apIds) {
-                    bool found = false;
-                    for (const auto& bap : batchAPs) {
-                        if (bap.getAPId() == apId) {
-                            found = true;
-                            std::cout << "      ✓ apId " << apId << " found in formula" << std::endl;
-                            break;
-                        }
-                    }
-                    if (!found) {
-                        std::cout << "      ✗ apId " << apId << " NOT found in formula!" << std::endl;
-                    }
-                }
-            } catch (const std::exception& e) {
-                std::cout << "    [DEBUG] Exception checking APs: " << e.what() << std::endl;
-            }
             
             for (uint16_t apId : apIds) {
                 // Solution 1: Check (state, AP) pair instead of just state
                 if (!isStateAPPairVisited(nbaId, apId)) {
-                    std::cout << "      [DEBUG] AP " << apId << " not visited with state " << nbaId << ", processing..." << std::endl;
-                    
                     int8_t batchVal = nbaPtr->getLTLFormula()->getBatchVal(apId);
-                    std::cout << "      [DEBUG] AP " << apId << " has batch value " << static_cast<int>(batchVal) << std::endl;
                     Node* TSState = envPtr->getTransitionSystem()->getNode(apId);
                     
                     // Create new tree node with automaton state and task state
@@ -218,16 +175,13 @@ PlanningDecisionTree* TaskAllocationAlgorithms::intensiveInterTaskRelationshipTr
                     // batchVal > 0: compatible tasks (same batch)
                     // batchVal < 0: exclusive tasks (conflicting batch)
                     if (batchVal == 0) {
-                        std::cout << "        [DEBUG] Routing to unrelatedTaskSearch (batch=0)" << std::endl;
                         unrelatedTaskSearch(newNode, TSState, currentNode, apId);
                     }
                     else if (batchVal > 0) {
-                        std::cout << "        [DEBUG] Routing to compatibleTaskSearch (batch=" << static_cast<int>(batchVal) << ")" << std::endl;
                         // TODO: compatible task search needs to consider sub tasks and main tasks
                         compatibleTaskSearch(newNode, TSState, currentNode);
                     }
                     else {
-                        std::cout << "        [DEBUG] Routing to exclusiveTaskSearch (batch=" << static_cast<int>(batchVal) << ")" << std::endl;
                         // TODO: exclusive task search needs to consider sub tasks and main tasks
                         exclusiveTaskSearch(newNode, TSState, currentNode);
                     }
@@ -246,112 +200,39 @@ PlanningDecisionTree* TaskAllocationAlgorithms::intensiveInterTaskRelationshipTr
                     }
                     else {
                         // Progress changed - Solution 2: Clear for new batch context
-                        std::cout << "        [DEBUG] Progress changed, clearing visited (state,AP) pairs for new batch..." << std::endl;
                         clearVisitedStateAPPairs();
                     }
                     
                     if (currentNode->getParent() == nullptr && nba->isAccepting(currentNode->getAutomatonState()->getId())) {
-                        std::cout << "        [DEBUG] Current node is root and accepting, clearing visited (state,AP) pairs for new batch..." << std::endl;
                         clearVisitedStateAPPairs();
                     }
                     
                     // Add to subtree (insertNode will auto-assign the correct nodeId)
                     subtree->insertNode(newNode);
                     visitedNodes.push_back(newNode); // Mark new node as visited
-                    std::cout << "        [DEBUG] Added node to subtree (NBA: " << nbaId << ", AP: " << apId << ")" << std::endl;
-                } else {
-                    std::cout << "      [DEBUG] (State " << nbaId << ", AP " << apId << ") pair already visited, skipping..." << std::endl;
                 }
             }
         }
         
-        // Show subtree state before pruning
-        std::vector<Tree_Node*> subtreeNodesBefore = subtree->getAllNodes();
-        std::cout << "[DEBUG] Subtree before pruning: " << subtreeNodesBefore.size() << " nodes" << std::endl;
-        for (const auto& node : subtreeNodesBefore) {
-            std::cout << "  - NBA: " << node->getAutomatonState()->getId() 
-                      << ", Progress: " << static_cast<int>(node->getProgress()) << std::endl;
-        }
-        
         // Prune subtree
-        std::cout << "[DEBUG] Calling pruneSubtree..." << std::endl;
         PlanningDecisionTree* pruningResult = pruneSubtree(subtree);
         
-        // Show tree state after pruning
-        std::vector<Tree_Node*> subtreeNodesAfter = pruningResult->getAllNodes();
-        std::cout << "[DEBUG] Subtree after pruning: " << subtreeNodesAfter.size() << " nodes" << std::endl;
-        for (const auto& node : subtreeNodesAfter) {
-            std::cout << "  - NBA: " << node->getAutomatonState()->getId() 
-                      << ", Progress: " << static_cast<int>(node->getProgress()) << std::endl;
-        }
-        
         // After pruning, add all remaining nodes in subtree to untraversed queue (except currentNode)
-        std::cout << "[DEBUG] Adding nodes to untraversed queue..." << std::endl;
         std::vector<Tree_Node*> remainingNodes = pruningResult->getAllNodes();
         for (Tree_Node* node : remainingNodes) {
             if (node != currentNode) {
                 addUntraversedPlanningNode(node);
-                std::cout << "  [DEBUG] Added to untraversed: NBA " << node->getAutomatonState()->getId() << std::endl;
             }
         }
         
-        // Show planning tree state before inserting subtree
-        std::vector<Tree_Node*> planningTreeNodesBefore = planningTree->getAllNodes();
-        std::cout << "[DEBUG] Planning tree before insert: " << planningTreeNodesBefore.size() << " nodes" << std::endl;
         // Attach subtree to planning tree
         // currentNode is the root of the subtree, so attach pruned subtree as children of currentNode
         planningTree->insertSubtree(currentNode, pruningResult);
-        // Show planning tree state after inserting subtree
-        std::vector<Tree_Node*> planningTreeNodesAfter = planningTree->getAllNodes();
-        std::cout << "[DEBUG] Planning tree after insert: " << planningTreeNodesAfter.size() << " nodes" << std::endl;
         // Add currentNode to traversed tree
         traversedTree->insertNode(currentNode);
-        std::cout << "[DEBUG] Added current node to traversed tree" << std::endl;
-        std::cout << "[DEBUG] Untraversed queue size: " << std::endl;
-        // Peek at queue size (we can't directly access it, but we can note this for observation)
     }
-    std::cout << "\n=== SEARCH COMPLETE ===" << std::endl;
     
     Tree_Node* finalOptimalNode = planningTree->getOptimalFrontierNode(nba->isFinite()); // Final optimal node after search completion
-    if (finalOptimalNode) {
-        uint16_t cost = finalOptimalNode->getMaxTime(); 
-        std::cout << "Optimal frontier node found with cost (max time): " << cost << std::endl;
-        std::cout << "Optimal frontier node - NBA state: " << finalOptimalNode->
-        getAutomatonState()->getId() << ", TS state: " << finalOptimalNode->getTSState()->getId() 
-                  << ", Progress: " << static_cast<int>(finalOptimalNode->getProgress()) << std::endl;
-        
-        
-        // Manually traverse from frontier node to root to avoid infinite loop issues
-        std::cout << "Path to optimal node:" << std::endl;
-        std::vector<Tree_Node*> path;
-        Tree_Node* current = finalOptimalNode;
-        size_t maxDepth = 1000;  // Safety check to prevent infinite loops
-        size_t depth = 0;
-        while (current != nullptr && depth < maxDepth) {
-            path.push_back(current);
-            Tree_Node* parent = current->getParent();
-            if (parent == current) {
-                std::cout << "  WARNING: Circular parent reference detected at node!" << std::endl;
-                break;
-            }
-            current = parent;
-            depth++;
-        }
-        
-        // Print path from root to frontier
-        std::reverse(path.begin(), path.end());
-        for (Tree_Node* node : path) {
-            std::cout << "  - NBA: " << node->getAutomatonState()->getId() 
-                      << ", TS: " << node->getTSState()->getId() 
-                      << ", Progress: " << static_cast<int>(node->getProgress());  
-            std::cout << "Task Allocation Result: [";
-            for (size_t i = 0; i < node->getRoboTaskAllocation().size(); ++i) {
-                std::cout << (node->getRoboTaskAllocation()[i] ? "1" : "0");
-                if (i < node->getRoboTaskAllocation().size() - 1) std::cout << ", ";
-            }
-            std::cout << "]" << std::endl;
-        }
-    }
     
     // Final tree state
     // Reassign node IDs to ensure proper hierarchy order (root = 0, then by depth)
@@ -381,6 +262,8 @@ void TaskAllocationAlgorithms::unrelatedTaskSearch(
     uint16_t tsStateId = TSState->getId();
     // Get task location from environment mapping p_an
     Point taskLocation = environment->TSStateIdToGridCenter(tsStateId);
+    multiRobotSystem->setRobotPositions(currentNode->getRobotPositions()); // Ensure current node has robot positions stored
+    
     std::vector<uint16_t> updatedtimes = multiRobotSystem->updateRobotTimesToGoal(currentNode->getTimes(), taskLocation);
 
     // Get the sort of the times vector and get the corresponding robot indices to find the best robot assignment
@@ -396,13 +279,6 @@ void TaskAllocationAlgorithms::unrelatedTaskSearch(
     
     auto [taskAllocation, maxTime] = getTaskAllocation(allRobots, requiredCapabilities, sortedTimes);
     
-    std::cout << "Task Allocation Result: [";
-    for (size_t i = 0; i < taskAllocation.size(); ++i) {
-        std::cout << (taskAllocation[i] ? "1" : "0");
-        if (i < taskAllocation.size() - 1) std::cout << ", ";
-    }
-    std::cout << "], Max Time: " << maxTime << std::endl;
-    
     // Check if we found a valid allocation
     bool hasAllocation = false;
     for (bool allocated : taskAllocation) {
@@ -413,15 +289,16 @@ void TaskAllocationAlgorithms::unrelatedTaskSearch(
     }
     
     if (!hasAllocation) {
-        std::cout << "No valid task allocation found for this node." << std::endl;
         return;
     }
+    // Start with parent node's times and only update allocated robots with their individual travel times
     std::vector<uint16_t> updatedTimes = currentNode->getTimes();
-    // Set all allocated robots to the max time of allocated robots, leave others unchanged
     for (size_t i = 0; i < taskAllocation.size() && i < updatedTimes.size(); ++i) {
         if (taskAllocation[i]) {
-            updatedTimes[i] = maxTime;
+            // Use individual calculated travel time for each allocated robot
+            updatedTimes[i] = updatedtimes[i];
         }
+        // Non-allocated robots keep their current time
     }
     
     // Update newNode with the task allocation and updated times
@@ -431,21 +308,16 @@ void TaskAllocationAlgorithms::unrelatedTaskSearch(
     // Check if the new node is an accepting state (increment progress when entering accepting)
     if (newNode && nba) {
         bool acceptingState = nba->isAccepting(newNode->getAutomatonState()->getId());
-        std::cout << "Automaton State " << newNode->getAutomatonState()->getId() 
-                  << " which is " << (acceptingState ? "ACCEPTING" : "NON-ACCEPTING") << std::endl;
         if (acceptingState) {
             // Increment progress when entering accepting state
             int newProgressInt = static_cast<int>(currentNode->getProgress()) + 1;
             Tree_Node::TASK_PROGRESS newProgress = static_cast<Tree_Node::TASK_PROGRESS>(newProgressInt);
             newNode->setProgress(newProgress);
-            std::cout << "Progress incremented to " << static_cast<int>(newProgress) << " (entering accepting)" << std::endl;
         } else {
             // Not entering accepting: keep progress the same
             newNode->setProgress(currentNode->getProgress());
         }
     }
-    
-    std::cout << "unrelatedTaskSearch completed successfully" << std::endl;
  }
 /**
  * Algorithm 3: Compatible-Task Search (CS)
@@ -894,14 +766,9 @@ PlanningDecisionTree* TaskAllocationAlgorithms::pruneSubtree(PlanningDecisionTre
     std::vector<Tree_Node*> nodesToRemove;
     std::vector<Tree_Node*> subtreeNodes = subtree->getAllNodes();
     
-    std::cout << "    [PRUNE] Starting pruneSubtree with " << subtreeNodes.size() << " nodes" << std::endl;
-    
     // Rule 1: Remove nodes with OTH progress (terminal nodes)
-    std::cout << "    [PRUNE] Rule 1: Checking for OTH progress nodes..." << std::endl;
     for (Tree_Node* node : subtreeNodes) {
         if (node->getProgress() == Tree_Node::TASK_PROGRESS::OTH) {
-            std::cout << "      [PRUNE] Marking for removal: NBA " << node->getAutomatonState()->getId() 
-                      << " (OTH progress)" << std::endl;
             nodesToRemove.push_back(node);
         }
     }
@@ -909,7 +776,6 @@ PlanningDecisionTree* TaskAllocationAlgorithms::pruneSubtree(PlanningDecisionTre
     // Rule 2: Remove nodes with traversed (automaton state, progress) pairs
     // If we've already visited (state S, progress P) in traversedTree, don't sample it again
     std::vector<Tree_Node*> traversedNodes = traversedTree->getAllNodes();
-    std::cout << "    [PRUNE] Rule 2: Checking traversed tree (" << traversedNodes.size() << " nodes)..." << std::endl;
     
     for (Tree_Node* node : subtreeNodes) {
         // Skip if already marked for removal
@@ -924,22 +790,17 @@ PlanningDecisionTree* TaskAllocationAlgorithms::pruneSubtree(PlanningDecisionTre
                 node->getAutomatonState()->getId() == traversedNode->getAutomatonState()->getId() &&
                 node->getProgress() == traversedNode->getProgress()) {
                 foundInTraversed = true;
-                std::cout << "      [PRUNE] Found duplicate in traversed tree: NBA " << node->getAutomatonState()->getId() 
-                          << " with progress " << static_cast<int>(node->getProgress()) << std::endl;
                 break;
             }
         }
         
         if (foundInTraversed) {
-            std::cout << "      [PRUNE] Marking for removal: NBA " << node->getAutomatonState()->getId() 
-                      << " (duplicate in traversed)" << std::endl;
             nodesToRemove.push_back(node);
         }
     }
     
     // Rule 3: For nodes with same automaton state and progress, keep only minimum cost
     // Cost is calculated as sum of all robot execution times
-    std::cout << "    [PRUNE] Rule 3: Checking for duplicate states (same NBA + Progress)..." << std::endl;
     std::map<std::pair<uint32_t, int>, std::vector<Tree_Node*>> nodeGroups;
     
     // Group remaining nodes by (automaton state ID, progress)
@@ -958,16 +819,12 @@ PlanningDecisionTree* TaskAllocationAlgorithms::pruneSubtree(PlanningDecisionTre
     // Within each group with duplicates, keep only the minimum cost node
     for (auto& [key, nodes] : nodeGroups) {
         if (nodes.size() > 1) {
-            std::cout << "      [PRUNE] Found " << nodes.size() << " nodes with same NBA " << key.first 
-                      << " and progress " << key.second << " - selecting min cost" << std::endl;
-            
             // Calculate cost for each node (sum of all robot times)
             Tree_Node* minCostNode = nodes[0];
             uint32_t minCost = 0;
             for (uint16_t time : minCostNode->getTimes()) {
                 minCost += time;
             }
-            std::cout << "        Initial min cost: " << minCost << std::endl;
             
             // Find minimum cost node and mark all others for removal
             for (size_t i = 1; i < nodes.size(); ++i) {
@@ -976,26 +833,18 @@ PlanningDecisionTree* TaskAllocationAlgorithms::pruneSubtree(PlanningDecisionTre
                     nodeCost += time;
                 }
                 
-                std::cout << "        Node " << i << " cost: " << nodeCost << std::endl;
-                
                 if (nodeCost < minCost) {
                     // Current node is better, mark previous min for removal
-                    std::cout << "          -> Marking previous min for removal" << std::endl;
                     nodesToRemove.push_back(minCostNode);
                     minCostNode = nodes[i];
                     minCost = nodeCost;
                 } else {
                     // Current node is worse or equal, mark for removal
-                    std::cout << "          -> Marking for removal (higher cost)" << std::endl;
                     nodesToRemove.push_back(nodes[i]);
                 }
             }
-            std::cout << "        Keeping node with cost: " << minCost << std::endl;
         }
     }
-    
-    std::cout << "    [PRUNE] Total nodes marked for removal: " << nodesToRemove.size() << std::endl;
-    std::cout << "    [PRUNE] Nodes remaining in subtree: " << (subtreeNodes.size() - nodesToRemove.size()) << std::endl;
     
     // Remove all marked nodes from subtree and add to traversedTree
     // Transfer nodes from subtree to traversedTree (don't delete, just move)
@@ -1142,19 +991,9 @@ void TaskAllocationAlgorithms::visualizeTree(const std::string& filename) const 
     file << "}\n";
     file.close();
     
-    std::cout << "✓ DOT file generated: " << dotFile << std::endl;
-    
     // Convert DOT to PNG using Graphviz
     std::string command = "dot -Tpng \"" + dotFile + "\" -o \"" + pngFile + "\"";
-    int result = system(command.c_str());
-    
-    if (result == 0) {
-        std::cout << "✓ Visualization created: " << pngFile << std::endl;
-    } else {
-        std::cerr << "Warning: Failed to convert DOT to PNG. Make sure Graphviz is installed." << std::endl;
-        std::cerr << "  Command: " << command << std::endl;
-        std::cerr << "  But DOT file is still available at: " << dotFile << std::endl;
-    }
+    system(command.c_str());
 }
 
 /**
@@ -1475,17 +1314,7 @@ void TaskAllocationAlgorithms::visualizeOptimalPath(const std::string& filename)
     file << "}\n";
     file.close();
     
-    std::cout << "✓ Comprehensive optimal path DOT file generated: " << dotFile << std::endl;
-    
     // Convert DOT to PNG using Graphviz
     std::string command = "dot -Tpng \"" + dotFile + "\" -o \"" + pngFile + "\"";
-    int result = system(command.c_str());
-    
-    if (result == 0) {
-        std::cout << "✓ Comprehensive visualization created: " << pngFile << std::endl;
-    } else {
-        std::cerr << "Warning: Failed to convert DOT to PNG. Make sure Graphviz is installed." << std::endl;
-        std::cerr << "  Command: " << command << std::endl;
-        std::cerr << "  But DOT file is still available at: " << dotFile << std::endl;
-    }
+    system(command.c_str());
 }

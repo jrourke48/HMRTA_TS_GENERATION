@@ -3,6 +3,7 @@
 #define TREE_NODE_H
 
 #include "../Automatons/Edge_Node.h"
+#include "Environment/Point.h"
 #include <vector>
 
 class Tree_Node {
@@ -21,6 +22,7 @@ class Tree_Node {
         Node* ts_state; // Associated transition system state
         std::vector<bool> robo_task_allocation; // Vector indicating which robot is allocated to which task
         std::vector<uint16_t> times; // Vector of approximate times for each robot to complete its allocated tasks
+        std::vector<Point> robotPositions; // Positions of robots at this node
         int8_t batch; // Batch number for the node
         TASK_PROGRESS prog; // Type of the node (pre, tra, suf, oth)
     public:
@@ -28,7 +30,7 @@ class Tree_Node {
         
         // Constructor
         Tree_Node(uint32_t id, Tree_Node* parent, Node* automatonState, Node* tsState, 
-                  std::vector<bool> taskAllocation, std::vector<uint16_t> times, int8_t batch, TASK_PROGRESS prog);
+                  std::vector<bool> taskAllocation, std::vector<uint16_t> times, std::vector<Point> robotpositions, int8_t batch, TASK_PROGRESS prog);
         
         Tree_Node(uint32_t id, Tree_Node* parent, Node* automatonState, Node* tsState, int8_t batch);
         // Destructor
@@ -58,6 +60,11 @@ class Tree_Node {
         void setBatch(int8_t newBatch);
         void setProgress(TASK_PROGRESS curProg);
         void setId(uint32_t newId);
+        void setRobotPositions(const std::vector<Point>& positions);
+        
+        // Robot positions
+        const std::vector<Point>& getRobotPositions() const;
+        bool hasRobotPositions() const;
         
         // Sorting methods
         // Returns vector of (robotIndex, time) pairs sorted by time in ascending order

@@ -171,6 +171,25 @@ std::vector<uint16_t> MultiRobotSystem::updateAllocatedRobotTimes(
     }
     return updatedTimes;
 }
+/**
+ * getRobotPositions - Get the current positions of all robots
+ */
+std::vector<Point> MultiRobotSystem::getRobotPositions() const {
+    std::vector<Point> positions;
+    for (const auto* robot : robots) {
+        positions.push_back(robot->getCurrentPosition()); // Default position if robot is null
+    }
+    return positions;
+}
+/**
+ * setRobotPositions - Set the current positions of all robots
+ */
+void MultiRobotSystem::setRobotPositions(const std::vector<Point>& positions) {
+    for (size_t i = 0; i < robots.size() && i < positions.size(); ++i) {
+        robots[i]->setCurrentPosition(positions[i]);
+    }
+}
+
 
 /**
  * getEmptyV - Get a vector of false values corresponding to the number of robots

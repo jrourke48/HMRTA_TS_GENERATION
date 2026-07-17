@@ -6,10 +6,10 @@
  * Initializes a tree node with automaton and transition system states
  */
 Tree_Node::Tree_Node(uint32_t id, Tree_Node* parent, Node* automatonState, Node* tsState,
-                     std::vector<bool> taskAllocation, std::vector<uint16_t> times, 
+                     std::vector<bool> taskAllocation, std::vector<uint16_t> times, std::vector<Point> robotpositions, 
                      int8_t batch, TASK_PROGRESS prog)
     : id(id), ParentNode(parent), automaton_state(automatonState), ts_state(tsState),
-      robo_task_allocation(taskAllocation), times(times), batch(batch), prog(prog) {
+      robo_task_allocation(taskAllocation), times(times), robotPositions(robotpositions), batch(batch), prog(prog) {
 }
 
 /**
@@ -20,7 +20,8 @@ Tree_Node::Tree_Node(uint32_t id, Tree_Node* parent, Node* automatonState, Node*
  */
 Tree_Node::Tree_Node(uint32_t id, Tree_Node* parent, Node* automatonState, Node* tsState, int8_t batch)
     : id(id), ParentNode(parent), automaton_state(automatonState), ts_state(tsState),
-      robo_task_allocation(), times(parent ? parent->getTimes() : std::vector<uint16_t>()), batch(batch), prog(TASK_PROGRESS::PRE) {
+      robo_task_allocation(), times(parent ? parent->getTimes() : std::vector<uint16_t>()), 
+      robotPositions(), batch(batch), prog(TASK_PROGRESS::PRE) {
 }
 
 /**
@@ -270,4 +271,25 @@ void Tree_Node::quickSortIndices(std::vector<uint16_t>& indices, int low, int hi
         quickSortIndices(indices, low, partitionIndex - 1);
         quickSortIndices(indices, partitionIndex + 1, high);
     }
+}
+
+/**
+ * setRobotPositions - Set the robot positions for this node
+ */
+void Tree_Node::setRobotPositions(const std::vector<Point>& positions) {
+    robotPositions = positions;
+}
+
+/**
+ * getRobotPositions - Get the robot positions at this node
+ */
+const std::vector<Point>& Tree_Node::getRobotPositions() const {
+    return robotPositions;
+}
+
+/**
+ * hasRobotPositions - Check if robot positions have been set
+ */
+bool Tree_Node::hasRobotPositions() const {
+    return !robotPositions.empty();
 }

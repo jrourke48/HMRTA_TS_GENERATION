@@ -13,7 +13,7 @@ digraph PlanningTree {
   node_7 [label="Node 7\nNBA: 12, TS: 3\nProgress: PRE\nMax Time: 5\nBatch: 0\nRobots: [1,1,1,0,0,0]", fillcolor="#FFE6E6"];
   node_8 [label="Node 8\nNBA: 13, TS: 5\nProgress: PRE\nMax Time: 14\nBatch: 0\nRobots: [0,0,0,1,1,0]", fillcolor="#FFE6E6"];
   node_9 [label="Node 9\nNBA: 14, TS: 4\nProgress: PRE\nMax Time: 10\nBatch: 0\nRobots: [0,0,0,1,0,1]", fillcolor="#FFE6E6"];
-  node_10 [label="Node 10\nNBA: 0, TS: 3\nProgress: TRA\nMax Time: 24\nBatch: 0\nRobots: [1,1,0,0,0,1]", fillcolor="#FFFFCC"];
+  node_10 [label="Node 10\nNBA: 0, TS: 3\nProgress: TRA\nMax Time: 24\nBatch: 0\nRobots: [1,0,0,0,1,1]", fillcolor="#FF6B6B", penwidth=3, color=red];
   node_11 [label="Node 11\nNBA: 1, TS: 5\nProgress: PRE\nMax Time: 24\nBatch: 0\nRobots: [0,0,0,1,1,0]", fillcolor="#FFE6E6"];
   node_12 [label="Node 12\nNBA: 2, TS: 4\nProgress: PRE\nMax Time: 18\nBatch: 0\nRobots: [0,0,1,1,0,0]", fillcolor="#FFE6E6"];
   node_13 [label="Node 13\nNBA: 3, TS: 1\nProgress: PRE\nMax Time: 18\nBatch: 0\nRobots: [1,1,0,0,0,0]", fillcolor="#FFE6E6"];
@@ -37,7 +37,7 @@ digraph PlanningTree {
   node_31 [label="Node 31\nNBA: 0, TS: 3\nProgress: TRA\nMax Time: 28\nBatch: 0\nRobots: [0,1,0,1,0,1]", fillcolor="#FFFFCC"];
   node_32 [label="Node 32\nNBA: 1, TS: 1\nProgress: PRE\nMax Time: 28\nBatch: 0\nRobots: [1,0,0,0,1,0]", fillcolor="#FFE6E6"];
   node_33 [label="Node 33\nNBA: 15, TS: 5\nProgress: PRE\nMax Time: 14\nBatch: 0\nRobots: [0,1,0,1,0,0]", fillcolor="#FFE6E6"];
-  node_34 [label="Node 34\nNBA: 0, TS: 1\nProgress: TRA\nMax Time: 32\nBatch: 0\nRobots: [0,1,0,1,0,0]", fillcolor="#FFFFCC"];
+  node_34 [label="Node 34\nNBA: 0, TS: 1\nProgress: TRA\nMax Time: 32\nBatch: 0\nRobots: [0,0,0,1,1,0]", fillcolor="#FFFFCC"];
   node_35 [label="Node 35\nNBA: 5, TS: 3\nProgress: PRE\nMax Time: 15\nBatch: 0\nRobots: [1,0,0,0,1,1]", fillcolor="#FFE6E6"];
   node_36 [label="Node 36\nNBA: 0, TS: 1\nProgress: TRA\nMax Time: 32\nBatch: 0\nRobots: [1,0,0,0,1,0]", fillcolor="#FFFFCC"];
   node_37 [label="Node 37\nNBA: 5, TS: 4\nProgress: PRE\nMax Time: 15\nBatch: 0\nRobots: [0,0,0,1,0,1]", fillcolor="#FFE6E6"];

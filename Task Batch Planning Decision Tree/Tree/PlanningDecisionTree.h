@@ -15,7 +15,8 @@ class PlanningDecisionTree {
     public:
         // Constructor
         PlanningDecisionTree(Node* automatonState, Node* tsState, 
-                             std::vector<bool> taskAllocation, std::vector<uint16_t> times, 
+                             std::vector<bool> taskAllocation, std::vector<uint16_t> times,
+                             std::vector<Point> robotPositions,
                              int8_t batch, Tree_Node::TASK_PROGRESS prog);
         
         // Empty constructor
@@ -30,7 +31,7 @@ class PlanningDecisionTree {
         // Tree construction methods
         Tree_Node* insertNode(Tree_Node* parent, Node* automatonState, Node* tsState,
                               std::vector<bool> taskAllocation, std::vector<uint16_t> times,
-                              int8_t batch, Tree_Node::TASK_PROGRESS prog);
+                              std::vector<Point> positions, int8_t batch, Tree_Node::TASK_PROGRESS prog);
         Tree_Node* insertNode(Tree_Node* newNode);
         Tree_Node* insertSubtree(Tree_Node* parentNode, PlanningDecisionTree* subtree);
         
