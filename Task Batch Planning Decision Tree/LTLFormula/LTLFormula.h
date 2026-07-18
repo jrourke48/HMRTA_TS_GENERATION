@@ -34,7 +34,8 @@ public:
     std::string getFormula() const;
     const std::vector<BatchAtomicProposition>& getBatchAPs() const;
     spot::formula getSpotFormula() const;
-    BatchAtomicProposition getAP(uint16_t id) const;
+    BatchAtomicProposition getBatchAP(uint16_t id) const;
+    uint16_t getTSState(uint16_t id) const;
     std::vector<BatchAtomicProposition>& getBatchAtomicPropositions();
     const std::vector<BatchAtomicProposition>& getBatchAtomicPropositions() const;
     std::vector<BatchAtomicProposition>& getAtomicPropositions();

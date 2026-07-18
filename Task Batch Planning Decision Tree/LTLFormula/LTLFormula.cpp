@@ -74,14 +74,22 @@ const std::vector<BatchAtomicProposition>& LTLFormula::getBatchAPs() const {
 }
 
 // Get a specific batch atomic proposition by ID
-BatchAtomicProposition LTLFormula::getAP(uint16_t id) const {
+BatchAtomicProposition LTLFormula::getBatchAP(uint16_t id) const {
     if (!batchAPs) throw std::runtime_error("BatchAPs vector is null");
     for (const auto& batchAP : *batchAPs) {
-        if (batchAP.getAP() == id) {
+        if (batchAP.getAPId() == id) {
             return batchAP;
         }
     }
     throw std::out_of_range("Atomic proposition ID not found");
+}
+
+// Get the TS state (AP) for a specific AP ID
+uint16_t LTLFormula::getTSState(uint16_t id) const {
+    if (!batchAPs || batchAPs->empty()) {
+        throw std::runtime_error("BatchAPs vector is null or empty");
+    }
+    return getBatchAP(id).getAP();
 }
 
 // Add a batch atomic proposition

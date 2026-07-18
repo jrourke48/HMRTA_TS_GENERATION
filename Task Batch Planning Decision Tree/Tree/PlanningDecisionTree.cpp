@@ -357,7 +357,6 @@ Tree_Node* PlanningDecisionTree::getOptimalFrontierNode(bool finite_nba) const {
 
     for (Tree_Node* node : completeNodes) {
         uint16_t nodeMaxTime = node->getMaxTime();
-        std::cout << "Max Time for Node NBA: node " << node->getId() << " = " << nodeMaxTime << std::endl;
         if (nodeMaxTime < minMaxTime) {
             minMaxTime = nodeMaxTime;
             optimal = node;

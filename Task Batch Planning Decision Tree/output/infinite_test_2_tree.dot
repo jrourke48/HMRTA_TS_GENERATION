@@ -3,6 +3,24 @@ digraph PlanningTree {
   node [shape=box, style=filled, fontname=Arial, fontsize=10];
   edge [fontname=Arial, fontsize=9];
 
-  node_0 [label="Node 0\nNBA: 0, TS: 0\nProgress: PRE\nMax Time: 0\nBatch: 0\nRobots: [0,0,0,0,0,0]", fillcolor="#FFE6E6"];
+  node_0 [label="Node 0\nNBA: 3, TS: 4\nProgress: PRE\nMax Time: 13\nBatch: 0\nRobots: [1,1,0,0,0,1]", fillcolor="#FFE6E6"];
+  node_1 [label="Node 1\nNBA: 0, TS: 0\nProgress: PRE\nMax Time: 0\nBatch: 0\nRobots: [0,0,0,0,0,0]", fillcolor="#FFE6E6"];
+  node_2 [label="Node 2\nNBA: 3, TS: 4\nProgress: PRE\nMax Time: 13\nBatch: 0\nRobots: [1,1,0,0,0,1]", fillcolor="#FFE6E6"];
+  node_3 [label="Node 3\nNBA: 2, TS: 0\nProgress: PRE\nMax Time: 1\nBatch: 0\nRobots: [1,1,0,0,0,0]", fillcolor="#FFE6E6"];
+  node_4 [label="Node 4\nNBA: 2, TS: 0\nProgress: TRA\nMax Time: 14\nBatch: 0\nRobots: [1,0,0,0,1,0]", fillcolor="#FFFFCC"];
+  node_5 [label="Node 5\nNBA: 3, TS: 4\nProgress: TRA\nMax Time: 14\nBatch: 0\nRobots: [0,1,1,1,0,0]", fillcolor="#FFFFCC"];
+  node_6 [label="Node 6\nNBA: 1, TS: 2\nProgress: TRA\nMax Time: 8\nBatch: 0\nRobots: [1,0,0,0,0,1]", fillcolor="#FFFFCC"];
+  node_7 [label="Node 7\nNBA: 2, TS: 0\nProgress: SUF\nMax Time: 21\nBatch: 0\nRobots: [0,0,0,1,1,0]", fillcolor="#E6F3FF"];
+  node_8 [label="Node 8\nNBA: 3, TS: 4\nProgress: SUF\nMax Time: 21\nBatch: 0\nRobots: [1,1,0,0,0,1]", fillcolor="#E6F3FF"];
+  node_9 [label="Node 9\nNBA: 1, TS: 2\nProgress: SUF\nMax Time: 9\nBatch: 0\nRobots: [0,0,1,1,0,0]", fillcolor="#E6F3FF"];
 
+  node_1 -> node_0 [label="cost=13"];
+  node_1 -> node_3 [label="cost=1"];
+  node_1 -> node_6 [label="cost=8"];
+  node_3 -> node_2 [label="cost=13"];
+  node_5 -> node_4 [label="cost=14"];
+  node_6 -> node_5 [label="cost=14"];
+  node_6 -> node_9 [label="cost=9"];
+  node_8 -> node_7 [label="cost=21"];
+  node_9 -> node_8 [label="cost=21"];
 }

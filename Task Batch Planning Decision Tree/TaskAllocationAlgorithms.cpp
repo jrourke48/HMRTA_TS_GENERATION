@@ -6,6 +6,7 @@
 #include <map>
 #include <fstream>
 #include <iostream>
+#include <stdexcept>
 
 /**
  * TaskAllocationAlgorithms - Constructor
@@ -163,7 +164,7 @@ PlanningDecisionTree* TaskAllocationAlgorithms::intensiveInterTaskRelationshipTr
                 // Solution 1: Check (state, AP) pair instead of just state
                 if (!isStateAPPairVisited(nbaId, apId)) {
                     int8_t batchVal = nbaPtr->getLTLFormula()->getBatchVal(apId);
-                    Node* TSState = envPtr->getTransitionSystem()->getNode(apId);
+                    Node* TSState = envPtr->getTransitionSystem()->getNode(nbaPtr->getLTLFormula()->getTSState(apId));
                     
                     // Create new tree node with automaton state and task state
                     // Note: nodeId is a placeholder; insertNode will auto-assign the correct ID
@@ -271,7 +272,7 @@ void TaskAllocationAlgorithms::unrelatedTaskSearch(
     
     // Get required capabilities from the BatchAtomicProposition using apId (not tsStateId)
     // CRITICAL: Different APs can map to same TS state but have different required capabilities
-    BatchAtomicProposition batchAP = nba->getLTLFormula()->getAP(apId);
+    BatchAtomicProposition batchAP = nba->getLTLFormula()->getBatchAP(apId);
     std::vector<bool> requiredCapabilities = batchAP.getCapabilities();
     
     // Find all permutations of robots that satisfy all required capabilities
@@ -629,6 +630,7 @@ std::vector<uint16_t> TaskAllocationAlgorithms::collectUniqueAPsFromEdges(const 
         // Remove acceptance marks {0}
         std::string cleaned = edgeLabel;
         size_t pos = cleaned.find("{0}");
+        size_t pos2 = cleaned.find("{1}");
         if (pos != std::string::npos) {
             cleaned.erase(pos, 3);
         }
@@ -753,6 +755,17 @@ std::pair<std::vector<bool>, uint16_t> TaskAllocationAlgorithms::getTaskAllocati
         }
         
         ++it;
+    }
+    
+    if (accumulatedCapabilities != requiredCapabilities) {
+        std::string missing;
+        for (size_t i = 0; i < requiredCapabilities.size(); ++i) {
+            if (requiredCapabilities[i] && !accumulatedCapabilities[i]) {
+                if (!missing.empty()) missing += ", ";
+                missing += std::to_string(i);
+            }
+        }
+        throw std::runtime_error("Failed to satisfy all required capabilities. Missing: " + missing);
     }
 
     return {taskAllocation, maxTime};
@@ -1196,7 +1209,7 @@ void TaskAllocationAlgorithms::visualizeOptimalPath(const std::string& filename)
             uint16_t count = 0;
             for (const auto& batchAP : batchAPs) {
                 if (count >= 12) break;  // Limit to 12 rows
-                uint16_t apId = batchAP.getAP();
+                uint16_t apId = batchAP.getAPId();
                 int8_t batchVal = batchAP.getBatch();
                 std::string batchType = (batchVal > 0) ? "Compatible" : (batchVal < 0) ? "Exclusive" : "Unrelated";
                 
@@ -1249,11 +1262,11 @@ void TaskAllocationAlgorithms::visualizeOptimalPath(const std::string& filename)
     // Path nodes with detailed information
     for (size_t i = 0; i < optimalPath.size(); ++i) {
         Tree_Node* node = optimalPath[i];
-        if (!node || !node->getAutomatonState() || !node->getTSState()) continue;
+        if (!node) continue;
         
         std::string nodeId = "opt_" + std::to_string(i);
-        uint16_t nbaId = node->getAutomatonState()->getId();
-        uint16_t tsId = node->getTSState()->getId();
+        uint16_t nbaId = node->getAutomatonState() ? node->getAutomatonState()->getId() : 0;
+        uint16_t tsId = node->getTSState() ? node->getTSState()->getId() : 0;
         uint16_t maxTime = node->getMaxTime();
         uint16_t totalCost = 0;
         for (uint16_t t : node->getTimes()) totalCost += t;
