@@ -9,6 +9,7 @@
 #include "MultiRobotSystem/RobotCapabilities.h"
 #include <vector>
 #include <queue>
+#include <set>
 #include <memory>
 #include <string>
 #include <spot/tl/formula.hh>
@@ -97,6 +98,17 @@ class TaskAllocationAlgorithms {
         
         // Collect and merge AP IDs from multiple edges, removing duplicates
         std::vector<uint16_t> collectUniqueAPsFromEdges(const std::vector<std::string>& edges) const;
+        
+        // Collect APs indexed by edge - returns vector where index i contains set of APs on edge i
+        std::vector<std::set<uint16_t>> collectAPsFromEdgesByIndex(const std::vector<std::string>& edges) const;
+        
+        // Collect both APs and acceptance marks indexed by edge
+        // Populates outEdgeAPIds and outEdgeAcceptanceSets from labels like "p0 & p1:{0,1}"
+        void collectAPsFromEdgesByIndexWithAcceptance(
+            const std::vector<std::string>& edges,
+            std::vector<std::set<uint16_t>>& outEdgeAPIds,
+            std::vector<std::set<uint16_t>>& outEdgeAcceptanceSets) const;
+        
         /**
          * Algorithm 1: Intensive Inter-Task Relationship Tree Search
          * Builds a planning tree considering inter-task relationships
@@ -115,7 +127,8 @@ class TaskAllocationAlgorithms {
             Tree_Node* newNode,
             Node* TSState,
             Tree_Node* currentNode,
-            uint16_t apId);
+            uint16_t apId, 
+        std::vector<uint16_t> acceptingSets);
         
         /**
          * Algorithm 3: Compatible-Task Search (CS)

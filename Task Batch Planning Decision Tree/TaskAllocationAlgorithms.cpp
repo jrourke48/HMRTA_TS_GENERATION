@@ -1,6 +1,7 @@
 #include "TaskAllocationAlgorithms.h"
 #include <algorithm>
 #include <queue>
+#include <set>
 #include <limits>
 #include <cmath>
 #include <map>
@@ -150,6 +151,14 @@ PlanningDecisionTree* TaskAllocationAlgorithms::intensiveInterTaskRelationshipTr
         // Create subtree for current node
         PlanningDecisionTree* subtree = new PlanningDecisionTree(currentNode);
         uint16_t buchisize = nbaPtr->getNumStates();
+        std::vector<uint16_t> acceptingSets = nba->getAcceptingStates();
+        
+        // DEBUG: Print acceptance sets
+        std::cout << "DEBUG: acceptingSets from getAcceptingStates(): ";
+        for (uint16_t s : acceptingSets) {
+            std::cout << s << " ";
+        }
+        std::cout << "(total: " << acceptingSets.size() << ")" << std::endl;
         
         // Iterate through all automaton states
         for (uint16_t i = 0; i < buchisize; ++i) {
@@ -158,9 +167,18 @@ PlanningDecisionTree* TaskAllocationAlgorithms::intensiveInterTaskRelationshipTr
             
             // Get edge labels from current automaton state to this state
             std::vector<std::string> edges = nbaPtr->getEdgeLabels(currentNode->getAutomatonState()->getId(), nbaId);
-            std::vector<uint16_t> apIds = collectUniqueAPsFromEdges(edges);
             
-            for (uint16_t apId : apIds) {
+            // Get APs indexed by edge - vector where index i contains set of APs on edge i
+            // Also extracts acceptance marks into edgeAcceptanceSets
+            std::vector<std::set<uint16_t>> edgeAPIds;
+            std::vector<std::set<uint16_t>> edgeAcceptanceSets;
+            collectAPsFromEdgesByIndexWithAcceptance(edges, edgeAPIds, edgeAcceptanceSets);
+            
+            
+            // Iterate through edges and their associated AP sets
+            for (size_t edgeIdx = 0; edgeIdx < edgeAPIds.size(); ++edgeIdx) {
+                const std::set<uint16_t>& apsOnEdge = edgeAPIds[edgeIdx];
+                for (uint16_t apId : apsOnEdge) {
                 // Solution 1: Check (state, AP) pair instead of just state
                 if (!isStateAPPairVisited(nbaId, apId)) {
                     int8_t batchVal = nbaPtr->getLTLFormula()->getBatchVal(apId);
@@ -170,13 +188,46 @@ PlanningDecisionTree* TaskAllocationAlgorithms::intensiveInterTaskRelationshipTr
                     // Note: nodeId is a placeholder; insertNode will auto-assign the correct ID
                     Tree_Node* newNode = new Tree_Node(0, currentNode, nbaState, 
                                                        TSState, batchVal);
+                    //if this edge is in the accepting set remove it to decrement the count of remaining accepting sets
+                    if (nbaPtr->isInfinite()) {
+                       std::set<uint16_t> curracceptingset = edgeAcceptanceSets[edgeIdx];
+                       
+                       // DEBUG: Show acceptance marks on this edge
+                       std::cout << "DEBUG: Edge " << edgeIdx << " has acceptance marks: ";
+                       for (uint16_t setNum : curracceptingset) {
+                           std::cout << setNum << " ";
+                       }
+                       std::cout << std::endl;
+                       
+                       // DEBUG: Show acceptingSets before removal
+                       std::cout << "DEBUG:   Before removal, acceptingSets: ";
+                       for (uint16_t s : acceptingSets) {
+                           std::cout << s << " ";
+                       }
+                       std::cout << std::endl;
+                       
+                       for (uint16_t setNum : curracceptingset) {
+                            auto it = std::find(acceptingSets.begin(), acceptingSets.end(), setNum);
+                            if (it != acceptingSets.end()) {
+                                acceptingSets.erase(it);
+                            }
+                       }
+                       
+                       // DEBUG: Show acceptingSets after removal
+                       std::cout << "DEBUG:   After removal, acceptingSets: ";
+                       for (uint16_t s : acceptingSets) {
+                           std::cout << s << " ";
+                       }
+                       std::cout << "(total: " << acceptingSets.size() << ")" << std::endl;
+                    }
+
                     
                     // Route based on batch value - don't use isBatchValueInTree() for routing!
                     // batchVal = 0: unrelated tasks
                     // batchVal > 0: compatible tasks (same batch)
                     // batchVal < 0: exclusive tasks (conflicting batch)
                     if (batchVal == 0) {
-                        unrelatedTaskSearch(newNode, TSState, currentNode, apId);
+                        unrelatedTaskSearch(newNode, TSState, currentNode, apId, acceptingSets);
                     }
                     else if (batchVal > 0) {
                         // TODO: compatible task search needs to consider sub tasks and main tasks
@@ -211,6 +262,7 @@ PlanningDecisionTree* TaskAllocationAlgorithms::intensiveInterTaskRelationshipTr
                     // Add to subtree (insertNode will auto-assign the correct nodeId)
                     subtree->insertNode(newNode);
                     visitedNodes.push_back(newNode); // Mark new node as visited
+                }
                 }
             }
         }
@@ -253,7 +305,8 @@ void TaskAllocationAlgorithms::unrelatedTaskSearch(
     Tree_Node* newNode,
     Node* TSState,
     Tree_Node* currentNode,
-    uint16_t apId) {
+    uint16_t apId, 
+std::vector<uint16_t> acceptingSets) {
     
     if (!newNode || !TSState || !multiRobotSystem || !nba || !environment) {
         return;
@@ -307,6 +360,8 @@ void TaskAllocationAlgorithms::unrelatedTaskSearch(
     newNode->setTimes(updatedTimes);
     
     // Check if the new node is an accepting state (increment progress when entering accepting)
+    if (nba && nba->isFinite()) {
+        // Handle finite NBA case if needed
     if (newNode && nba) {
         bool acceptingState = nba->isAccepting(newNode->getAutomatonState()->getId());
         if (acceptingState) {
@@ -319,6 +374,20 @@ void TaskAllocationAlgorithms::unrelatedTaskSearch(
             newNode->setProgress(currentNode->getProgress());
         }
     }
+} else {
+    // Handle the case when NBA is not finite
+    if (acceptingSets.empty()) {
+        // Increment progress when visited all accepting set edges
+            int newProgressInt = static_cast<int>(currentNode->getProgress()) + 1;
+            Tree_Node::TASK_PROGRESS newProgress = static_cast<Tree_Node::TASK_PROGRESS>(newProgressInt);
+            newNode->setProgress(newProgress);
+    }else{
+        // Handle the case when there are still accepting sets to visit
+        //progress remains the same as current node
+        newNode->setProgress(currentNode->getProgress());
+    }
+
+}
  }
 /**
  * Algorithm 3: Compatible-Task Search (CS)
@@ -705,6 +774,209 @@ std::vector<uint16_t> TaskAllocationAlgorithms::collectUniqueAPsFromEdges(const 
     }
     
     return allApIds;
+}
+
+/**
+ * collectAPsFromEdgesByIndex - Returns a vector of sets of AP IDs indexed by edge
+ * Each element at index i contains the set of AP IDs found on edge i
+ */
+std::vector<std::set<uint16_t>> TaskAllocationAlgorithms::collectAPsFromEdgesByIndex(const std::vector<std::string>& edges) const {
+    std::vector<std::set<uint16_t>> edgeAPIds;
+    
+    // Process each edge label string
+    for (const auto& edgeLabel : edges) {
+        std::set<uint16_t> apsOnThisEdge;
+        
+        // Remove acceptance marks {0}, {1}
+        std::string cleaned = edgeLabel;
+        size_t pos = cleaned.find("{0}");
+        if (pos != std::string::npos) {
+            cleaned.erase(pos, 3);
+        }
+        pos = cleaned.find("{1}");
+        if (pos != std::string::npos) {
+            cleaned.erase(pos, 3);
+        }
+        
+        // Check if there are 2+ true APs connected by AND (not OR)
+        bool hasMultipleTrueAPsInAndClause = false;
+        size_t orStart = 0;
+        size_t orEnd = cleaned.find('|');
+        
+        while (orStart < cleaned.length() && !hasMultipleTrueAPsInAndClause) {
+            // Extract OR-separated clause
+            std::string orClause = (orEnd == std::string::npos) ? 
+                                   cleaned.substr(orStart) : 
+                                   cleaned.substr(orStart, orEnd - orStart);
+            
+            // Count true APs in this AND-clause
+            int trueApCount = 0;
+            size_t andStart = 0;
+            size_t andEnd = orClause.find('&');
+            
+            while (andStart < orClause.length()) {
+                std::string token = (andEnd == std::string::npos) ? 
+                                   orClause.substr(andStart) : 
+                                   orClause.substr(andStart, andEnd - andStart);
+                
+                token.erase(0, token.find_first_not_of(" \t\n\r\""));
+                token.erase(token.find_last_not_of(" \t\n\r\"") + 1);
+                
+                if (!token.empty() && token[0] != '!') {
+                    trueApCount++;
+                }
+                
+                if (andEnd == std::string::npos) break;
+                andStart = andEnd + 1;
+                andEnd = orClause.find('&', andStart);
+            }
+            
+            if (trueApCount >= 2) {
+                hasMultipleTrueAPsInAndClause = true;
+            }
+            
+            if (orEnd == std::string::npos) break;
+            orStart = orEnd + 1;
+            orEnd = cleaned.find('|', orStart);
+        }
+        
+        // Only process edges that don't have 2+ true APs connected by AND
+        if (!hasMultipleTrueAPsInAndClause) {
+            // Parse the edge label to extract AP IDs
+            std::vector<uint16_t> apIds = parseEdgeLabel(edgeLabel);
+            
+            // Add parsed AP IDs to the set for this edge
+            for (uint16_t apId : apIds) {
+                apsOnThisEdge.insert(apId);
+            }
+        }
+        
+        edgeAPIds.push_back(apsOnThisEdge);
+    }
+    
+    return edgeAPIds;
+}
+
+/**
+ * collectAPsFromEdgesByIndexWithAcceptance - Extracts both APs and acceptance marks from edges
+ * Parses labels like "p0 & p1:{0,1}" where part before : is APs and after : is acceptance marks
+ * Populates both edgeAPIds and edgeAcceptanceSets vectors by reference
+ */
+void TaskAllocationAlgorithms::collectAPsFromEdgesByIndexWithAcceptance(
+    const std::vector<std::string>& edges,
+    std::vector<std::set<uint16_t>>& outEdgeAPIds,
+    std::vector<std::set<uint16_t>>& outEdgeAcceptanceSets) const {
+    
+    outEdgeAPIds.clear();
+    outEdgeAcceptanceSets.clear();
+    
+    // Process each edge label string
+    for (const auto& edgeLabel : edges) {
+        std::set<uint16_t> apsOnThisEdge;
+        std::set<uint16_t> acceptanceMarksOnThisEdge;
+        
+        // Split label by ':' to separate APs from acceptance marks
+        size_t colon_pos = edgeLabel.find(':');
+        std::string apPart = (colon_pos == std::string::npos) ? edgeLabel : edgeLabel.substr(0, colon_pos);
+        std::string acceptancePart = (colon_pos == std::string::npos) ? "" : edgeLabel.substr(colon_pos + 1);
+        
+        // Remove acceptance marks {0}, {1} from AP part if they still exist
+        std::string cleaned = apPart;
+        size_t pos = cleaned.find("{0}");
+        if (pos != std::string::npos) {
+            cleaned.erase(pos, 3);
+        }
+        pos = cleaned.find("{1}");
+        if (pos != std::string::npos) {
+            cleaned.erase(pos, 3);
+        }
+        
+        // Check if there are 2+ true APs connected by AND (not OR)
+        bool hasMultipleTrueAPsInAndClause = false;
+        size_t orStart = 0;
+        size_t orEnd = cleaned.find('|');
+        
+        while (orStart < cleaned.length() && !hasMultipleTrueAPsInAndClause) {
+            std::string orClause = (orEnd == std::string::npos) ? 
+                                   cleaned.substr(orStart) : 
+                                   cleaned.substr(orStart, orEnd - orStart);
+            
+            int trueApCount = 0;
+            size_t andStart = 0;
+            size_t andEnd = orClause.find('&');
+            
+            while (andStart < orClause.length()) {
+                std::string token = (andEnd == std::string::npos) ? 
+                                   orClause.substr(andStart) : 
+                                   orClause.substr(andStart, andEnd - andStart);
+                
+                token.erase(0, token.find_first_not_of(" \t\n\r\""));
+                token.erase(token.find_last_not_of(" \t\n\r\"") + 1);
+                
+                if (!token.empty() && token[0] != '!') {
+                    trueApCount++;
+                }
+                
+                if (andEnd == std::string::npos) break;
+                andStart = andEnd + 1;
+                andEnd = orClause.find('&', andStart);
+            }
+            
+            if (trueApCount >= 2) {
+                hasMultipleTrueAPsInAndClause = true;
+            }
+            
+            if (orEnd == std::string::npos) break;
+            orStart = orEnd + 1;
+            orEnd = cleaned.find('|', orStart);
+        }
+        
+        // Extract APs from the AP part (only if not multiple APs connected by AND)
+        if (!hasMultipleTrueAPsInAndClause) {
+            std::vector<uint16_t> apIds = parseEdgeLabel(apPart);
+            for (uint16_t apId : apIds) {
+                apsOnThisEdge.insert(apId);
+            }
+        }
+        
+        // Extract acceptance marks from the acceptance part
+        // Format: {0,1,2} or similar
+        if (!acceptancePart.empty()) {
+            size_t brace_start = acceptancePart.find('{');
+            size_t brace_end = acceptancePart.find('}');
+            if (brace_start != std::string::npos && brace_end != std::string::npos && brace_end > brace_start) {
+                std::string content = acceptancePart.substr(brace_start + 1, brace_end - brace_start - 1);
+                
+                // Parse comma-separated numbers
+                size_t parsePos = 0;
+                while (parsePos < content.length()) {
+                    size_t comma = content.find(',', parsePos);
+                    std::string num_str;
+                    if (comma == std::string::npos) {
+                        num_str = content.substr(parsePos);
+                        parsePos = content.length();
+                    } else {
+                        num_str = content.substr(parsePos, comma - parsePos);
+                        parsePos = comma + 1;
+                    }
+                    
+                    // Trim whitespace
+                    num_str.erase(0, num_str.find_first_not_of(" \t"));
+                    num_str.erase(num_str.find_last_not_of(" \t") + 1);
+                    
+                    if (!num_str.empty()) {
+                        try {
+                            uint16_t num = static_cast<uint16_t>(std::stoul(num_str));
+                            acceptanceMarksOnThisEdge.insert(num);
+                        } catch (const std::exception&) {}
+                    }
+                }
+            }
+        }
+        
+        outEdgeAPIds.push_back(apsOnThisEdge);
+        outEdgeAcceptanceSets.push_back(acceptanceMarksOnThisEdge);
+    }
 }
 
 /**

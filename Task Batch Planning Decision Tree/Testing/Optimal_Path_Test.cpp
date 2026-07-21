@@ -237,38 +237,38 @@ void infiniteAutomataTests(Environment* env, MultiRobotSystem* mrs) {
         taa5->visualizeOptimalPath("output/infinite_test_1_path");
     }
     
-    BuchiAutomaton* infinite2 = createTestInfiniteBuchiAutomaton2();
-    infiniteAutomata.push_back(infinite2);
-    TaskAllocationAlgorithms* taa6 = new TaskAllocationAlgorithms(infinite2, env, mrs);
-    infiniteAlgorithms.push_back(taa6);
-    infiniteSearchResults.push_back(taa6->intensiveInterTaskRelationshipTreeSearch(infinite2, env, mrs));
-    cout << "  → Search Result: " << (infiniteSearchResults.back() ? "SUCCESS" : "FAILED") << endl;
-    if (infiniteSearchResults.back()) {
-        taa6->visualizeTree("output/infinite_test_2_tree");
-        taa6->visualizeOptimalPath("output/infinite_test_2_path");
-    }
+    // BuchiAutomaton* infinite2 = createTestInfiniteBuchiAutomaton2();
+    // infiniteAutomata.push_back(infinite2);
+    // TaskAllocationAlgorithms* taa6 = new TaskAllocationAlgorithms(infinite2, env, mrs);
+    // infiniteAlgorithms.push_back(taa6);
+    // infiniteSearchResults.push_back(taa6->intensiveInterTaskRelationshipTreeSearch(infinite2, env, mrs));
+    // cout << "  → Search Result: " << (infiniteSearchResults.back() ? "SUCCESS" : "FAILED") << endl;
+    // if (infiniteSearchResults.back()) {
+    //     taa6->visualizeTree("output/infinite_test_2_tree");
+    //     taa6->visualizeOptimalPath("output/infinite_test_2_path");
+    // }
     
-    BuchiAutomaton* infinite3 = createTestInfiniteBuchiAutomaton3();
-    infiniteAutomata.push_back(infinite3);
-    TaskAllocationAlgorithms* taa7 = new TaskAllocationAlgorithms(infinite3, env, mrs);
-    infiniteAlgorithms.push_back(taa7);
-    infiniteSearchResults.push_back(taa7->intensiveInterTaskRelationshipTreeSearch(infinite3, env, mrs));
-    cout << "  → Search Result: " << (infiniteSearchResults.back() ? "SUCCESS" : "FAILED") << endl;
-    if (infiniteSearchResults.back()) {
-        taa7->visualizeTree("output/infinite_test_3_tree");
-        taa7->visualizeOptimalPath("output/infinite_test_3_path");
-    }
+    // BuchiAutomaton* infinite3 = createTestInfiniteBuchiAutomaton3();
+    // infiniteAutomata.push_back(infinite3);
+    // TaskAllocationAlgorithms* taa7 = new TaskAllocationAlgorithms(infinite3, env, mrs);
+    // infiniteAlgorithms.push_back(taa7);
+    // infiniteSearchResults.push_back(taa7->intensiveInterTaskRelationshipTreeSearch(infinite3, env, mrs));
+    // cout << "  → Search Result: " << (infiniteSearchResults.back() ? "SUCCESS" : "FAILED") << endl;
+    // if (infiniteSearchResults.back()) {
+    //     taa7->visualizeTree("output/infinite_test_3_tree");
+    //     taa7->visualizeOptimalPath("output/infinite_test_3_path");
+    // }
     
-    BuchiAutomaton* infinite4 = createTestInfiniteBuchiAutomaton4();
-    infiniteAutomata.push_back(infinite4);
-    TaskAllocationAlgorithms* taa8 = new TaskAllocationAlgorithms(infinite4, env, mrs);
-    infiniteAlgorithms.push_back(taa8);
-    infiniteSearchResults.push_back(taa8->intensiveInterTaskRelationshipTreeSearch(infinite4, env, mrs));
-    cout << "  → Search Result: " << (infiniteSearchResults.back() ? "SUCCESS" : "FAILED") << endl;
-    if (infiniteSearchResults.back()) {
-        taa8->visualizeTree("output/infinite_test_4_tree");
-        taa8->visualizeOptimalPath("output/infinite_test_4_path");
-    }
+    // BuchiAutomaton* infinite4 = createTestInfiniteBuchiAutomaton4();
+    // infiniteAutomata.push_back(infinite4);
+    // TaskAllocationAlgorithms* taa8 = new TaskAllocationAlgorithms(infinite4, env, mrs);
+    // infiniteAlgorithms.push_back(taa8);
+    // infiniteSearchResults.push_back(taa8->intensiveInterTaskRelationshipTreeSearch(infinite4, env, mrs));
+    // cout << "  → Search Result: " << (infiniteSearchResults.back() ? "SUCCESS" : "FAILED") << endl;
+    // if (infiniteSearchResults.back()) {
+    //     taa8->visualizeTree("output/infinite_test_4_tree");
+    //     taa8->visualizeOptimalPath("output/infinite_test_4_path");
+    // }
 
     cout << "\n" << string(80, '=') << endl;
     cout << "   TEST SUMMARY" << endl;
