@@ -151,14 +151,7 @@ PlanningDecisionTree* TaskAllocationAlgorithms::intensiveInterTaskRelationshipTr
         // Create subtree for current node
         PlanningDecisionTree* subtree = new PlanningDecisionTree(currentNode);
         uint16_t buchisize = nbaPtr->getNumStates();
-        std::vector<uint16_t> acceptingSets = nba->getAcceptingStates();
-        
-        // DEBUG: Print acceptance sets
-        std::cout << "DEBUG: acceptingSets from getAcceptingStates(): ";
-        for (uint16_t s : acceptingSets) {
-            std::cout << s << " ";
-        }
-        std::cout << "(total: " << acceptingSets.size() << ")" << std::endl;
+        std::vector<uint16_t> acceptingSets = nbaPtr->getAcceptingStates();
         
         // Iterate through all automaton states
         for (uint16_t i = 0; i < buchisize; ++i) {
@@ -168,102 +161,62 @@ PlanningDecisionTree* TaskAllocationAlgorithms::intensiveInterTaskRelationshipTr
             // Get edge labels from current automaton state to this state
             std::vector<std::string> edges = nbaPtr->getEdgeLabels(currentNode->getAutomatonState()->getId(), nbaId);
             
-            // Get APs indexed by edge - vector where index i contains set of APs on edge i
-            // Also extracts acceptance marks into edgeAcceptanceSets
-            std::vector<std::set<uint16_t>> edgeAPIds;
-            std::vector<std::set<uint16_t>> edgeAcceptanceSets;
-            collectAPsFromEdgesByIndexWithAcceptance(edges, edgeAPIds, edgeAcceptanceSets);
-            
-            
-            // Iterate through edges and their associated AP sets
-            for (size_t edgeIdx = 0; edgeIdx < edgeAPIds.size(); ++edgeIdx) {
-                const std::set<uint16_t>& apsOnEdge = edgeAPIds[edgeIdx];
-                for (uint16_t apId : apsOnEdge) {
-                // Solution 1: Check (state, AP) pair instead of just state
-                if (!isStateAPPairVisited(nbaId, apId)) {
-                    int8_t batchVal = nbaPtr->getLTLFormula()->getBatchVal(apId);
-                    Node* TSState = envPtr->getTransitionSystem()->getNode(nbaPtr->getLTLFormula()->getTSState(apId));
-                    
-                    // Create new tree node with automaton state and task state
-                    // Note: nodeId is a placeholder; insertNode will auto-assign the correct ID
-                    Tree_Node* newNode = new Tree_Node(0, currentNode, nbaState, 
-                                                       TSState, batchVal);
-                    //if this edge is in the accepting set remove it to decrement the count of remaining accepting sets
-                    if (nbaPtr->isInfinite()) {
-                       std::set<uint16_t> curracceptingset = edgeAcceptanceSets[edgeIdx];
-                       
-                       // DEBUG: Show acceptance marks on this edge
-                       std::cout << "DEBUG: Edge " << edgeIdx << " has acceptance marks: ";
-                       for (uint16_t setNum : curracceptingset) {
-                           std::cout << setNum << " ";
-                       }
-                       std::cout << std::endl;
-                       
-                       // DEBUG: Show acceptingSets before removal
-                       std::cout << "DEBUG:   Before removal, acceptingSets: ";
-                       for (uint16_t s : acceptingSets) {
-                           std::cout << s << " ";
-                       }
-                       std::cout << std::endl;
-                       
-                       for (uint16_t setNum : curracceptingset) {
-                            auto it = std::find(acceptingSets.begin(), acceptingSets.end(), setNum);
-                            if (it != acceptingSets.end()) {
-                                acceptingSets.erase(it);
-                            }
-                       }
-                       
-                       // DEBUG: Show acceptingSets after removal
-                       std::cout << "DEBUG:   After removal, acceptingSets: ";
-                       for (uint16_t s : acceptingSets) {
-                           std::cout << s << " ";
-                       }
-                       std::cout << "(total: " << acceptingSets.size() << ")" << std::endl;
-                    }
+            // Get APs from the edges between the two NBA states
+            std::vector<uint16_t> apIds = collectUniqueAPsFromEdges(edges);
+             
+            for (uint16_t apId : apIds) {
+                int8_t batchVal = nbaPtr->getLTLFormula()->getBatchVal(apId);
+                Node* TSState = envPtr->getTransitionSystem()->getNode(nbaPtr->getLTLFormula()->getTSState(apId));
+                
+                // Create new tree node with automaton state and task state
+                // Note: nodeId is a placeholder; insertNode will auto-assign the correct ID
+                Tree_Node* newNode = new Tree_Node(0, currentNode, nbaState, 
+                                                   TSState, batchVal);
 
-                    
-                    // Route based on batch value - don't use isBatchValueInTree() for routing!
-                    // batchVal = 0: unrelated tasks
-                    // batchVal > 0: compatible tasks (same batch)
-                    // batchVal < 0: exclusive tasks (conflicting batch)
-                    if (batchVal == 0) {
-                        unrelatedTaskSearch(newNode, TSState, currentNode, apId, acceptingSets);
-                    }
-                    else if (batchVal > 0) {
-                        // TODO: compatible task search needs to consider sub tasks and main tasks
-                        compatibleTaskSearch(newNode, TSState, currentNode);
-                    }
-                    else {
-                        // TODO: exclusive task search needs to consider sub tasks and main tasks
-                        exclusiveTaskSearch(newNode, TSState, currentNode);
-                    }
-                    
-                    // Now track that we've seen this batch value
-                    if (batchVal != 0) {
-                        isBatchValueInTree(batchVal);  // Side effect: adds to tree tracking
-                    }
-                    
-                    // Solution 1: Track (state, AP) pair as visited
-                    addVisitedStateAPPair(nbaId, apId);
-                    
-                    // Solution 2: Clear visited pairs when progress changes
-                    if (currentNode->getProgress() == newNode->getProgress()) {
-                        // Same progress - keep tracking
-                    }
-                    else {
-                        // Progress changed - Solution 2: Clear for new batch context
-                        clearVisitedStateAPPairs();
-                    }
-                    
-                    if (currentNode->getParent() == nullptr && nba->isAccepting(currentNode->getAutomatonState()->getId())) {
-                        clearVisitedStateAPPairs();
-                    }
-                    
-                    // Add to subtree (insertNode will auto-assign the correct nodeId)
-                    subtree->insertNode(newNode);
-                    visitedNodes.push_back(newNode); // Mark new node as visited
+                
+                // Route based on batch value - don't use isBatchValueInTree() for routing!
+                // batchVal = 0: unrelated tasks
+                // batchVal > 0: compatible tasks (same batch)
+                // batchVal < 0: exclusive tasks (conflicting batch)
+                if (batchVal == 0) {
+                    unrelatedTaskSearch(newNode, TSState, currentNode, apId);
                 }
+                else if (batchVal > 0) {
+                    // TODO: compatible task search needs to consider sub tasks and main tasks
+                    compatibleTaskSearch(newNode, TSState, currentNode);
                 }
+                else {
+                    // TODO: exclusive task search needs to consider sub tasks and main tasks
+                    exclusiveTaskSearch(newNode, TSState, currentNode);
+                }
+                
+                // Now track that we've seen this batch value
+                if (batchVal != 0) {
+                    isBatchValueInTree(batchVal);  // Side effect: adds to tree tracking
+                }
+                
+                // Get final progress level AFTER search routines have set it
+                uint8_t currentProgress = static_cast<uint8_t>(currentNode->getProgress());
+                uint8_t newProgress = static_cast<uint8_t>(newNode->getProgress());
+                
+                // Check if this (state, AP, progress) triple was already visited at this exact progress level
+                if (isStateAPPairVisited(nbaId, apId, newProgress)) {
+                    delete newNode;  // Skip this duplicate
+                    continue;
+                }
+                
+                if (newProgress > currentProgress) {
+                    std::cerr << "[SEARCH DEBUG]     Progress for (state=" << nbaId << ", apId=" << apId 
+                              << ") advanced from " << static_cast<int>(currentProgress) 
+                              << " to " << static_cast<int>(newProgress) << std::endl;
+                }
+                
+                // Mark the (state, AP, progress) triple as visited
+                addVisitedStateAPPair(nbaId, apId, newProgress);
+                
+                // Add to subtree (insertNode will auto-assign the correct nodeId)
+                subtree->insertNode(newNode);
+                visitedNodes.push_back(newNode); // Mark new node as visited
             }
         }
         
@@ -272,6 +225,7 @@ PlanningDecisionTree* TaskAllocationAlgorithms::intensiveInterTaskRelationshipTr
         
         // After pruning, add all remaining nodes in subtree to untraversed queue (except currentNode)
         std::vector<Tree_Node*> remainingNodes = pruningResult->getAllNodes();
+        
         for (Tree_Node* node : remainingNodes) {
             if (node != currentNode) {
                 addUntraversedPlanningNode(node);
@@ -305,8 +259,7 @@ void TaskAllocationAlgorithms::unrelatedTaskSearch(
     Tree_Node* newNode,
     Node* TSState,
     Tree_Node* currentNode,
-    uint16_t apId, 
-std::vector<uint16_t> acceptingSets) {
+    uint16_t apId) {
     
     if (!newNode || !TSState || !multiRobotSystem || !nba || !environment) {
         return;
@@ -360,8 +313,6 @@ std::vector<uint16_t> acceptingSets) {
     newNode->setTimes(updatedTimes);
     
     // Check if the new node is an accepting state (increment progress when entering accepting)
-    if (nba && nba->isFinite()) {
-        // Handle finite NBA case if needed
     if (newNode && nba) {
         bool acceptingState = nba->isAccepting(newNode->getAutomatonState()->getId());
         if (acceptingState) {
@@ -369,25 +320,18 @@ std::vector<uint16_t> acceptingSets) {
             int newProgressInt = static_cast<int>(currentNode->getProgress()) + 1;
             Tree_Node::TASK_PROGRESS newProgress = static_cast<Tree_Node::TASK_PROGRESS>(newProgressInt);
             newNode->setProgress(newProgress);
-        } else {
+        } else if (currentNode->getProgress() == Tree_Node::TASK_PROGRESS::SUF) {
+            // If the current node is at SUF progress,
+            // Increment progress when entering accepting state
+            int newProgressInt = static_cast<int>(currentNode->getProgress()) + 1;
+            Tree_Node::TASK_PROGRESS newProgress = static_cast<Tree_Node::TASK_PROGRESS>(newProgressInt);
+            newNode->setProgress(newProgress);
+        }
+        else {
             // Not entering accepting: keep progress the same
             newNode->setProgress(currentNode->getProgress());
         }
     }
-} else {
-    // Handle the case when NBA is not finite
-    if (acceptingSets.empty()) {
-        // Increment progress when visited all accepting set edges
-            int newProgressInt = static_cast<int>(currentNode->getProgress()) + 1;
-            Tree_Node::TASK_PROGRESS newProgress = static_cast<Tree_Node::TASK_PROGRESS>(newProgressInt);
-            newNode->setProgress(newProgress);
-    }else{
-        // Handle the case when there are still accepting sets to visit
-        //progress remains the same as current node
-        newNode->setProgress(currentNode->getProgress());
-    }
-
-}
  }
 /**
  * Algorithm 3: Compatible-Task Search (CS)
@@ -491,39 +435,33 @@ void TaskAllocationAlgorithms::clearVisitedNodes() {
 }
 
 /**
- * addVisitedStateAPPair - Add a (automatonState, AP) pair to visited collection
- * Solution 1: Track (state, AP) pairs instead of just states
+ * addVisitedStateAPPair - Add a (automatonState, AP, progress) triple to visited collection
+ * Tracks exact progress level so we only skip at that specific progress, allowing revisits at different progress levels
  */
-void TaskAllocationAlgorithms::addVisitedStateAPPair(uint16_t automatonStateId, uint16_t apId) {
-    auto pair = std::make_pair(automatonStateId, apId);
-    if (std::find(visitedStateAPPairs.begin(), visitedStateAPPairs.end(), pair) == visitedStateAPPairs.end()) {
-        visitedStateAPPairs.push_back(pair);
+void TaskAllocationAlgorithms::addVisitedStateAPPair(uint16_t automatonStateId, uint16_t apId, uint8_t progress) {
+    auto triple = std::make_tuple(automatonStateId, apId, progress);
+    if (std::find(visitedStateAPProgressTriples.begin(), visitedStateAPProgressTriples.end(), triple) == visitedStateAPProgressTriples.end()) {
+        visitedStateAPProgressTriples.push_back(triple);
     }
 }
 
 /**
- * isStateAPPairVisited - Check if a specific (automatonState, AP) pair has been visited
- * Solution 1: Check exact pair, not just automaton state
+ * isStateAPPairVisited - Check if a specific (automatonState, AP, progress) triple has been visited
+ * Returns true only if this exact combination at this progress level was visited before
  */
-bool TaskAllocationAlgorithms::isStateAPPairVisited(uint16_t automatonStateId, uint16_t apId) const {
-    auto pair = std::make_pair(automatonStateId, apId);
-    return std::find(visitedStateAPPairs.begin(), visitedStateAPPairs.end(), pair) != visitedStateAPPairs.end();
+bool TaskAllocationAlgorithms::isStateAPPairVisited(uint16_t automatonStateId, uint16_t apId, uint8_t progress) const {
+    auto triple = std::make_tuple(automatonStateId, apId, progress);
+    return std::find(visitedStateAPProgressTriples.begin(), visitedStateAPProgressTriples.end(), triple) != visitedStateAPProgressTriples.end();
 }
 
 /**
- * getVisitedStateAPPairs - Get all visited (state, AP) pairs
+ * getVisitedStateAPPairs - Get all visited (state, AP, progress) triples
  */
-std::vector<std::pair<uint16_t, uint16_t>>& TaskAllocationAlgorithms::getVisitedStateAPPairs() {
-    return visitedStateAPPairs;
+std::vector<std::tuple<uint16_t, uint16_t, uint8_t>>& TaskAllocationAlgorithms::getVisitedStateAPPairs() {
+    return visitedStateAPProgressTriples;
 }
 
-/**
- * clearVisitedStateAPPairs - Clear all visited (state, AP) pairs
- * Solution 2: Call this when progress level changes to allow re-exploring APs in new batch
- */
-void TaskAllocationAlgorithms::clearVisitedStateAPPairs() {
-    visitedStateAPPairs.clear();
-}
+
 
 /**
  * addVisitedAutomatonState - LEGACY: Kept for backward compatibility
@@ -536,12 +474,12 @@ void TaskAllocationAlgorithms::addVisitedAutomatonState(uint16_t state) {
 }
 
 /**
- * isAutomatonStateVisited - LEGACY: Check if any (state, AP) pair exists for this state
+ * isAutomatonStateVisited - LEGACY: Check if any (state, AP, progress) triple exists for this state
  */
 bool TaskAllocationAlgorithms::isAutomatonStateVisited(uint16_t state) const {
-    // Check if this automaton state appears in ANY (state, AP) pair
-    for (const auto& pair : visitedStateAPPairs) {
-        if (pair.first == state) {
+    // Check if this automaton state appears in ANY (state, AP, progress) triple
+    for (const auto& triple : visitedStateAPProgressTriples) {
+        if (std::get<0>(triple) == state) {
             return true;
         }
     }
@@ -549,25 +487,28 @@ bool TaskAllocationAlgorithms::isAutomatonStateVisited(uint16_t state) const {
 }
 
 /**
- * getVisitedAutomatonStates - LEGACY: Extract unique automaton states from visited pairs
+ * getVisitedAutomatonStates - LEGACY: Extract unique automaton states from visited triples
  */
 std::vector<uint16_t>& TaskAllocationAlgorithms::getVisitedAutomatonStates() {
     static std::vector<uint16_t> legacyStates;
     legacyStates.clear();
     
-    for (const auto& pair : visitedStateAPPairs) {
-        if (std::find(legacyStates.begin(), legacyStates.end(), pair.first) == legacyStates.end()) {
-            legacyStates.push_back(pair.first);
+    for (const auto& triple : visitedStateAPProgressTriples) {
+        uint16_t state = std::get<0>(triple);
+        if (std::find(legacyStates.begin(), legacyStates.end(), state) == legacyStates.end()) {
+            legacyStates.push_back(state);
         }
     }
     return legacyStates;
 }
 
 /**
- * clearVisitedAutomatonStates - LEGACY: Clears the visited (state, AP) pairs
+ * clearVisitedAutomatonStates - LEGACY: No longer needed with (state, AP, progress) tracking
+ * Kept for backward compatibility but does nothing
  */
 void TaskAllocationAlgorithms::clearVisitedAutomatonStates() {
-    clearVisitedStateAPPairs();
+    // With 3-tuple tracking, we never need to clear visited pairs
+    // (state, AP, progress) combinations are only skipped at that specific progress level
 }
 
 /**
@@ -777,209 +718,6 @@ std::vector<uint16_t> TaskAllocationAlgorithms::collectUniqueAPsFromEdges(const 
 }
 
 /**
- * collectAPsFromEdgesByIndex - Returns a vector of sets of AP IDs indexed by edge
- * Each element at index i contains the set of AP IDs found on edge i
- */
-std::vector<std::set<uint16_t>> TaskAllocationAlgorithms::collectAPsFromEdgesByIndex(const std::vector<std::string>& edges) const {
-    std::vector<std::set<uint16_t>> edgeAPIds;
-    
-    // Process each edge label string
-    for (const auto& edgeLabel : edges) {
-        std::set<uint16_t> apsOnThisEdge;
-        
-        // Remove acceptance marks {0}, {1}
-        std::string cleaned = edgeLabel;
-        size_t pos = cleaned.find("{0}");
-        if (pos != std::string::npos) {
-            cleaned.erase(pos, 3);
-        }
-        pos = cleaned.find("{1}");
-        if (pos != std::string::npos) {
-            cleaned.erase(pos, 3);
-        }
-        
-        // Check if there are 2+ true APs connected by AND (not OR)
-        bool hasMultipleTrueAPsInAndClause = false;
-        size_t orStart = 0;
-        size_t orEnd = cleaned.find('|');
-        
-        while (orStart < cleaned.length() && !hasMultipleTrueAPsInAndClause) {
-            // Extract OR-separated clause
-            std::string orClause = (orEnd == std::string::npos) ? 
-                                   cleaned.substr(orStart) : 
-                                   cleaned.substr(orStart, orEnd - orStart);
-            
-            // Count true APs in this AND-clause
-            int trueApCount = 0;
-            size_t andStart = 0;
-            size_t andEnd = orClause.find('&');
-            
-            while (andStart < orClause.length()) {
-                std::string token = (andEnd == std::string::npos) ? 
-                                   orClause.substr(andStart) : 
-                                   orClause.substr(andStart, andEnd - andStart);
-                
-                token.erase(0, token.find_first_not_of(" \t\n\r\""));
-                token.erase(token.find_last_not_of(" \t\n\r\"") + 1);
-                
-                if (!token.empty() && token[0] != '!') {
-                    trueApCount++;
-                }
-                
-                if (andEnd == std::string::npos) break;
-                andStart = andEnd + 1;
-                andEnd = orClause.find('&', andStart);
-            }
-            
-            if (trueApCount >= 2) {
-                hasMultipleTrueAPsInAndClause = true;
-            }
-            
-            if (orEnd == std::string::npos) break;
-            orStart = orEnd + 1;
-            orEnd = cleaned.find('|', orStart);
-        }
-        
-        // Only process edges that don't have 2+ true APs connected by AND
-        if (!hasMultipleTrueAPsInAndClause) {
-            // Parse the edge label to extract AP IDs
-            std::vector<uint16_t> apIds = parseEdgeLabel(edgeLabel);
-            
-            // Add parsed AP IDs to the set for this edge
-            for (uint16_t apId : apIds) {
-                apsOnThisEdge.insert(apId);
-            }
-        }
-        
-        edgeAPIds.push_back(apsOnThisEdge);
-    }
-    
-    return edgeAPIds;
-}
-
-/**
- * collectAPsFromEdgesByIndexWithAcceptance - Extracts both APs and acceptance marks from edges
- * Parses labels like "p0 & p1:{0,1}" where part before : is APs and after : is acceptance marks
- * Populates both edgeAPIds and edgeAcceptanceSets vectors by reference
- */
-void TaskAllocationAlgorithms::collectAPsFromEdgesByIndexWithAcceptance(
-    const std::vector<std::string>& edges,
-    std::vector<std::set<uint16_t>>& outEdgeAPIds,
-    std::vector<std::set<uint16_t>>& outEdgeAcceptanceSets) const {
-    
-    outEdgeAPIds.clear();
-    outEdgeAcceptanceSets.clear();
-    
-    // Process each edge label string
-    for (const auto& edgeLabel : edges) {
-        std::set<uint16_t> apsOnThisEdge;
-        std::set<uint16_t> acceptanceMarksOnThisEdge;
-        
-        // Split label by ':' to separate APs from acceptance marks
-        size_t colon_pos = edgeLabel.find(':');
-        std::string apPart = (colon_pos == std::string::npos) ? edgeLabel : edgeLabel.substr(0, colon_pos);
-        std::string acceptancePart = (colon_pos == std::string::npos) ? "" : edgeLabel.substr(colon_pos + 1);
-        
-        // Remove acceptance marks {0}, {1} from AP part if they still exist
-        std::string cleaned = apPart;
-        size_t pos = cleaned.find("{0}");
-        if (pos != std::string::npos) {
-            cleaned.erase(pos, 3);
-        }
-        pos = cleaned.find("{1}");
-        if (pos != std::string::npos) {
-            cleaned.erase(pos, 3);
-        }
-        
-        // Check if there are 2+ true APs connected by AND (not OR)
-        bool hasMultipleTrueAPsInAndClause = false;
-        size_t orStart = 0;
-        size_t orEnd = cleaned.find('|');
-        
-        while (orStart < cleaned.length() && !hasMultipleTrueAPsInAndClause) {
-            std::string orClause = (orEnd == std::string::npos) ? 
-                                   cleaned.substr(orStart) : 
-                                   cleaned.substr(orStart, orEnd - orStart);
-            
-            int trueApCount = 0;
-            size_t andStart = 0;
-            size_t andEnd = orClause.find('&');
-            
-            while (andStart < orClause.length()) {
-                std::string token = (andEnd == std::string::npos) ? 
-                                   orClause.substr(andStart) : 
-                                   orClause.substr(andStart, andEnd - andStart);
-                
-                token.erase(0, token.find_first_not_of(" \t\n\r\""));
-                token.erase(token.find_last_not_of(" \t\n\r\"") + 1);
-                
-                if (!token.empty() && token[0] != '!') {
-                    trueApCount++;
-                }
-                
-                if (andEnd == std::string::npos) break;
-                andStart = andEnd + 1;
-                andEnd = orClause.find('&', andStart);
-            }
-            
-            if (trueApCount >= 2) {
-                hasMultipleTrueAPsInAndClause = true;
-            }
-            
-            if (orEnd == std::string::npos) break;
-            orStart = orEnd + 1;
-            orEnd = cleaned.find('|', orStart);
-        }
-        
-        // Extract APs from the AP part (only if not multiple APs connected by AND)
-        if (!hasMultipleTrueAPsInAndClause) {
-            std::vector<uint16_t> apIds = parseEdgeLabel(apPart);
-            for (uint16_t apId : apIds) {
-                apsOnThisEdge.insert(apId);
-            }
-        }
-        
-        // Extract acceptance marks from the acceptance part
-        // Format: {0,1,2} or similar
-        if (!acceptancePart.empty()) {
-            size_t brace_start = acceptancePart.find('{');
-            size_t brace_end = acceptancePart.find('}');
-            if (brace_start != std::string::npos && brace_end != std::string::npos && brace_end > brace_start) {
-                std::string content = acceptancePart.substr(brace_start + 1, brace_end - brace_start - 1);
-                
-                // Parse comma-separated numbers
-                size_t parsePos = 0;
-                while (parsePos < content.length()) {
-                    size_t comma = content.find(',', parsePos);
-                    std::string num_str;
-                    if (comma == std::string::npos) {
-                        num_str = content.substr(parsePos);
-                        parsePos = content.length();
-                    } else {
-                        num_str = content.substr(parsePos, comma - parsePos);
-                        parsePos = comma + 1;
-                    }
-                    
-                    // Trim whitespace
-                    num_str.erase(0, num_str.find_first_not_of(" \t"));
-                    num_str.erase(num_str.find_last_not_of(" \t") + 1);
-                    
-                    if (!num_str.empty()) {
-                        try {
-                            uint16_t num = static_cast<uint16_t>(std::stoul(num_str));
-                            acceptanceMarksOnThisEdge.insert(num);
-                        } catch (const std::exception&) {}
-                    }
-                }
-            }
-        }
-        
-        outEdgeAPIds.push_back(apsOnThisEdge);
-        outEdgeAcceptanceSets.push_back(acceptanceMarksOnThisEdge);
-    }
-}
-
-/**
  * getTaskAllocation
  * Greedily selects minimum set of robots from sorted times that satisfy all required capabilities
  * Iterates through robots in ascending time order and accumulates only required capabilities
@@ -1051,17 +789,17 @@ PlanningDecisionTree* TaskAllocationAlgorithms::pruneSubtree(PlanningDecisionTre
     std::vector<Tree_Node*> nodesToRemove;
     std::vector<Tree_Node*> subtreeNodes = subtree->getAllNodes();
     
-    // Rule 1: Remove nodes with OTH progress (terminal nodes)
+    // Rule 1: Add OTH progress nodes (terminal nodes) to traversedTree AND mark for removal
     for (Tree_Node* node : subtreeNodes) {
         if (node->getProgress() == Tree_Node::TASK_PROGRESS::OTH) {
-            nodesToRemove.push_back(node);
+            traversedTree->insertNode(node);
+            nodesToRemove.push_back(node);  // Mark OTH nodes for removal so they don't re-enter queue
         }
     }
     
     // Rule 2: Remove nodes with traversed (automaton state, progress) pairs
     // If we've already visited (state S, progress P) in traversedTree, don't sample it again
     std::vector<Tree_Node*> traversedNodes = traversedTree->getAllNodes();
-    
     for (Tree_Node* node : subtreeNodes) {
         // Skip if already marked for removal
         if (std::find(nodesToRemove.begin(), nodesToRemove.end(), node) != nodesToRemove.end()) {
@@ -1085,10 +823,10 @@ PlanningDecisionTree* TaskAllocationAlgorithms::pruneSubtree(PlanningDecisionTre
     }
     
     // Rule 3: For nodes with same automaton state and progress, keep only minimum cost
-    // Cost is calculated as sum of all robot execution times
-    std::map<std::pair<uint32_t, int>, std::vector<Tree_Node*>> nodeGroups;
+    // (Only apply for finite automata; infinite automata need to explore multiple paths for cycles)
     
     // Group remaining nodes by (automaton state ID, progress)
+    std::map<std::pair<uint32_t, int>, std::vector<Tree_Node*>> nodeGroups;
     for (Tree_Node* node : subtreeNodes) {
         if (std::find(nodesToRemove.begin(), nodesToRemove.end(), node) != nodesToRemove.end()) {
             continue;  // Skip nodes already marked for removal
@@ -1104,6 +842,7 @@ PlanningDecisionTree* TaskAllocationAlgorithms::pruneSubtree(PlanningDecisionTre
     // Within each group with duplicates, keep only the minimum cost node
     for (auto& [key, nodes] : nodeGroups) {
         if (nodes.size() > 1) {
+            
             // Calculate cost for each node (sum of all robot times)
             Tree_Node* minCostNode = nodes[0];
             uint32_t minCost = 0;

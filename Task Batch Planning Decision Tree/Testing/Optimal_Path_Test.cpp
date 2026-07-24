@@ -237,38 +237,38 @@ void infiniteAutomataTests(Environment* env, MultiRobotSystem* mrs) {
         taa5->visualizeOptimalPath("output/infinite_test_1_path");
     }
     
-    // BuchiAutomaton* infinite2 = createTestInfiniteBuchiAutomaton2();
-    // infiniteAutomata.push_back(infinite2);
-    // TaskAllocationAlgorithms* taa6 = new TaskAllocationAlgorithms(infinite2, env, mrs);
-    // infiniteAlgorithms.push_back(taa6);
-    // infiniteSearchResults.push_back(taa6->intensiveInterTaskRelationshipTreeSearch(infinite2, env, mrs));
-    // cout << "  → Search Result: " << (infiniteSearchResults.back() ? "SUCCESS" : "FAILED") << endl;
-    // if (infiniteSearchResults.back()) {
-    //     taa6->visualizeTree("output/infinite_test_2_tree");
-    //     taa6->visualizeOptimalPath("output/infinite_test_2_path");
-    // }
+    BuchiAutomaton* infinite2 = createTestInfiniteBuchiAutomaton2();
+    infiniteAutomata.push_back(infinite2);
+    TaskAllocationAlgorithms* taa6 = new TaskAllocationAlgorithms(infinite2, env, mrs);
+    infiniteAlgorithms.push_back(taa6);
+    infiniteSearchResults.push_back(taa6->intensiveInterTaskRelationshipTreeSearch(infinite2, env, mrs));
+    cout << "  → Search Result: " << (infiniteSearchResults.back() ? "SUCCESS" : "FAILED") << endl;
+    if (infiniteSearchResults.back()) {
+        taa6->visualizeTree("output/infinite_test_2_tree");
+        taa6->visualizeOptimalPath("output/infinite_test_2_path");
+    }
     
-    // BuchiAutomaton* infinite3 = createTestInfiniteBuchiAutomaton3();
-    // infiniteAutomata.push_back(infinite3);
-    // TaskAllocationAlgorithms* taa7 = new TaskAllocationAlgorithms(infinite3, env, mrs);
-    // infiniteAlgorithms.push_back(taa7);
-    // infiniteSearchResults.push_back(taa7->intensiveInterTaskRelationshipTreeSearch(infinite3, env, mrs));
-    // cout << "  → Search Result: " << (infiniteSearchResults.back() ? "SUCCESS" : "FAILED") << endl;
-    // if (infiniteSearchResults.back()) {
-    //     taa7->visualizeTree("output/infinite_test_3_tree");
-    //     taa7->visualizeOptimalPath("output/infinite_test_3_path");
-    // }
+    BuchiAutomaton* infinite3 = createTestInfiniteBuchiAutomaton3();
+    infiniteAutomata.push_back(infinite3);
+    TaskAllocationAlgorithms* taa7 = new TaskAllocationAlgorithms(infinite3, env, mrs);
+    infiniteAlgorithms.push_back(taa7);
+    infiniteSearchResults.push_back(taa7->intensiveInterTaskRelationshipTreeSearch(infinite3, env, mrs));
+    cout << "  → Search Result: " << (infiniteSearchResults.back() ? "SUCCESS" : "FAILED") << endl;
+    if (infiniteSearchResults.back()) {
+        taa7->visualizeTree("output/infinite_test_3_tree");
+        taa7->visualizeOptimalPath("output/infinite_test_3_path");
+    }
     
-    // BuchiAutomaton* infinite4 = createTestInfiniteBuchiAutomaton4();
-    // infiniteAutomata.push_back(infinite4);
-    // TaskAllocationAlgorithms* taa8 = new TaskAllocationAlgorithms(infinite4, env, mrs);
-    // infiniteAlgorithms.push_back(taa8);
-    // infiniteSearchResults.push_back(taa8->intensiveInterTaskRelationshipTreeSearch(infinite4, env, mrs));
-    // cout << "  → Search Result: " << (infiniteSearchResults.back() ? "SUCCESS" : "FAILED") << endl;
-    // if (infiniteSearchResults.back()) {
-    //     taa8->visualizeTree("output/infinite_test_4_tree");
-    //     taa8->visualizeOptimalPath("output/infinite_test_4_path");
-    // }
+    BuchiAutomaton* infinite4 = createTestInfiniteBuchiAutomaton4();
+    infiniteAutomata.push_back(infinite4);
+    TaskAllocationAlgorithms* taa8 = new TaskAllocationAlgorithms(infinite4, env, mrs);
+    infiniteAlgorithms.push_back(taa8);
+    infiniteSearchResults.push_back(taa8->intensiveInterTaskRelationshipTreeSearch(infinite4, env, mrs));
+    cout << "  → Search Result: " << (infiniteSearchResults.back() ? "SUCCESS" : "FAILED") << endl;
+    if (infiniteSearchResults.back()) {
+        taa8->visualizeTree("output/infinite_test_4_tree");
+        taa8->visualizeOptimalPath("output/infinite_test_4_path");
+    }
 
     cout << "\n" << string(80, '=') << endl;
     cout << "   TEST SUMMARY" << endl;
@@ -551,7 +551,7 @@ BuchiAutomaton* createTestInfiniteBuchiAutomaton1() {
  * Tests weak until combined with strong until and nested sequencing with 5 locations
  */
 BuchiAutomaton* createTestInfiniteBuchiAutomaton2() {
-    string ltl_str = "G((F\"p0\" W \"p1\") & (F\"p2\" U \"p3\")) & G(F(\"p4\" & X\"p0\"))";
+    string ltl_str = "G(F(\"p0\" W \"p1\") & F(\"p2\" U \"p3\")) & G(F(\"p4\" & X\"p0\"))";
     
     vector<BatchAtomicProposition> batchAPs;
     // Weak until pattern with p0 and p1
@@ -579,16 +579,13 @@ BuchiAutomaton* createTestInfiniteBuchiAutomaton2() {
  * Tests strong release operator with disjunctive choices using 5 locations
  */
 BuchiAutomaton* createTestInfiniteBuchiAutomaton3() {
-    string ltl_str = "G((\"p0\" M (\"p1\" & F\"p2\")) | (\"p3\" U \"p4\"))";
+    string ltl_str = "G(F(\"p0\")) ^ G(F(\"p1\" & X (\"p2\")))";
     
     vector<BatchAtomicProposition> batchAPs;
     // Release pattern: p0 releases from (p1 & eventually p2)
-    batchAPs.push_back(BatchAtomicProposition(0, 0, {true, false, false, false, false, true, false, false, false, false, false, false, false}, 0));
-    batchAPs.push_back(BatchAtomicProposition(1, 1, {true, false, false, false, false, true, false, false, false, false, false, false, false}, 0));
-    batchAPs.push_back(BatchAtomicProposition(2, 2, {false, false, false, true, false, true, false, false, false, false, false, false, false}, 0));
-    // Until pattern: p3 until p4
-    batchAPs.push_back(BatchAtomicProposition(3, 3, {false, false, false, true, false, true, false, false, false, false, false, false, false}, 0));
-    batchAPs.push_back(BatchAtomicProposition(4, 4, {true, false, false, true, false, true, false, false, false, false, false, false, false}, 0));
+    batchAPs.push_back(BatchAtomicProposition(0, 0, {true, false, false, true, false, true, false, false, false, false, false, false, false}, 0));
+    batchAPs.push_back(BatchAtomicProposition(1, 1, {true, false, false, true, false, true, false, false, false, false, false, false, false}, 0));
+    batchAPs.push_back(BatchAtomicProposition(2, 2, {true, false, false, true, false, true, false, false, false, false, false, false, false}, 0));
     
     LTLFormula* ltlFormula = new LTLFormula(ltl_str, batchAPs);
     BuchiAutomaton* buchi = new BuchiAutomaton(ltlFormula);
@@ -606,7 +603,7 @@ BuchiAutomaton* createTestInfiniteBuchiAutomaton3() {
  * Tests multi-level nesting with mixed safety and liveness properties using 5 locations
  */
 BuchiAutomaton* createTestInfiniteBuchiAutomaton4() {
-    string ltl_str = "G((F(\"p0\" & X(\"p1\" U \"p2\"))) & (G!\"p3\" | F(\"p4\" & X\"p0\")))";
+    string ltl_str = "G((F(\"p0\" & X(\"p1\" U \"p2\")))) & (G(F\"p3\") | G(F(\"p4\" & X(\"p0\")))";
     
     vector<BatchAtomicProposition> batchAPs;
     // Main nested pattern: p0 then until pattern

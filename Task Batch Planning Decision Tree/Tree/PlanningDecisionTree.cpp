@@ -340,7 +340,7 @@ Tree_Node* PlanningDecisionTree::getOptimalFrontierNode(bool finite_nba) const {
     else {
         // if the nba is infinte Filter frontier nodes to only those at Other progress
         for (Tree_Node* node : frontierNodes) {
-            if (node->getProgress() == Tree_Node::TASK_PROGRESS::OTH) {
+            if (node->getProgress() == Tree_Node::TASK_PROGRESS::SUF) {
                 completeNodes.push_back(node);
             }
         }

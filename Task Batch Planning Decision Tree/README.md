@@ -1,16 +1,16 @@
-# Task Batch Planning Decision Tree
-
-A hierarchical tree-based planning module for multi-robot task allocation and decision-making in the HMRTA (Hierarchical Multi-Robot Task Allocation) system.
+# Task Batch Planning Decision Tree Module
 
 ## Overview
 
-The Planning Decision Tree module provides a framework for:
-- **Hierarchical Decision Making**: Build and traverse tree-based search structures for planning paths through task-automaton and transition system states
-- **Multi-Robot Task Allocation**: Efficiently allocate tasks to multiple robots with constraint-aware scheduling
-- **Batch Task Planning**: Organize and manage robot tasks in batches with progress tracking
-- **Environment Navigation**: Integrate with grid-world environments and transition system representations
+This module implements the core task allocation algorithms for multi-robot systems using hierarchical decision tree search. It synthesizes components from automatons, environments, and robot systems to find optimal task allocations that satisfy LTL specifications.
 
-This module forms a critical component of the thesis project for generating test suites using hierarchical multi-robot task allocation strategies.
+### Key Responsibilities
+
+1. **Task Allocation Algorithms** - Search strategies for assigning tasks to robots
+2. **Decision Tree Structure** - Hierarchical representation of task allocation possibilities
+3. **Planning Space Management** - State, progress, and acceptance tracking during search
+4. **Pruning Strategies** - Optimization to prevent state space explosion
+5. **Integration** - Coordination between environment, automata, and robot systems
 
 ## Architecture
 

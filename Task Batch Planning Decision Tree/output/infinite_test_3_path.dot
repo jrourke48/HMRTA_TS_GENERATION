@@ -54,18 +54,15 @@ digraph ComprehensiveOptimalPath {
     fillcolor="#F8F0F0";
     color=black;
 
-    ltl_info [shape=box, label="LTL Formula Details:\nAutomaton States: 36\nAccepting States: 1\n", fillcolor="#F8E8E8"];
+    ltl_info [shape=box, label="LTL Formula Details:\nAutomaton States: 7\nAccepting States: 3\n", fillcolor="#F8E8E8"];
 
     ltl_tasks [shape=plaintext, label=<
       <TABLE BORDER="1" CELLBORDER="1" CELLSPACING="0">
         <TR><TD COLSPAN="3"><B>Task Requirements (LTL APs)</B></TD></TR>
         <TR><TD><B>AP ID</B></TD><TD><B>Batch Value</B></TD><TD><B>Required Capabilities</B></TD></TR>
-        <TR><TD>AP0</TD><TD>0 (Unrelated)</TD><TD>Movement_Ground</TD></TR>
-        <TR><TD>AP10</TD><TD>0 (Unrelated)</TD><TD>Movement_Ground, Sensor_GPS</TD></TR>
-        <TR><TD>AP2</TD><TD>0 (Unrelated)</TD><TD>Sensor_Camera, Sensor_GPS</TD></TR>
-        <TR><TD>AP3</TD><TD>0 (Unrelated)</TD><TD>Movement_Ground, Sensor_Camera, Sensor_GPS</TD></TR>
-        <TR><TD>AP11</TD><TD>0 (Unrelated)</TD><TD>Movement_Ground, Sensor_Camera, Sensor_GPS</TD></TR>
-        <TR><TD>AP4</TD><TD>0 (Unrelated)</TD><TD>Movement_Ground, Sensor_Camera, Sensor_GPS</TD></TR>
+        <TR><TD>AP0</TD><TD>0 (Unrelated)</TD><TD>Movement_Ground, Sensor_Camera, Sensor_GPS</TD></TR>
+        <TR><TD>AP1</TD><TD>0 (Unrelated)</TD><TD>Movement_Ground, Sensor_Camera, Sensor_GPS</TD></TR>
+        <TR><TD>AP2</TD><TD>0 (Unrelated)</TD><TD>Movement_Ground, Sensor_Camera, Sensor_GPS</TD></TR>
       </TABLE>
     >];
   }
@@ -77,22 +74,14 @@ digraph ComprehensiveOptimalPath {
     color=darkred;
     penwidth=2;
 
-    path_summary [shape=note, label="Optimal Path Summary\nTotal Steps: 7\nFinal Cost: 31\nTotal Execution Time: 157s\n", fillcolor="#FFFFCC", penwidth=2];
+    path_summary [shape=note, label="Optimal Path Summary\nTotal Steps: 3\nFinal Cost: 1\nTotal Execution Time: 4s\n", fillcolor="#FFFFCC", penwidth=2];
 
-    opt_0 [shape=box, label="Step 0\nNBA: 4 | TS: 0\nCost: 0s | Total: 0s\n-----\nAllocated Robots:\n", fillcolor="#B3E5FC", penwidth=1.5];
-    opt_1 [shape=box, label="Step 1\nNBA: 3 | TS: 2\nCost: 8s | Total: 16s\n-----\nAllocated Robots:\n  R1: 8s\n  R6: 8s\n", fillcolor="#B3E5FC", penwidth=1.5];
-    opt_2 [shape=box, label="Step 2\nNBA: 8 | TS: 0\nCost: 8s | Total: 17s\n-----\nAllocated Robots:\n  R2: 1s\n", fillcolor="#B3E5FC", penwidth=1.5];
-    opt_3 [shape=box, label="Step 3\nNBA: 2 | TS: 1\nCost: 11s | Total: 36s\n-----\nAllocated Robots:\n  R2: 11s\n  R4: 9s\n", fillcolor="#B3E5FC", penwidth=1.5];
-    opt_4 [shape=box, label="Step 4\nNBA: 10 | TS: 3\nCost: 25s | Total: 87s\n-----\nAllocated Robots:\n  R1: 25s\n  R3: 17s\n  R5: 17s\n", fillcolor="#B3E5FC", penwidth=1.5];
-    opt_5 [shape=box, label="Step 5\nNBA: 1 | TS: 1\nCost: 25s | Total: 117s\n-----\nAllocated Robots:\n  R2: 21s\n  R4: 18s\n  R6: 19s\n", fillcolor="#B3E5FC", penwidth=1.5];
-    opt_6 [shape=box, label="Step 6\nNBA: 0 | TS: 4\nCost: 31s | Total: 157s\n-----\nAllocated Robots:\n  R3: 31s\n  R4: 31s\n  R5: 30s\n", fillcolor="#FF6B6B", penwidth=3, color=darkred, fontweight=bold, fontsize=11];
+    opt_0 [shape=box, label="Step 0\nNBA: 0 | TS: 0\nCost: 0s | Total: 0s\n-----\nAllocated Robots:\n", fillcolor="#B3E5FC", penwidth=1.5];
+    opt_1 [shape=box, label="Step 1\nNBA: 1 | TS: 0\nCost: 1s | Total: 2s\n-----\nAllocated Robots:\n  R1: 0s\n  R2: 1s\n  R3: 1s\n", fillcolor="#B3E5FC", penwidth=1.5];
+    opt_2 [shape=box, label="Step 2\nNBA: 1 | TS: 0\nCost: 1s | Total: 4s\n-----\nAllocated Robots:\n  R1: 0s\n  R5: 1s\n  R6: 1s\n", fillcolor="#FF6B6B", penwidth=3, color=darkred, fontweight=bold, fontsize=11];
 
-    opt_0 -> opt_1 [label="Δ=8s", penwidth=2, color=darkred];
+    opt_0 -> opt_1 [label="Δ=1s", penwidth=2, color=darkred];
     opt_1 -> opt_2 [label="Δ=0s", penwidth=2, color=darkred];
-    opt_2 -> opt_3 [label="Δ=3s", penwidth=2, color=darkred];
-    opt_3 -> opt_4 [label="Δ=14s", penwidth=2, color=darkred];
-    opt_4 -> opt_5 [label="Δ=0s", penwidth=2, color=darkred];
-    opt_5 -> opt_6 [label="Δ=6s", penwidth=2, color=darkred];
   }
 
   // Connections between clusters

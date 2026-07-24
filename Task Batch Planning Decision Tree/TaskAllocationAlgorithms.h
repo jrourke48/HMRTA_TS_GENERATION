@@ -25,7 +25,7 @@ class TaskAllocationAlgorithms {
         PlanningDecisionTree* traversedTree; // To keep track of the tree being traversed during search
         MultiRobotSystem* multiRobotSystem;
         std::vector<Tree_Node*> visitedNodes; // To keep track of visited nodes during search
-        std::vector<std::pair<uint16_t, uint16_t>> visitedStateAPPairs; // Track (automatonStateId, apId) pairs
+        std::vector<std::tuple<uint16_t, uint16_t, uint8_t>> visitedStateAPProgressTriples; // Track (automatonStateId, apId, progress) tuples
         std::vector<uint8_t> treebatchvals; // To keep track of batch values in the tree (if needed for cost calculations)
         std::queue<Tree_Node*> untraversedPlanningQueue; // Queue of nodes in planning tree not yet traversed
     
@@ -69,11 +69,10 @@ class TaskAllocationAlgorithms {
         };
         void clearVisitedNodes();
 
-        // Visited (automatonState, AP) pairs methods - Solution 1
-        void addVisitedStateAPPair(uint16_t automatonStateId, uint16_t apId);
-        bool isStateAPPairVisited(uint16_t automatonStateId, uint16_t apId) const;
-        std::vector<std::pair<uint16_t, uint16_t>>& getVisitedStateAPPairs();
-        void clearVisitedStateAPPairs();  // Solution 2: Clear when progress changes
+        // Visited (automatonState, AP, progress) triples methods
+        void addVisitedStateAPPair(uint16_t automatonStateId, uint16_t apId, uint8_t progress);
+        bool isStateAPPairVisited(uint16_t automatonStateId, uint16_t apId, uint8_t progress) const;
+        std::vector<std::tuple<uint16_t, uint16_t, uint8_t>>& getVisitedStateAPPairs();
 
         // Legacy methods (kept for compatibility, will use state-AP pairs internally)
         void addVisitedAutomatonState(uint16_t state);
@@ -99,16 +98,6 @@ class TaskAllocationAlgorithms {
         // Collect and merge AP IDs from multiple edges, removing duplicates
         std::vector<uint16_t> collectUniqueAPsFromEdges(const std::vector<std::string>& edges) const;
         
-        // Collect APs indexed by edge - returns vector where index i contains set of APs on edge i
-        std::vector<std::set<uint16_t>> collectAPsFromEdgesByIndex(const std::vector<std::string>& edges) const;
-        
-        // Collect both APs and acceptance marks indexed by edge
-        // Populates outEdgeAPIds and outEdgeAcceptanceSets from labels like "p0 & p1:{0,1}"
-        void collectAPsFromEdgesByIndexWithAcceptance(
-            const std::vector<std::string>& edges,
-            std::vector<std::set<uint16_t>>& outEdgeAPIds,
-            std::vector<std::set<uint16_t>>& outEdgeAcceptanceSets) const;
-        
         /**
          * Algorithm 1: Intensive Inter-Task Relationship Tree Search
          * Builds a planning tree considering inter-task relationships
@@ -127,8 +116,7 @@ class TaskAllocationAlgorithms {
             Tree_Node* newNode,
             Node* TSState,
             Tree_Node* currentNode,
-            uint16_t apId, 
-        std::vector<uint16_t> acceptingSets);
+            uint16_t apId);
         
         /**
          * Algorithm 3: Compatible-Task Search (CS)
