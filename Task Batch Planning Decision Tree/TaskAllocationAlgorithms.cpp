@@ -315,17 +315,16 @@ void TaskAllocationAlgorithms::unrelatedTaskSearch(
     // Check if the new node is an accepting state (increment progress when entering accepting)
     if (newNode && nba) {
         bool acceptingState = nba->isAccepting(newNode->getAutomatonState()->getId());
+        uint8_t currentProgress = static_cast<uint8_t>(currentNode->getProgress());
+        
         if (acceptingState) {
             // Increment progress when entering accepting state
             int newProgressInt = static_cast<int>(currentNode->getProgress()) + 1;
             Tree_Node::TASK_PROGRESS newProgress = static_cast<Tree_Node::TASK_PROGRESS>(newProgressInt);
             newNode->setProgress(newProgress);
         } else if (currentNode->getProgress() == Tree_Node::TASK_PROGRESS::SUF) {
-            // If the current node is at SUF progress,
-            // Increment progress when entering accepting state
-            int newProgressInt = static_cast<int>(currentNode->getProgress()) + 1;
-            Tree_Node::TASK_PROGRESS newProgress = static_cast<Tree_Node::TASK_PROGRESS>(newProgressInt);
-            newNode->setProgress(newProgress);
+            // If the current node is at SUF progress, increment to OTH
+            newNode->setProgress(Tree_Node::TASK_PROGRESS::OTH);
         }
         else {
             // Not entering accepting: keep progress the same
@@ -789,12 +788,21 @@ PlanningDecisionTree* TaskAllocationAlgorithms::pruneSubtree(PlanningDecisionTre
     std::vector<Tree_Node*> nodesToRemove;
     std::vector<Tree_Node*> subtreeNodes = subtree->getAllNodes();
     
-    // Rule 1: Add OTH progress nodes (terminal nodes) to traversedTree AND mark for removal
+    // Rule 1: If the NBA is Ininite Mark OTH progress nodes (terminal nodes) for removal
+    //If the the NBA is finite mark the TRA progress nodes for removal
+   //Also add the node to the planning tree rather than just the traversed tree
     for (Tree_Node* node : subtreeNodes) {
+    if (nba && nba->isInfinite()) {
         if (node->getProgress() == Tree_Node::TASK_PROGRESS::OTH) {
-            traversedTree->insertNode(node);
             nodesToRemove.push_back(node);  // Mark OTH nodes for removal so they don't re-enter queue
+            planningTree->addFrontierNode(node);
+        }  
+    } else{ 
+        if (node->getProgress() == Tree_Node::TASK_PROGRESS::TRA) {
+            nodesToRemove.push_back(node);  // Mark TRA nodes for removal so they don't re-enter queue
+            planningTree->addFrontierNode(node);
         }
+    }
     }
     
     // Rule 2: Remove nodes with traversed (automaton state, progress) pairs
