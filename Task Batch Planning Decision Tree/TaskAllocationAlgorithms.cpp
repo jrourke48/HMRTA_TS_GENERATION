@@ -205,12 +205,6 @@ PlanningDecisionTree* TaskAllocationAlgorithms::intensiveInterTaskRelationshipTr
                     continue;
                 }
                 
-                if (newProgress > currentProgress) {
-                    std::cerr << "[SEARCH DEBUG]     Progress for (state=" << nbaId << ", apId=" << apId 
-                              << ") advanced from " << static_cast<int>(currentProgress) 
-                              << " to " << static_cast<int>(newProgress) << std::endl;
-                }
-                
                 // Mark the (state, AP, progress) triple as visited
                 addVisitedStateAPPair(nbaId, apId, newProgress);
                 

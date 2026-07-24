@@ -6,6 +6,7 @@
 #include <vector>
 #include <string>
 #include <sstream>
+#include <iostream>
 #include <memory>
 #include <algorithm>
 #include <fstream>
@@ -16,6 +17,7 @@
 #include <spot/twaalgos/dot.hh>
 #include <spot/tl/parse.hh>
 #include <spot/twaalgos/translate.hh>
+#include <spot/twaalgos/degen.hh>
 #include <spot/tl/formula.hh>
 #include "../Task Batch Planning Decision Tree/LTLFormula/LTLFormula.h"
 #include "../Task Batch Planning Decision Tree/LTLFormula/BatchAtomicProposition.h"
@@ -26,21 +28,46 @@ private:
     const LTLFormula* ltlFormula;  // LTL formula associated with the Büchi automaton (externally owned)
     spot::twa_graph_ptr spotAutomaton;  // Store the Spot automaton for visualization
     uint16_t initialState;  // Initial state of the Büchi automaton
+    bool isInfiniteFlag;  // Flag indicating if the automaton is infinite (GBA)
+
 
 public:
     // Constructor that takes a pointer to an LTL formula object (externally owned)
-    BuchiAutomaton(const LTLFormula* formula) : ltlFormula(formula) {
+    BuchiAutomaton(const LTLFormula* formula) : ltlFormula(formula), isInfiniteFlag(false) {
         try {
             // Extract spot formula from LTLFormula and build automaton
             spot::translator trans;
             spot::twa_graph_ptr buchiAut = trans.run(ltlFormula->getSpotFormula());
-            // Convert spot buchi to our buchi automaton
-            fromSpotAutomaton(buchiAut);
+            
+            // Check if it's a GBA (Generalized Büchi Automaton) BEFORE degeneralizing
+            std::ostringstream dotStream;
+            spot::print_dot(dotStream, buchiAut);
+            std::string dotContent = dotStream.str();
+            checkIsInfinite(dotContent);  // Check if the automaton is infinite (GBA)
+            
+            // Degeneralize: convert GBA to standard Büchi automaton
+            buchiAut = spot::degeneralize(buchiAut);
+            
+            // Store the degeneralized spot automaton for visualization
+            this->spotAutomaton = buchiAut;
+            
+            // Clear existing data
+            nodeMap.clear();
+            acceptingStates.clear();
+            numNodes = 0;
+            numEdges = 0;
+            
+            // Generate DOT from degeneralized automaton and parse it
+            std::ostringstream dotStream2;
+            spot::print_dot(dotStream2, buchiAut);
+            std::string dotContent2 = dotStream2.str();
+            parseBuchiFromDot(dotContent2);
+
         } catch (const std::exception& e) {
             throw std::runtime_error("Failed to create Buchi automaton from formula: " + std::string(e.what()));
         }
     }
-    
+
     ~BuchiAutomaton() override;
     // Override pure virtual methods from Automaton
     void add_Node(Node* node) override;
@@ -63,35 +90,36 @@ public:
         }
     };
     // Check if the buchi automaton is finite
-    bool isFinite() const;
+    bool isFinite() const {
+        return !isInfiniteFlag;
+    }
+    // Check if the buchi automaton is infinite (GBA)
+    bool isInfinite() const {
+        return isInfiniteFlag;
+    }
     // Check if a state is an accepting state
     bool isAcceptingState(uint16_t stateId) const {
         return std::find(acceptingStates.begin(), acceptingStates.end(), stateId) != acceptingStates.end();
     };
     //get the edge label for a given source and destination
     std::vector<std::string> getEdgeLabels(uint16_t srcId, uint16_t dstId) const;
-
-    void fromSpotAutomaton(spot::twa_graph_ptr spotAutomaton) {
-        if (!spotAutomaton) return;
+    
+    // Check if the DOT content indicates an infinite automaton (GBA) by looking for Inf() label
+    void checkIsInfinite(const std::string& dotContent) {
+        // Look for label="Inf(...) in the DOT header
+        size_t label_pos = dotContent.find("label=\"");
+        if (label_pos != std::string::npos) {
+            size_t end_pos = dotContent.find('\"', label_pos + 7);
+            if (end_pos != std::string::npos) {
+                std::string label_content = dotContent.substr(label_pos + 7, end_pos - (label_pos + 7));
+                // Check if label contains "Inf(" which indicates generalized Büchi automaton
+                isInfiniteFlag = (label_content.find("Inf(") != std::string::npos);
+            }
+        } else {
+            isInfiniteFlag = false;
+        }
+    }
         
-        // Store the spot automaton for visualization
-        this->spotAutomaton = spotAutomaton;
-        
-        // Clear existing data
-        nodeMap.clear();
-        acceptingStates.clear();
-        numNodes = 0;
-        numEdges = 0;
-        
-        // Generate DOT and parse it completely
-        std::ostringstream dotStream;
-        spot::print_dot(dotStream, spotAutomaton);
-        std::string dotContent = dotStream.str();
-        
-        // Parse DOT to extract nodes, edges, initial state, and accepting states
-        parseBuchiFromDot(dotContent);
-    };
-
     // Comprehensive DOT parser that builds the Büchi automaton
     void parseBuchiFromDot(const std::string& dotContent) {
         std::istringstream stream(dotContent);
@@ -174,12 +202,6 @@ public:
                 std::string bracket_content = line.substr(bracket_start + 1, bracket_end - bracket_start - 1);
                 std::string edgeLabel = extractLabelFromDotBrackets(bracket_content);
                 
-                // Check for acceptance mark {0} in the bracket content
-                bool hasAcceptanceMark = (bracket_content.find("{0}") != std::string::npos);
-                if (hasAcceptanceMark) {
-                    edgeLabel += " {0}";  // Append to label for later detection
-                }
-                
                 edges[src].push_back(std::make_pair(dst, edgeLabel));
             }
         }
@@ -239,7 +261,24 @@ public:
                     label += '"';
                     label_pos += 2;
                 } else if (next == 'n') {
-                    // Stop at newline - don't include acceptance marks
+                    // Add : then grab acceptance marks {x, y, ...}
+                    label += ':';
+                    label_pos += 2;  // Skip \n
+                    
+                    // Skip whitespace after newline
+                    while (label_pos < content.length() && (content[label_pos] == ' ' || content[label_pos] == '\t')) {
+                        label_pos++;
+                    }
+                    
+                    // Grab acceptance marks: {0,1,2} etc
+                    while (label_pos < content.length()) {
+                        char c = content[label_pos];
+                        if (c == '"') {
+                            break;  // End of label
+                        }
+                        label += c;
+                        label_pos++;
+                    }
                     break;
                 } else {
                     label += c;
@@ -253,7 +292,7 @@ public:
             }
         }
         
-        // Clean up label - remove trailing whitespace and {0} acceptance marks
+        // Clean up label - remove trailing whitespace
         label.erase(label.find_last_not_of(" \t") + 1);
         return label.empty() ? "true" : label;
     }

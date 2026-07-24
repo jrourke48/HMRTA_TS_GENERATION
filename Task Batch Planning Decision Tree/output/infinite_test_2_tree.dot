@@ -19,10 +19,10 @@ digraph PlanningTree {
   node_13 [label="Node 13\nNBA: 4, TS: 1\nProgress: TRA\nMax Time: 23\nBatch: 0\nRobots: [1,0,0,0,1,0]", fillcolor="#FFFFCC"];
   node_14 [label="Node 14\nNBA: 12, TS: 0\nProgress: TRA\nMax Time: 32\nBatch: 0\nRobots: [1,1,0,0,0,0]", fillcolor="#FFFFCC"];
   node_15 [label="Node 15\nNBA: 5, TS: 3\nProgress: TRA\nMax Time: 32\nBatch: 0\nRobots: [0,0,1,1,0,0]", fillcolor="#FFFFCC"];
-  node_16 [label="Node 16\nNBA: 9, TS: 0\nProgress: SUF\nMax Time: 36\nBatch: 0\nRobots: [0,0,0,1,1,0]", fillcolor="#FF6B6B", penwidth=3, color=red];
+  node_16 [label="Node 16\nNBA: 9, TS: 0\nProgress: SUF\nMax Time: 36\nBatch: 0\nRobots: [0,0,0,1,1,0]", fillcolor="#E6F3FF"];
   node_17 [label="Node 17\nNBA: 2, TS: 4\nProgress: TRA\nMax Time: 36\nBatch: 0\nRobots: [1,1,0,0,0,1]", fillcolor="#FFFFCC"];
   node_18 [label="Node 18\nNBA: 4, TS: 1\nProgress: OTH\nMax Time: 42\nBatch: 0\nRobots: [0,0,0,1,1,0]", fillcolor="#E6FFE6"];
-  node_19 [label="Node 19\nNBA: 8, TS: 0\nProgress: OTH\nMax Time: 36\nBatch: 0\nRobots: [0,0,0,1,1,0]", fillcolor="#E6FFE6"];
+  node_19 [label="Node 19\nNBA: 8, TS: 0\nProgress: OTH\nMax Time: 36\nBatch: 0\nRobots: [0,0,0,1,1,0]", fillcolor="#FF6B6B", penwidth=3, color=red];
   node_20 [label="Node 20\nNBA: 7, TS: 0\nProgress: SUF\nMax Time: 45\nBatch: 0\nRobots: [1,1,0,0,0,0]", fillcolor="#E6F3FF"];
   node_21 [label="Node 21\nNBA: 3, TS: 4\nProgress: TRA\nMax Time: 45\nBatch: 0\nRobots: [0,0,0,1,1,1]", fillcolor="#FFFFCC"];
   node_22 [label="Node 22\nNBA: 6, TS: 1\nProgress: TRA\nMax Time: 33\nBatch: 0\nRobots: [1,1,0,0,0,0]", fillcolor="#FFFFCC"];

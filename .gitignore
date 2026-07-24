@@ -25,6 +25,10 @@ output/*.o
 
 # gnuplot temporary files
 gnuplot-gnuplot-main/
+dstar/
+Robotics_Research/
+Learning_Spot/
+
 
 # Data files (uncomment if you don't want to track these)
 # *.dat

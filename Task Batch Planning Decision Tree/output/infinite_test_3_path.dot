@@ -74,14 +74,16 @@ digraph ComprehensiveOptimalPath {
     color=darkred;
     penwidth=2;
 
-    path_summary [shape=note, label="Optimal Path Summary\nTotal Steps: 3\nFinal Cost: 1\nTotal Execution Time: 4s\n", fillcolor="#FFFFCC", penwidth=2];
+    path_summary [shape=note, label="Optimal Path Summary\nTotal Steps: 4\nFinal Cost: 2\nTotal Execution Time: 6s\n", fillcolor="#FFFFCC", penwidth=2];
 
     opt_0 [shape=box, label="Step 0\nNBA: 0 | TS: 0\nCost: 0s | Total: 0s\n-----\nAllocated Robots:\n", fillcolor="#B3E5FC", penwidth=1.5];
     opt_1 [shape=box, label="Step 1\nNBA: 1 | TS: 0\nCost: 1s | Total: 2s\n-----\nAllocated Robots:\n  R1: 0s\n  R2: 1s\n  R3: 1s\n", fillcolor="#B3E5FC", penwidth=1.5];
-    opt_2 [shape=box, label="Step 2\nNBA: 1 | TS: 0\nCost: 1s | Total: 4s\n-----\nAllocated Robots:\n  R1: 0s\n  R5: 1s\n  R6: 1s\n", fillcolor="#FF6B6B", penwidth=3, color=darkred, fontweight=bold, fontsize=11];
+    opt_2 [shape=box, label="Step 2\nNBA: 1 | TS: 0\nCost: 1s | Total: 4s\n-----\nAllocated Robots:\n  R1: 0s\n  R5: 1s\n  R6: 1s\n", fillcolor="#B3E5FC", penwidth=1.5];
+    opt_3 [shape=box, label="Step 3\nNBA: 1 | TS: 0\nCost: 2s | Total: 6s\n-----\nAllocated Robots:\n  R1: 0s\n  R2: 2s\n  R3: 2s\n", fillcolor="#FF6B6B", penwidth=3, color=darkred, fontweight=bold, fontsize=11];
 
     opt_0 -> opt_1 [label="Δ=1s", penwidth=2, color=darkred];
     opt_1 -> opt_2 [label="Δ=0s", penwidth=2, color=darkred];
+    opt_2 -> opt_3 [label="Δ=1s", penwidth=2, color=darkred];
   }
 
   // Connections between clusters
