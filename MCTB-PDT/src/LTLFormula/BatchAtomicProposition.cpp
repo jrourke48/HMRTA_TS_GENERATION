@@ -1,32 +1,46 @@
 #include "LTLFormula/BatchAtomicProposition.h"
 
-std::string BatchAtomicProposition::capabilityToString(RobotCapability cap) const {
-    switch (cap) {
-        case RobotCapability::MOVEMENT_GROUND:
+// Constructors
+BatchAtomicProposition::BatchAtomicProposition() 
+    : apId(0), ap(0), batch(0) {
+}
+
+BatchAtomicProposition::BatchAtomicProposition(uint16_t apId, uint16_t ap, 
+                                             const std::vector<bool>& capabilities, int8_t batch)
+    : apId(apId), ap(ap), capabilityRequirements(capabilities), batch(batch) {
+}
+
+// Destructor
+BatchAtomicProposition::~BatchAtomicProposition() {
+}
+
+std::string BatchAtomicProposition::capabilityToString(int cap) const {
+    switch (static_cast<int>(cap)) {
+        case 0:  // MOVEMENT_GROUND
             return "MOVEMENT_GROUND";
-        case RobotCapability::MOVEMENT_AERIAL:
+        case 1:  // MOVEMENT_AERIAL
             return "MOVEMENT_AERIAL";
-        case RobotCapability::MOVEMENT_AQUATIC:
+        case 2:  // MOVEMENT_AQUATIC
             return "MOVEMENT_AQUATIC";
-        case RobotCapability::SENSOR_GPS:
+        case 5:  // SENSOR_GPS
             return "SENSOR_GPS";
-        case RobotCapability::SENSOR_LIDAR:
+        case 4:  // SENSOR_LIDAR
             return "SENSOR_LIDAR";
-        case RobotCapability::SENSOR_CAMERA:
+        case 3:  // SENSOR_CAMERA
             return "SENSOR_CAMERA";
-        case RobotCapability::SENSOR_IMU:
+        case 6:  // SENSOR_IMU
             return "SENSOR_IMU";
-        case RobotCapability::SENSOR_PROXIMITY:
+        case 7:  // SENSOR_PROXIMITY
             return "SENSOR_PROXIMITY";
-        case RobotCapability::COMMUNICATION_WIFI:
+        case 10:  // COMMUNICATION_WIFI
             return "COMMUNICATION_WIFI";
-        case RobotCapability::COMMUNICATION_4G:
+        case 11:  // COMMUNICATION_4G
             return "COMMUNICATION_4G";
-        case RobotCapability::MANIPULATION_GRIPPER:
+        case 8:  // MANIPULATION_GRIPPER
             return "MANIPULATION_GRIPPER";
-        case RobotCapability::MANIPULATION_TOOL:
+        case 9:  // MANIPULATION_TOOL
             return "MANIPULATION_TOOL";
-        case RobotCapability::CAPABILITY_PAYLOAD:
+        case 12:  // CAPABILITY_PAYLOAD
             return "CAPABILITY_PAYLOAD";
         default:
             return "UNKNOWN";

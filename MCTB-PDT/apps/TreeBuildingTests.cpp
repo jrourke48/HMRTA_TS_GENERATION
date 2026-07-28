@@ -2,17 +2,17 @@
 #include <vector>
 #include <memory>
 #include <cstdlib>
-#include "../TaskAllocationAlgorithms.h"
-#include "../LTLFormula/LTLFormula.h"
-#include "../LTLFormula/BatchAtomicProposition.h"
-#include "../Environment/Environment.h"
-#include "../Environment/GridWorld.h"
-#include "../Environment/Point.h"
-#include "../MultiRobotSystem/MultiRobotSystem.h"
-#include "../MultiRobotSystem/Robot.h"
-#include "../Tree/PlanningDecisionTree.h"
+#include "../include/TaskAllocationAlgorithms.h"
+#include "../include/LTLFormula/LTLFormula.h"
+#include "../include/LTLFormula/BatchAtomicProposition.h"
+#include "../include/Environment/Environment.h"
+#include "../include/Environment/GridWorld.h"
+#include "../include/Environment/Point.h"
+#include "../include/MultiRobotSystem/MultiRobotSystem.h"
+#include "../include/MultiRobotSystem/Robot.h"
+#include "../include/Tree/PlanningDecisionTree.h"
 #include "../../Automatons/BuchiAutomaton.h"
-#include "../../Automatons/TS.h"
+#include "../../Automatons/Automaton.h"
 
 void testAlgorithm1_IntensiveInterTaskSearch() {
     std::cout << "\n========== TEST 1: Intensive Inter-Task Relationship Search ==========" << std::endl;

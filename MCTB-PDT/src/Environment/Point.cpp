@@ -33,6 +33,35 @@ bool Point::operator!=(const Point& other) const {
 }
 
 /**
+ * operator< - Lexicographic ordering (row-major: y first, then x)
+ */
+bool Point::operator<(const Point& other) const {
+    if (y != other.y) return y < other.y;
+    return x < other.x;
+}
+
+/**
+ * operator> - Lexicographic ordering (row-major: y first, then x)
+ */
+bool Point::operator>(const Point& other) const {
+    return other < *this;
+}
+
+/**
+ * operator<= - Lexicographic ordering (row-major: y first, then x)
+ */
+bool Point::operator<=(const Point& other) const {
+    return !(other < *this);
+}
+
+/**
+ * operator>= - Lexicographic ordering (row-major: y first, then x)
+ */
+bool Point::operator>=(const Point& other) const {
+    return !(*this < other);
+}
+
+/**
  * operator+ - Add two points
  */
 Point Point::operator+(const Point& other) const {

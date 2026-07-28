@@ -142,6 +142,11 @@ private:
     double heuristic(const Point& s) const;
     
     /**
+     * Heuristic: straight-line distance between two points
+     */
+    double heuristic(const Point& from, const Point& to) const;
+    
+    /**
      * Movement cost between adjacent cells
      * Respects obstacles and terrain costs in GridWorld
      */

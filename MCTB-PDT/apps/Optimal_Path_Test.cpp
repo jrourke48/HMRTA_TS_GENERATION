@@ -3,12 +3,12 @@
 #include <vector>
 #include <memory>
 #include <algorithm>
-#include "../TaskAllocationAlgorithms.h"
-#include "../Tree/PlanningDecisionTree.h"
-#include "../Tree/Tree_Node.h"
-#include "../Environment/Environment.h"
-#include "../MultiRobotSystem/MultiRobotSystem.h"
-#include "../LTLFormula/LTLFormula.h"
+#include "../include/TaskAllocationAlgorithms.h"
+#include "../include/Tree/PlanningDecisionTree.h"
+#include "../include/Tree/Tree_Node.h"
+#include "../include/Environment/Environment.h"
+#include "../include/MultiRobotSystem/MultiRobotSystem.h"
+#include "../include/LTLFormula/LTLFormula.h"
 #include "../../Automatons/BuchiAutomaton.h"
 
 using namespace std;

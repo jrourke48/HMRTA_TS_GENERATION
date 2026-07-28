@@ -36,13 +36,15 @@ public:
     bool isObstacle(const Point& point) const;
     bool isFree(const Point& point) const;
     bool isInBounds(const Point& point) const;
-    
+
+    // Obstacle manipulation
+    void addObstacle(const Point& point) { setCost(point, 255); }
+    void clearObstacle(const Point& point) { setCost(point, 0); }
     // Grid operations
     void setObstacle(const Point& point) { setCost(point, 255); }
     void clearCell(const Point& point) { setCost(point, 0); }
     void clearAll();
-    void fillObstacles();
-    void 
+    void fillObstacles(); 
 };
 
 #endif // GRIDWORLD_H

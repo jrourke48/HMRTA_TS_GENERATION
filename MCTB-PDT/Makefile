@@ -12,6 +12,7 @@ TREE_BIN = $(OUT_DIR)/TreeBuildingTests
 TASK_ALLOC_BIN = $(OUT_DIR)/TestTaskAllocation
 PLANNING_TREE_BIN = $(OUT_DIR)/TestPlanningTreeComprehensive
 OPTIMAL_PATH_BIN = $(OUT_DIR)/OptimalPathTest
+DSTAR_BIN = $(OUT_DIR)/Test_DStarGridWorld
 
 # Source files
 TEST_SRC = apps/TestIntegration.cpp
@@ -19,23 +20,25 @@ TREE_TEST_SRC = apps/TreeBuildingTests.cpp
 TASK_ALLOC_SRC = apps/TestTaskAllocationAlgorithms.cpp
 PLANNING_TREE_TEST_SRC = apps/TestPlanningTreeComprehensive.cpp
 OPTIMAL_PATH_SRC = apps/Optimal_Path_Test.cpp
+DSTAR_SRC = apps/Test_DStarGridWorld.cpp
 # TaskAllocationAlgorithms - algorithms for task allocation
-TASK_ALLOC_SRCS = TaskAllocationAlgorithms.cpp
+TASK_ALLOC_SRCS = src/TaskAllocationAlgorithms.cpp
 
 COMMON_SRCS = \
-	Environment/Point.cpp \
-	Environment/GridWorld.cpp \
-	Environment/Environment.cpp \
-	Tree/Tree_Node.cpp \
-	Tree/PlanningDecisionTree.cpp \
-	MultiRobotSystem/Robot.cpp \
-	MultiRobotSystem/MultiRobotSystem.cpp \
-	LTLFormula/BatchAtomicProposition.cpp \
-	LTLFormula/LTLFormula.cpp \
+	src/Environment/Point.cpp \
+	src/Environment/GridWorld.cpp \
+	src/Environment/Environment.cpp \
+	src/Environment/DStarGridWorld.cpp \
+	src/Tree/Tree_Node.cpp \
+	src/Tree/PlanningDecisionTree.cpp \
+	src/MultiRobotSystem/Robot.cpp \
+	src/MultiRobotSystem/MultiRobotSystem.cpp \
+	src/LTLFormula/BatchAtomicProposition.cpp \
+	src/LTLFormula/LTLFormula.cpp \
 	../Automatons/BuchiAutomaton.cpp \
 	../Automatons/TS.cpp \
 	../Transition_Systems/GeneralTransitionSystem.cpp \
-	AlgorithmMetrics.cpp
+	src/AlgorithmMetrics.cpp
 
 # Object files
 TEST_OBJ = $(TEST_SRC:.cpp=.o)
@@ -43,14 +46,15 @@ TREE_TEST_OBJ = $(TREE_TEST_SRC:.cpp=.o)
 TASK_ALLOC_OBJ = $(TASK_ALLOC_SRC:.cpp=.o)
 PLANNING_TREE_TEST_OBJ = $(PLANNING_TREE_TEST_SRC:.cpp=.o)
 OPTIMAL_PATH_OBJ = $(OPTIMAL_PATH_SRC:.cpp=.o)
+DSTAR_OBJ = $(DSTAR_SRC:.cpp=.o)
 COMMON_OBJS = $(COMMON_SRCS:.cpp=.o)
 TASK_ALLOC_OBJS = $(TASK_ALLOC_SRCS:.cpp=.o)
-ALL_OBJS = $(TEST_OBJ) $(TREE_TEST_OBJ) $(TASK_ALLOC_OBJ) $(PLANNING_TREE_TEST_OBJ) $(OPTIMAL_PATH_OBJ) $(COMMON_OBJS) $(TASK_ALLOC_OBJS)
+ALL_OBJS = $(TEST_OBJ) $(TREE_TEST_OBJ) $(TASK_ALLOC_OBJ) $(PLANNING_TREE_TEST_OBJ) $(OPTIMAL_PATH_OBJ) $(DSTAR_OBJ) $(COMMON_OBJS) $(TASK_ALLOC_OBJS)
 
 # Targets
-.PHONY: all clean run rebuild help test test-tree test-task test-planning-tree test-optimal-path test-all tree-only task-only planning-tree-only optimal-path-only
+.PHONY: all clean run rebuild help test test-tree test-task test-planning-tree test-optimal-path test-dstar test-all tree-only task-only planning-tree-only optimal-path-only dstar-only
 
-all: $(OUT_BIN) $(TREE_BIN) $(TASK_ALLOC_BIN) $(PLANNING_TREE_BIN) $(OPTIMAL_PATH_BIN)
+all: $(OUT_BIN) $(TREE_BIN) $(TASK_ALLOC_BIN) $(PLANNING_TREE_BIN) $(OPTIMAL_PATH_BIN) $(DSTAR_BIN)
 
 # Build the test executable
 $(OUT_BIN): $(TEST_OBJ) $(COMMON_OBJS)
@@ -82,6 +86,12 @@ $(OPTIMAL_PATH_BIN): $(OPTIMAL_PATH_OBJ) $(COMMON_OBJS) $(TASK_ALLOC_OBJS)
 	$(CXX) $(CXXFLAGS) $(INCLUDES) $^ -o $@ $(LIBS)
 	@echo "✓ Build successful: $(OPTIMAL_PATH_BIN)"
 
+# Build the D* GridWorld tests executable
+$(DSTAR_BIN): $(DSTAR_OBJ) $(COMMON_OBJS)
+	@mkdir -p $(OUT_DIR)
+	$(CXX) $(CXXFLAGS) $(INCLUDES) $^ -o $@ $(LIBS)
+	@echo "✓ Build successful: $(DSTAR_BIN)"
+
 # Compile object files
 %.o: %.cpp
 	$(CXX) $(CXXFLAGS) $(INCLUDES) -c $< -o $@
@@ -111,6 +121,11 @@ test-optimal-path: $(OPTIMAL_PATH_BIN)
 	@echo "Running optimal path tests..."
 	@$(OPTIMAL_PATH_BIN)
 
+# Run D* GridWorld tests
+test-dstar: $(DSTAR_BIN)
+	@echo "Running D* GridWorld tests..."
+	@$(DSTAR_BIN)
+
 # Shortcut to run only tree tests
 tree-only: test-tree
 
@@ -123,8 +138,11 @@ planning-tree-only: test-planning-tree
 # Shortcut to run only optimal path tests
 optimal-path-only: test-optimal-path
 
+# Shortcut to run only D* tests
+dstar-only: test-dstar
+
 # Run all tests
-test-all: run test-tree test-task test-planning-tree test-optimal-path
+test-all: run test-tree test-task test-planning-tree test-optimal-path test-dstar
 
 # Run tests and show output
 test: test-all

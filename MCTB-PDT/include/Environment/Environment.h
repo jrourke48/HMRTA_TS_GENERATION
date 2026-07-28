@@ -61,8 +61,8 @@ public:
     bool isFree(Point p) const;
     //add obstacle
     void addObstacle(Point p);
-    
-
+    //clear obstacle
+    void clearObstacle(Point p);
     
     // Utility methods
     bool isValidState(uint32_t stateId) const;

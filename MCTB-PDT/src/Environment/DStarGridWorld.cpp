@@ -29,8 +29,8 @@ std::vector<Point> DStarGridWorldPlanner::plan(const Point& start, const Point& 
     rhs_[goal] = 0.0;
     g_[goal] = std::numeric_limits<double>::infinity();
     
-    for (int x = 0; x < gridworld_->getWidth(); ++x) {
-        for (int y = 0; y < gridworld_->getHeight(); ++y) {
+    for (uint32_t x = 0; x < gridworld_->getWidth(); ++x) {
+        for (uint32_t y = 0; y < gridworld_->getHeight(); ++y) {
             Point p(x, y);
             if (!(p.getX() == goal.getX() && p.getY() == goal.getY())) {
                 rhs_[p] = std::numeric_limits<double>::infinity();
@@ -247,7 +247,7 @@ void DStarGridWorldPlanner::computeShortestPath() {
         }
         
         // Safety check: don't expand too many states
-        if (expanded_count_ > gridworld_->getWidth() * gridworld_->getHeight()) {
+        if (static_cast<uint32_t>(expanded_count_) > gridworld_->getWidth() * gridworld_->getHeight()) {
             break;
         }
     }
