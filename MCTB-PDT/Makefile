@@ -2,7 +2,7 @@
 # Compiler and flags
 CXX = g++
 CXXFLAGS = -std=c++20 -Wall -Wextra -g3
-INCLUDES = -I. -I..
+INCLUDES = -I. -I./include -I..
 LIBS = -lspot -lbddx
 
 # Output directory
@@ -14,11 +14,11 @@ PLANNING_TREE_BIN = $(OUT_DIR)/TestPlanningTreeComprehensive
 OPTIMAL_PATH_BIN = $(OUT_DIR)/OptimalPathTest
 
 # Source files
-TEST_SRC = Testing/TestIntegration.cpp
-TREE_TEST_SRC = Testing/TreeBuildingTests.cpp
-TASK_ALLOC_SRC = Testing/TestTaskAllocationAlgorithms.cpp
-PLANNING_TREE_TEST_SRC = Testing/TestPlanningTreeComprehensive.cpp
-OPTIMAL_PATH_SRC = Testing/Optimal_Path_Test.cpp
+TEST_SRC = apps/TestIntegration.cpp
+TREE_TEST_SRC = apps/TreeBuildingTests.cpp
+TASK_ALLOC_SRC = apps/TestTaskAllocationAlgorithms.cpp
+PLANNING_TREE_TEST_SRC = apps/TestPlanningTreeComprehensive.cpp
+OPTIMAL_PATH_SRC = apps/Optimal_Path_Test.cpp
 # TaskAllocationAlgorithms - algorithms for task allocation
 TASK_ALLOC_SRCS = TaskAllocationAlgorithms.cpp
 
@@ -34,7 +34,8 @@ COMMON_SRCS = \
 	LTLFormula/LTLFormula.cpp \
 	../Automatons/BuchiAutomaton.cpp \
 	../Automatons/TS.cpp \
-	../Transition_Systems/GeneralTransitionSystem.cpp
+	../Transition_Systems/GeneralTransitionSystem.cpp \
+	AlgorithmMetrics.cpp
 
 # Object files
 TEST_OBJ = $(TEST_SRC:.cpp=.o)

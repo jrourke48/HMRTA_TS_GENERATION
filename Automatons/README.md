@@ -1,10 +1,12 @@
 # Automatons Module
 
+Comprehensive guide to the abstract automaton hierarchy and Spot library integration for LTL-based multi-robot planning.
+
 ## Overview
 
 The Automatons module provides a unified hierarchy of automaton classes for formal task planning with LTL specifications. It serves as the bridge between high-level temporal logic formulas and low-level planning algorithms.
 
-### Core Responsibilities
+This module is responsible for:
 
 1. **Abstract Automaton Interface** - Common methods and properties across all automata types
 2. **Büchi Automaton Generation** - LTL-to-automaton conversion via Spot library integration
@@ -169,13 +171,33 @@ Represents the discrete workspace as a state transition graph.
 
 Abstracts continuous or complex environments into discrete states and transitions suitable for formal planning.
 
-#### Key Members
+#### Class Definition
 
 ```cpp
-std::map<uint32_t, Node*> nodeMap;        // State ID to state object mapping
-std::vector<Edge_Node*> edgeList;         // All transitions in the system
-uint32_t initialState;                    // Entry point for planning
+class TS : public Automaton {
+private:
+    std::vector<uint32_t> initialStates;
+    std::unordered_map<uint32_t, uint32_t> stateToNodeId;
+
+public:
+    TS();
+    
+    // Base class implementation
+    void add_Node(Node* node) override;
+    bool isAdjacent(uint32_t srcId, uint32_t dstId) const override;
+    
+    // Initial state management
+    void setInitial(uint32_t stateId);
+    bool isInitial(uint32_t stateId) const;
+    const std::vector<uint32_t>& getInitialStates() const;
+};
 ```
+
+#### Key Members
+
+- `std::map<uint32_t, Node*> nodeMap` - State ID to state object mapping
+- `std::vector<Edge_Node*> edgeList` - All transitions in the system
+- `uint32_t initialState` - Entry point for planning
 
 #### Key Methods
 
@@ -188,6 +210,35 @@ Node* getState(uint32_t id) const;
 void addTransition(uint32_t fromState, uint32_t toState, 
                    const string& label, double cost = 1.0);
 vector<uint32_t> getSuccessors(uint32_t state) const;
+```
+
+#### Usage
+
+```cpp
+// Create transition system for 3 regions
+TS* ts = new TS();
+
+// Add region states
+Node* regionA = new Node(0, "RegionA");
+Node* regionB = new Node(1, "RegionB");
+Node* regionC = new Node(2, "RegionC");
+
+ts->add_Node(regionA);
+ts->add_Node(regionB);
+ts->add_Node(regionC);
+
+// Add transitions (motion between regions)
+regionA->addEdge(Edge(1));       // Can move A → B
+regionA->addEdge(Edge(2));       // Can move A → C
+regionB->addEdge(Edge(0));       // Can move B → A
+
+// Set initial region
+ts->setInitial(0);
+
+// Check connectivity
+if (ts->isAdjacent(0, 1)) {
+    std::cout << "Can move from A to B\n";
+}
 ```
 
 #### Atomic Propositions
@@ -204,9 +255,7 @@ ts.addTransition(0, 1, "move_to_A", 5.0);
 ts.addTransition(1, 2, "move_to_B", 8.0);
 ```
 
-#### Workspace Mapping
-
-TS can be paired with grid-based or continuous workspace representations (see Environment module).
+TS can be paired with grid-based or continuous workspace representations for detailed environment modeling.
 
 ---
 
@@ -224,28 +273,37 @@ The product automaton merges two automaton spaces:
 
 **Product State**: `(ts_state, buchi_state)` pair
 
+#### Class Definition
+
+```cpp
+class ProductAutomaton : public Automaton {
+private:
+    std::vector<std::pair<uint32_t, uint32_t>> stateMapping;
+    std::vector<uint32_t> acceptingStates;
+
+public:
+    ProductAutomaton();
+    ProductAutomaton(spot::twa_graph_ptr spotAutomaton);
+    
+    // Base class
+    void add_Node(Node* node) override;
+    bool isAdjacent(uint32_t srcId, uint32_t dstId) const override;
+    
+    // Accepting states
+    void setAccepting(uint32_t stateId);
+    bool isAccepting(uint32_t stateId) const;
+    
+    // State mapping: product state → (TS state, Buchi state)
+    void addStateMapping(uint32_t productState, uint32_t tsState, uint32_t automataState);
+    std::pair<uint32_t, uint32_t> getStateMapping(uint32_t productState) const;
+};
+```
+
 #### Key Members
 
-```cpp
-TS* transitionSystem;              // Reference to workspace model
-BuchiAutomaton* buchiAutomaton;    // Reference to task automaton
-std::map<pair<uint32_t, uint32_t>, uint32_t> productStates; // Product state mapping
-```
-
-#### Key Methods
-
-```cpp
-// Construction
-void constructProduct();
-uint32_t getProductStateId(uint32_t tsState, uint32_t buchiState) const;
-
-// Queries
-vector<uint32_t> getProductSuccessors(uint32_t productState) const;
-pair<uint32_t, uint32_t> decomposeProductState(uint32_t productState) const;
-
-// Acceptance
-bool isAcceptingState(uint32_t productState) const;
-```
+- `TS* transitionSystem` - Reference to workspace model
+- `BuchiAutomaton* buchiAutomaton` - Reference to task automaton
+- `std::map<pair<uint32_t, uint32_t>, uint32_t> productStates` - Product state mapping
 
 #### Product Space Growth
 
@@ -258,45 +316,246 @@ The product automaton is the actual planning domain:
 - **Transitions** = motions that advance both workspace and task
 - **Accepting paths** = complete task execution satisfying both TS and Büchi conditions
 
+#### Usage
+
+```cpp
+// Create product automaton from Spot automaton
+spot::twa_graph_ptr buchi = spot::translate("F p0", false, false, false);
+ProductAutomaton* product = new ProductAutomaton(buchi);
+
+// Manual construction:
+ProductAutomaton* manual = new ProductAutomaton();
+
+// Add product states (pairs of TS and Buchi states)
+for (uint32_t s = 0; s < ts_states; ++s) {
+    for (uint32_t q = 0; q < buchi_states; ++q) {
+        uint32_t productState = s * buchi_states + q;
+        Node* pnode = new Node(productState);
+        manual->add_Node(pnode);
+        
+        // Map to original states
+        manual->addStateMapping(productState, s, q);
+        
+        // Mark accepting if Buchi state is accepting
+        if (buchi->state_is_accepting(q)) {
+            manual->setAccepting(productState);
+        }
+    }
+}
+
+// Query state mapping
+auto mapping = product->getStateMapping(stateId);
+uint32_t ts_state = mapping.first;
+uint32_t buchi_state = mapping.second;
+```
+
 ---
 
 ### 5. Node and Edge Classes
 
-**Files**: `Edge_Node.h`
+**File**: `Edge_Node.h`
+
+Lightweight data structures for graph representation.
 
 #### Node (State Representation)
 
 ```cpp
 class Node {
-    uint32_t nodeId;
-    std::string label;           // State description / atomic propositions
-    std::vector<Edge_Node*> edges; // Outgoing transitions
+private:
+    std::string label;           // State name/label or atomic propositions
+    uint32_t id;                 // Unique ID
+    std::vector<Edge> edges;     // Outgoing edges
+
+public:
+    // Constructors
+    Node(uint32_t id);
+    Node(uint32_t id, const std::string& label);
+    
+    // Access methods
+    uint32_t getId() const;
+    std::string getLabel() const;
+    std::vector<Edge> getEdges() const;
+    
+    // Modification
+    void addEdge(const Edge& edge);
+    bool isAdjacent(uint32_t dstId) const;
+    void setLabel(const std::string& label);
 };
 ```
 
-**Properties**:
-- Unique identifier (nodeId)
-- Textual label (APs or state name)
-- Collection of outgoing edges
+**Usage**:
+```cpp
+// Create a state
+Node* stateA = new Node(0, "RegionA");
 
-#### Edge_Node (Transition Representation)
+// Add transition to another state
+Edge transitionToB(1, "action_move");  // destination ID, label
+stateA->addEdge(transitionToB);
+
+// Query adjacency
+if (stateA->isAdjacent(1)) {
+    std::cout << "Can reach state 1\n";
+}
+```
+
+#### Edge (Transition Representation)
 
 ```cpp
-class Edge_Node {
-    uint32_t srcNodeId;
-    uint32_t dstNodeId;
-    std::string label;           // Atomic propositions / Acceptance marks
-    double cost;                 // Transition cost
-    uint32_t edgeIndex;          // Position in edge collection (for indexing)
-    std::set<uint16_t> acceptanceMarks; // GBA acceptance sets (for GBA edges)
+class Edge {
+private:
+    uint32_t dstId;              // Destination node ID
+    std::string label;           // Transition label/condition or APs
+    uint32_t weight;             // For weighted edges
+    std::set<uint16_t> acceptanceMarks; // GBA acceptance sets
+
+public:
+    // Constructors
+    Edge(uint32_t dstId);
+    Edge(uint32_t dstId, const std::string& label);
+    Edge(uint32_t dstId, const std::string& label, uint32_t weight);
+    
+    // Access
+    uint32_t getDstId() const;
+    std::string getLabel() const;
+    uint32_t getWeight() const;
+    
+    // Modification
+    void setLabel(const std::string& label);
+    void setWeight(uint32_t w);
 };
 ```
 
-**Properties**:
-- Source and destination nodes
-- Label with APs and acceptance marks
-- Cost for weighted planning
-- Edge index for efficient AP collection
+**Usage**:
+```cpp
+// Create labeled edge
+Edge e1(5, "p0 & p1");           // Condition: p0 AND p1
+Edge e2(3, "move_north", 1);     // With weight
+
+// Query edge properties
+std::string condition = e1.getLabel();
+uint32_t dest = e1.getDstId();
+```
+
+**Label Format in GBA**:
+- Simple: `"p0"` - single atomic proposition
+- Complex: `"p0 & p1 | p2"` - boolean expressions
+- With Acceptance: `"p0 & p1:{0,1}"` - APs and GBA acceptance marks
+
+Parsing: Split by `:` to separate AP section from acceptance marks `{x,y,z}`
+
+---
+
+## Spot Library Integration
+
+The Spot library handles LTL-to-Büchi conversion and manipulation.
+
+### Setup
+
+**Installation** (Ubuntu/Debian):
+```bash
+sudo apt-get install libspot-dev libbdd-dev
+```
+
+**Include**:
+```cpp
+#include <spot/twa/twagraph.hh>
+#include <spot/twaalgos/translate.hh>
+#include <spot/twaalgos/dot.hh>
+#include <spot/twaalgos/bdd.hh>
+#include <bddx.h>
+```
+
+### LTL to Büchi Conversion
+
+**Translate LTL formula to automaton**:
+```cpp
+#include <spot/twaalgos/translate.hh>
+
+// Convert LTL to Büchi automaton
+std::string ltlFormula = "F (p0 & F p1)";  // Eventually p0, then p1
+spot::twa_graph_ptr buchi = spot::translate(ltlFormula, false, false, false);
+
+if (!buchi) {
+    std::cerr << "Failed to translate LTL formula\n";
+    return -1;
+}
+
+std::cout << "Büchi states: " << buchi->num_states() << "\n";
+std::cout << "Accepting sets: " << buchi->acc().num_sets() << "\n";
+```
+
+**Formula syntax**:
+```
+F phi        - Eventually phi
+G phi        - Always phi  
+X phi        - Next phi
+phi U psi    - Until
+phi & psi    - AND
+phi | psi    - OR
+!phi         - NOT
+p0, p1, ...  - Propositions
+```
+
+**Examples**:
+```cpp
+"F p0"                    // Eventually visit region 0
+"G F p0"                  // Infinitely often visit region 0
+"F (p0 & F p1)"          // Eventually 0, then eventually 1
+"!(p0 & p1)"             // Never (0 and 1 simultaneously)
+"F p0 | F p1"            // Eventually 0 or eventually 1
+"G (p0 -> X p1)"         // If in 0, next must be in 1
+```
+
+### Querying Spot Automaton
+
+```cpp
+// Get state information
+unsigned numStates = buchi->num_states();
+unsigned initialState = buchi->get_init_state_number();
+
+// Check if state is accepting
+for (unsigned i = 0; i < numStates; ++i) {
+    if (buchi->state_is_accepting(i)) {
+        std::cout << "State " << i << " is accepting\n";
+    }
+}
+
+// Iterate over edges (transitions)
+for (const auto& edge : buchi->edges()) {
+    unsigned src = edge.src;
+    unsigned dst = edge.dst;
+    bdd cond = edge.cond;  // Boolean condition
+    
+    // Get condition as formula string
+    std::string label = bdd_format_formula(buchi->get_dict(), cond);
+    std::cout << "Transition: " << src << " --[" << label << "]-> " << dst << "\n";
+}
+
+// Get state names if available
+auto names = buchi->get_named_prop<std::map<unsigned, std::string>>("state-names");
+if (names) {
+    for (const auto& pair : *names) {
+        std::cout << "State " << pair.first << ": " << pair.second << "\n";
+    }
+}
+```
+
+### Export to GraphViz
+
+```cpp
+#include <spot/twaalgos/dot.hh>
+
+// Output as DOT format (for Graphviz)
+std::cout << spot::dot_reachable(buchi) << std::endl;
+
+// Or save to file
+std::ofstream out("buchi.dot");
+out << spot::dot_reachable(buchi);
+out.close();
+
+// Convert to image
+// dot -Tpng buchi.dot -o buchi.png
+```
 
 ---
 
@@ -449,12 +708,84 @@ g++ -std=c++20 -Wall -Wextra -g3 \
 
 ---
 
+## Complete Example
+
+Building and using all automaton types together:
+
+```cpp
+#include "Automaton.h"
+#include "BuchiAutomaton.h"
+#include "TS.h"
+#include "ProductAutomaton.h"
+#include "Edge_Node.h"
+#include <spot/twaalgos/translate.hh>
+#include <iostream>
+
+int main() {
+    // ========== 1. Create Transition System ==========
+    TS* ts = new TS();
+    
+    // Three regions
+    ts->add_Node(new Node(0, "RegionA"));
+    ts->add_Node(new Node(1, "RegionB"));
+    ts->add_Node(new Node(2, "RegionC"));
+    
+    // Add transitions
+    ts->getNode(0)->addEdge(Edge(1, "move_AB"));
+    ts->getNode(1)->addEdge(Edge(2, "move_BC"));
+    ts->getNode(1)->addEdge(Edge(0, "move_BA"));
+    ts->getNode(2)->addEdge(Edge(1, "move_CB"));
+    
+    ts->setInitial(0);
+    
+    std::cout << "TS: " << ts->getnumStates() << " states, " 
+              << ts->getnumEdges() << " transitions\n";
+    
+    // ========== 2. Create Büchi Automaton from LTL ==========
+    std::string ltl = "F (p0 & F p1)";  // Visit A then B
+    spot::twa_graph_ptr spotBuchi = spot::translate(ltl, false, false, false);
+    
+    if (!spotBuchi) {
+        std::cerr << "LTL translation failed\n";
+        return -1;
+    }
+    
+    std::cout << "\nLTL: " << ltl << "\n";
+    std::cout << "Büchi: " << spotBuchi->num_states() << " states\n";
+    
+    // ========== 3. Build Product Automaton ==========
+    ProductAutomaton* product = new ProductAutomaton(spotBuchi);
+    
+    std::cout << "\nProduct: " << product->getnumStates() << " states, " 
+              << product->getnumEdges() << " transitions\n";
+    
+    // ========== 4. Query States ==========
+    std::cout << "\nAccepting states in product:\n";
+    for (const auto& nodePair : product->getNodes()) {
+        if (product->isAccepting(nodePair.first)) {
+            auto mapping = product->getStateMapping(nodePair.first);
+            std::cout << "  Product state " << nodePair.first 
+                      << " = (TS:" << mapping.first 
+                      << ", Buchi:" << mapping.second << ")\n";
+        }
+    }
+    
+    // ========== Cleanup ==========
+    delete ts;
+    delete product;
+    
+    return 0;
+}
+```
+
+---
+
 ## Usage Examples
 
 ### Creating a Büchi Automaton from LTL
 
 ```cpp
-#include "Automatons/BuchiAutomaton.h"
+#include "BuchiAutomaton.h"
 
 BuchiAutomaton* gba = new BuchiAutomaton();
 
@@ -476,7 +807,7 @@ cout << endl;
 ### Working with Transition Systems
 
 ```cpp
-#include "Automatons/TS.h"
+#include "TS.h"
 
 TS ts;
 
@@ -497,7 +828,22 @@ vector<uint32_t> successors = ts.getSuccessors(0);  // Get states reachable from
 ### Creating a Product Automaton
 
 ```cpp
-#include "Automatons/ProductAutomaton.h"
+#include "ProductAutomaton.h"
+#include <spot/twaalgos/translate.hh>
+
+// Create product from LTL formula and transition system
+std::string ltl = "F p0 & G F p1";
+spot::twa_graph_ptr buchi = spot::translate(ltl, false, false, false);
+ProductAutomaton* product = new ProductAutomaton(buchi);
+
+// Query accepting states
+for (uint32_t state = 0; state < product->getnumStates(); ++state) {
+    if (product->isAccepting(state)) {
+        auto [ts_state, buchi_state] = product->getStateMapping(state);
+        cout << "State (" << ts_state << ", " << buchi_state << ") is accepting\n";
+    }
+}
+```
 
 TS* ts = new TS();
 // ... populate TS ...
