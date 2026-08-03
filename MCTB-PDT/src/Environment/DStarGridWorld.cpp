@@ -202,12 +202,7 @@ void DStarGridWorldPlanner::updateVertex(const Point& s) {
 }
 
 void DStarGridWorldPlanner::computeShortestPath() {
-    while (true) {
-        // Check if open list is empty
-        if (open_.empty()) {
-            break;
-        }
-        
+    while (!open_.empty()) {
         // Get state with minimum key
         auto [key, s] = open_.top();
         open_.pop();
@@ -241,10 +236,6 @@ void DStarGridWorldPlanner::computeShortestPath() {
                 updateVertex(pred);
             }
         }
-        // If g == rhs, state is consistent - done
-        else {
-            break;
-        }
         
         // Safety check: don't expand too many states
         if (static_cast<uint32_t>(expanded_count_) > gridworld_->getWidth() * gridworld_->getHeight()) {
@@ -264,16 +255,20 @@ std::vector<Point> DStarGridWorldPlanner::extractPath(const Point& current) cons
     while (!(current_pos.getX() == sgoal_.getX() && current_pos.getY() == sgoal_.getY()) && steps < max_steps) {
         path.push_back(current_pos);
         
-        // Find neighbor with minimum g value
+        // Find neighbor with minimum g value that can be reached
         double min_g = std::numeric_limits<double>::infinity();
         Point next = current_pos;
         
         auto successors = getSuccessors(current_pos);
         for (const auto& succ : successors) {
-            double cost = movementCost(current_pos, succ) + getG(succ);
-            if (cost < min_g) {
-                min_g = cost;
-                next = succ;
+            // Check if we can move to this successor (not an obstacle)
+            double move_cost = movementCost(current_pos, succ);
+            if (move_cost != std::numeric_limits<double>::infinity()) {
+                double succ_g = getG(succ);
+                if (succ_g < min_g) {
+                    min_g = succ_g;
+                    next = succ;
+                }
             }
         }
         

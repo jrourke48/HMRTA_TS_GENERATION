@@ -2,17 +2,56 @@
 
 ## Overview
 
-This module implements the core task allocation algorithms for multi-robot systems using hierarchical decision tree search. It synthesizes components from automatons, environments, and robot systems to find optimal task allocations that satisfy LTL specifications.
+This module implements the core task allocation algorithms for the thesis project for multi-robot systems using a hierarchical decision tree search. The main algorithm named the IITRTS (Intensive Inter-Task Relationship Tree Search) takes 3 inputs to produce the Planning Decision Tree ([Tree/](../Tree/README.md)) that is then searched the optimal path from root to frontier tree node is the completed robot allocation for the specified task. The three inputs to the main algorithm are the buchi automatons (NBA)[Automatons](../../Automatons/README.md), environment (Env)[Environment](../Environment/README.md), and Multi-robot system (MRS)[MultiRobotSystem](../MultiRobotSystem/README.md). The environment is comprised of a gridworld and a Transition System (TS). The transition system is an automaton that represents a partition of the entire workspace into meaningful sections such as rooms or aisles. While the gridworld divides the workspace into cells with an arbitrary resolutuion to allow robots to navigate the workspace. Next the Multi-Robot System details the number of robots, their resepctive capabilities, and their positions in the environment. Lastly, the NBA is an automaton that describes the specified task for the robots. The task is specefied as an LTL formula [LTLFormula](../LTLFormula/README.md) comprised of Batch Atomic Propostions and Temportal and logic operators that is then converted to a buchi automaton using the SPOT library.    These three inputs are then used by the main algorithm, IITRTS, to build the Tree, which is a subset of the entire product automaton. Then once the tree is built we do a tree search to find the optimal frontier node.
 
 ### Key Responsibilities
 
 1. **Task Allocation Algorithms** - Search strategies for assigning tasks to robots
-2. **Decision Tree Structure** - Hierarchical representation of task allocation possibilities
+2. **Decision Tree Structure** - Hierarchical representation of task allocation possibilities ([Tree/](../Tree/README.md))
 3. **Planning Space Management** - State, progress, and acceptance tracking during search
 4. **Pruning Strategies** - Optimization to prevent state space explosion
-5. **Integration** - Coordination between environment, automata, and robot systems
+5. **Integration** - Coordination between [Environment](../Environment/README.md), [Automatons](../../Automatons/README.md), and [MultiRobotSystem](../MultiRobotSystem/README.md)
 
 ## Architecture
+### System Architecture
+
+```
+┌─────────────────────────────────────────────────────────┐
+│          LTL Task Specifications (Formula)              │
+└─────────────────┬───────────────────────────────────────┘
+                  │ (Parse & Convert)
+                  ▼
+┌─────────────────────────────────────────────────────────┐
+│     Generalized Büchi Automata (GBA) Generation         |
+│              (via Spot Library)                         │
+└─────────────────┬───────────────────────────────────────┘
+                  │
+        ┌─────────┴─────────┐
+        ▼                   ▼
+┌───────────────┐  ┌──────────────────┐
+│ Transition    │  │ Büchi Automaton  │
+│ System (TS)   │  │ States/Edges     │
+└───────┬───────┘  └────────┬─────────┘
+        │                   │
+        └─────────┬─────────┘
+                  ▼
+┌─────────────────────────────────────────────────────────┐
+│          Product Automaton (TS × GBA)                   │
+│       Combined State Space with Acceptance Marks        │
+└─────────────────┬───────────────────────────────────────┘
+                  │
+                  ▼
+┌─────────────────────────────────────────────────────────┐
+│      Planning Decision Tree (Task Allocation)           │
+│     Hierarchical Search with Pruning Strategies         │
+└─────────────────┬───────────────────────────────────────┘
+                  │
+                  ▼
+┌─────────────────────────────────────────────────────────┐
+│    Allocated Task Sequences for Robot Team             │
+│         (Paths satisfying LTL specifications)           │
+└─────────────────────────────────────────────────────────┘
+```
 
 ### Core Components
 
@@ -119,7 +158,11 @@ Task Batch Planning Decision Tree/
 ├── GridWorld.cpp                    # Grid implementation
 ├── Point.h                          # 2D point utility
 ├── Point.cpp                        # Point implementation
-├── MultiRobotSystem/                # Multi-robot coordination
+├── [Environment/](../Environment/README.md)  # Grid and environment management
+├── [LTLFormula/](../LTLFormula/README.md)    # LTL parsing and atomic propositions
+├── [MultiRobotSystem/](../MultiRobotSystem/README.md)  # Multi-robot coordination
+├── [Tree/](../Tree/README.md)                # Planning tree node structures
+├── [Automatons/](../../Automatons/README.md) # Büchi automata (parent directory)
 └── README.md                        # This file
 ```
 
@@ -284,20 +327,30 @@ delete env;
 
 ## Integration Points
 
-### With Automatons Module
+### With Automatons Module ([Automatons/](../../Automatons/README.md))
 - Uses `Node` from `Automatons/` for automaton state representation
 - Works with `BuchiAutomaton` for LTL specification validation
 - Tracks progress through automaton states during planning
 
-### With Transition Systems Module
+### With LTL Formula Module ([LTLFormula/](../LTLFormula/README.md))
+- Parses LTL specifications into atomic propositions
+- Manages batch atomic propositions for task representation
+- Converts formulas to Büchi automata via SPOT library
+
+### With Environment Module ([Environment/](../Environment/README.md))
 - Integrates `GeneralTransitionSystem` for discrete state space
 - Maps between TS state IDs and grid coordinates
 - Queries successor states for planning exploration
 
-### With Multi-Robot System
+### With Multi-Robot System ([MultiRobotSystem/](../MultiRobotSystem/README.md))
 - Coordinates task allocation across multiple robots
 - Tracks individual robot times and capabilities
 - Manages robot-task relationships in allocation vectors
+
+### With Tree Module ([Tree/](../Tree/README.md))
+- Manages planning tree node structures and relationships
+- Stores task allocation decisions at each tree node
+- Tracks progress types (PRE, TRA, SUF, OTH) through task phases
 
 ## Data Flow
 

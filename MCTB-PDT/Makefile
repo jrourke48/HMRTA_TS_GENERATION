@@ -4,6 +4,7 @@ CXX = g++
 CXXFLAGS = -std=c++20 -Wall -Wextra -g3
 INCLUDES = -I. -I./include -I..
 LIBS = -lspot -lbddx
+RAYLIB_FLAGS = $(shell pkg-config --cflags --libs raylib 2>/dev/null || echo "-lraylib -lGL -lm -lpthread -ldl -lrt -lX11")
 
 # Output directory
 OUT_DIR = Testing
@@ -13,6 +14,7 @@ TASK_ALLOC_BIN = $(OUT_DIR)/TestTaskAllocation
 PLANNING_TREE_BIN = $(OUT_DIR)/TestPlanningTreeComprehensive
 OPTIMAL_PATH_BIN = $(OUT_DIR)/OptimalPathTest
 DSTAR_BIN = $(OUT_DIR)/Test_DStarGridWorld
+VIS_BIN = $(OUT_DIR)/Visualization
 
 # Source files
 TEST_SRC = apps/TestIntegration.cpp
@@ -21,6 +23,7 @@ TASK_ALLOC_SRC = apps/TestTaskAllocationAlgorithms.cpp
 PLANNING_TREE_TEST_SRC = apps/TestPlanningTreeComprehensive.cpp
 OPTIMAL_PATH_SRC = apps/Optimal_Path_Test.cpp
 DSTAR_SRC = apps/Test_DStarGridWorld.cpp
+VIS_SRC = apps/VisualizationApp.cpp
 # TaskAllocationAlgorithms - algorithms for task allocation
 TASK_ALLOC_SRCS = src/TaskAllocationAlgorithms.cpp
 
@@ -29,6 +32,7 @@ COMMON_SRCS = \
 	src/Environment/GridWorld.cpp \
 	src/Environment/Environment.cpp \
 	src/Environment/DStarGridWorld.cpp \
+	src/Environment/gridvis.cpp \
 	src/Tree/Tree_Node.cpp \
 	src/Tree/PlanningDecisionTree.cpp \
 	src/MultiRobotSystem/Robot.cpp \
@@ -47,14 +51,15 @@ TASK_ALLOC_OBJ = $(TASK_ALLOC_SRC:.cpp=.o)
 PLANNING_TREE_TEST_OBJ = $(PLANNING_TREE_TEST_SRC:.cpp=.o)
 OPTIMAL_PATH_OBJ = $(OPTIMAL_PATH_SRC:.cpp=.o)
 DSTAR_OBJ = $(DSTAR_SRC:.cpp=.o)
+VIS_OBJ = $(VIS_SRC:.cpp=.o)
 COMMON_OBJS = $(COMMON_SRCS:.cpp=.o)
 TASK_ALLOC_OBJS = $(TASK_ALLOC_SRCS:.cpp=.o)
-ALL_OBJS = $(TEST_OBJ) $(TREE_TEST_OBJ) $(TASK_ALLOC_OBJ) $(PLANNING_TREE_TEST_OBJ) $(OPTIMAL_PATH_OBJ) $(DSTAR_OBJ) $(COMMON_OBJS) $(TASK_ALLOC_OBJS)
+ALL_OBJS = $(TEST_OBJ) $(TREE_TEST_OBJ) $(TASK_ALLOC_OBJ) $(PLANNING_TREE_TEST_OBJ) $(OPTIMAL_PATH_OBJ) $(DSTAR_OBJ) $(VIS_OBJ) $(COMMON_OBJS) $(TASK_ALLOC_OBJS)
 
 # Targets
-.PHONY: all clean run rebuild help test test-tree test-task test-planning-tree test-optimal-path test-dstar test-all tree-only task-only planning-tree-only optimal-path-only dstar-only
+.PHONY: all clean run rebuild help test test-tree test-task test-planning-tree test-optimal-path test-dstar test-all tree-only task-only planning-tree-only optimal-path-only dstar-only vis vis-only
 
-all: $(OUT_BIN) $(TREE_BIN) $(TASK_ALLOC_BIN) $(PLANNING_TREE_BIN) $(OPTIMAL_PATH_BIN) $(DSTAR_BIN)
+all: $(OUT_BIN) $(TREE_BIN) $(TASK_ALLOC_BIN) $(PLANNING_TREE_BIN) $(OPTIMAL_PATH_BIN) $(DSTAR_BIN) $(VIS_BIN)
 
 # Build the test executable
 $(OUT_BIN): $(TEST_OBJ) $(COMMON_OBJS)
@@ -91,6 +96,12 @@ $(DSTAR_BIN): $(DSTAR_OBJ) $(COMMON_OBJS)
 	@mkdir -p $(OUT_DIR)
 	$(CXX) $(CXXFLAGS) $(INCLUDES) $^ -o $@ $(LIBS)
 	@echo "✓ Build successful: $(DSTAR_BIN)"
+
+# Build the visualization executable
+$(VIS_BIN): $(VIS_OBJ) $(COMMON_OBJS) $(TASK_ALLOC_OBJS)
+	@mkdir -p $(OUT_DIR)
+	$(CXX) $(CXXFLAGS) $(INCLUDES) $^ -o $@ $(LIBS) $(RAYLIB_FLAGS)
+	@echo "✓ Build successful: $(VIS_BIN)"
 
 # Compile object files
 %.o: %.cpp
@@ -141,6 +152,15 @@ optimal-path-only: test-optimal-path
 # Shortcut to run only D* tests
 dstar-only: test-dstar
 
+# Run visualization
+vis: $(VIS_BIN)
+	@echo "Running visualization..."
+	@$(VIS_BIN)
+
+# Shortcut to build only visualization
+vis-only: $(VIS_BIN)
+	@echo "✓ Visualization built. Run 'make vis' to execute."
+
 # Run all tests
 test-all: run test-tree test-task test-planning-tree test-optimal-path test-dstar
 
@@ -169,10 +189,14 @@ help:
 	@echo "  make test-task           - Build and run the task allocation tests"
 	@echo "  make test-planning-tree  - Build and run planning tree tests"
 	@echo "  make test-optimal-path   - Build and run optimal path visualization tests"
+	@echo "  make test-dstar          - Build and run D* GridWorld algorithm tests"
+	@echo "  make vis                 - Build and run visualization app (requires raylib)"
+	@echo "  make vis-only            - Build only visualization executable"
 	@echo "  make tree-only           - Shortcut for 'make test-tree'"
 	@echo "  make task-only           - Shortcut for 'make test-task'"
 	@echo "  make planning-tree-only  - Shortcut for 'make test-planning-tree'"
 	@echo "  make optimal-path-only   - Shortcut for 'make test-optimal-path'"
+	@echo "  make dstar-only          - Shortcut for 'make test-dstar'"
 	@echo "  make test                - Run all tests"
 	@echo "  make test-all            - Run all tests (explicit)"
 	@echo "  make rebuild             - Clean and rebuild all"
@@ -183,6 +207,7 @@ help:
 	@echo "  make                        # Build all tests"
 	@echo "  make run                    # Build and run integration test"
 	@echo "  make test-tree              # Build and run tree tests"
+	@echo "  make vis                    # Build and run visualization (D* pathfinding)"
 	@echo "  make test-optimal-path      # Build and run optimal path tests"
 	@echo "  make test                   # Build and run all tests"
 	@echo "  make clean && make          # Rebuild from scratch"

@@ -69,9 +69,11 @@ public:
             return;
         }
         
-        // Check path length is roughly diagonal distance (approximately 14-15 waypoints)
+        // Check path length is reasonable for diagonal movement
+        // Distance = sqrt(200) ≈ 14.14, with diagonals we need ~10 waypoints
         double expected_distance = std::sqrt(10*10 + 10*10);  // ~14.14
-        if (path.size() < expected_distance - 2) {
+        double expected_waypoints = expected_distance / std::sqrt(2.0);  // ~10
+        if (path.size() < expected_waypoints - 2) {
             failTest("Path seems too short");
             return;
         }
@@ -202,8 +204,8 @@ public:
         printPath(path1);
         std::cout << "  Initial plan length: " << initial_length << std::endl;
         
-        // Now block the path with a wall
-        Point robot_pos(10, 10);  // Robot has moved to this position
+        // Robot has moved along the path but not to obstacle location
+        Point robot_pos(5, 10);  // Safe position before the wall will be placed
         std::vector<Point> changed_cells;
         
         for (int y = 8; y <= 12; ++y) {
@@ -330,7 +332,9 @@ public:
         double expected_distance = std::sqrt(90*90 + 90*90);
         std::cout << "  Expected distance: ~" << expected_distance << std::endl;
         
-        if (path.size() < expected_distance - 5) {
+        // With diagonal movement, waypoint count = distance / sqrt(2)
+        double expected_waypoints = expected_distance / std::sqrt(2.0);  // ~90
+        if (path.size() < expected_waypoints - 5) {
             failTest("Path seems too short");
             return;
         }

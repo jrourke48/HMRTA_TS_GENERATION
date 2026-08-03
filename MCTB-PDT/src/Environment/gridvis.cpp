@@ -1,5 +1,6 @@
 #include "Environment/gridvis.h"
-#include "raylib.h"
+#include "Environment/DStarGridWorld.h"
+#include <raylib.h>
 #include <iostream>
 #include <vector>
 #include <cmath>
@@ -17,7 +18,6 @@ static void gridToScreen(
 }
 
 // Helper: Compute a single D* path from start to goal
-// TODO: Integrate with actual D* Lite algorithm
 static std::vector<Point> compute_dstar_path_single(
     const Environment& env,
     const Point& startPos,
@@ -25,17 +25,18 @@ static std::vector<Point> compute_dstar_path_single(
 ) {
     std::vector<Point> path;
     
-    // TODO: Call D* Lite with:
-    // - env.getGridWorld() for the grid
-    // - startPos as the start
-    // - goalPos as the goal
-    // - env.isObstacle() to check blocked cells
-    
-    // Placeholder: Linear interpolation (temporary)
-    path.push_back(startPos);
-    if (!(startPos.getX() == goalPos.getX() && startPos.getY() == goalPos.getY())) {
-        path.push_back(goalPos);
+    // Get the GridWorld from environment
+    const GridWorld* gridWorld = env.getGridWorld();
+    if (!gridWorld) {
+        std::cerr << "compute_dstar_path_single: GridWorld is null" << std::endl;
+        return path;
     }
+    
+    // Create D* Lite planner for this grid
+    DStarGridWorldPlanner planner(const_cast<GridWorld*>(gridWorld));
+    
+    // Compute path from start to goal
+    path = planner.plan(startPos, goalPos);
     
     return path;
 }
