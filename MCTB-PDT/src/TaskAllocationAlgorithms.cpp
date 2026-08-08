@@ -15,13 +15,19 @@
  */
 TaskAllocationAlgorithms::TaskAllocationAlgorithms(BuchiAutomaton* nbaPtr, Environment* envPtr, MultiRobotSystem* robotSysPtr)
     : nba(nbaPtr), environment(envPtr), planningTree(nullptr), traversedTree(nullptr), multiRobotSystem(robotSysPtr) {
+    metrics = new AlgorithmMetrics();
 }
 
 /**
  * TaskAllocationAlgorithms - Destructor
  */
 TaskAllocationAlgorithms::~TaskAllocationAlgorithms() {
-    // Note: We don't delete the pointers here as they are managed externally
+    // Clean up metrics
+    if (metrics != nullptr) {
+        delete metrics;
+        metrics = nullptr;
+    }
+    // Note: Other pointers are managed externally
 }
 
 //  * Algorithm 1: Intensive Inter-Task Relationship Tree Search
@@ -115,7 +121,7 @@ PlanningDecisionTree* TaskAllocationAlgorithms::intensiveInterTaskRelationshipTr
     
     // Automaton characteristics
     indVars.num_automaton_states = nbaPtr->getNumStates();
-    indVars.num_automaton_edges = 0;  // TODO: add getNumEdges() to BuchiAutomaton
+    indVars.num_automaton_edges = nbaPtr->getNumEdges();
     indVars.num_atomic_propositions = nbaPtr->getLTLFormula()->getBatchAtomicPropositions().size();
     
     // Robot fleet characteristics
@@ -158,6 +164,9 @@ PlanningDecisionTree* TaskAllocationAlgorithms::intensiveInterTaskRelationshipTr
     
     // Store in metrics
     metrics->setIndependentVariables(indVars);
+    
+    // Start timing the algorithm execution
+    metrics->startTimer();
     //=======================================================================
     //=======================================================================
 
@@ -296,9 +305,23 @@ PlanningDecisionTree* TaskAllocationAlgorithms::intensiveInterTaskRelationshipTr
     //get the total number of nodes traversed and in expanded in the planning tree
     metrics->subtree_efficiency_.total_nodes_traversed = traversedTree->getNumNodes();
     metrics->subtree_efficiency_.total_nodes_generated = planningTree->getNumNodes();
+    
     // Final tree state
     // Reassign node IDs to ensure proper hierarchy order (root = 0, then by depth)
     tree->reassignNodeIds();
+    
+    // Stop timing the algorithm execution
+    metrics->stopTimer();
+    //Compute derived metrics and store the solution quality metrics after stopping the timer
+    metrics->computeDerivedMetrics();
+    
+    // Update independent variables with results from algorithm execution
+    metrics->iv_.num_inter_task_constraints = static_cast<int>(treebatchvals.size());
+    
+    // Store solution quality metrics
+    metrics->setSolutionMakespan(finalOptimalNode->getMaxTime());
+    metrics->setSumOfTravelTimes(finalOptimalNode->getSumOfTimes());
+    metrics->setRobotsUtilized(finalOptimalNode->getNumUtilizedRobots());
     
     return tree;
 }

@@ -5,8 +5,7 @@ gridvis:
 1. Robots use the same goal position so they lie directly on top of eachother
 2. The ts regions have no meaningful borders in the gridworld (ie. obstacles) meaning robots can enter and exit any where from one ts to another.
 3. currently not working for infinite need to figure out why
-4. **Atomic Proposition Checking** - Evaluate task conditions at states
-5. **Cost Tracking** - Support for weighted motion planning
+4. the obstacles can populate where the robots currently are add a stop for that
 
 ## Overview
 

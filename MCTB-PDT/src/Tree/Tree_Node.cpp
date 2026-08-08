@@ -99,6 +99,18 @@ uint16_t Tree_Node::getTimeForRobot(uint16_t robotIndex) const {
     }
     return times[robotIndex];
 }
+
+/**
+ * getSumOfTimes - Get the sum of all robot times
+ */
+uint16_t Tree_Node::getSumOfTimes() const {
+    uint16_t sum = 0;
+    for (uint16_t time : times) {
+        sum += time;
+    }
+    return sum;
+}
+
 /**
  * getMaxTime - Get the maximum time across all robots
  */
@@ -121,6 +133,35 @@ int8_t Tree_Node::getBatch() const {
  */
 Tree_Node::TASK_PROGRESS Tree_Node::getProgress() const {
     return prog;
+}
+
+/**
+ * getNumUtilizedRobots - Get the number of robots utilized along the path from this node to root
+ * Traverses up the tree and collects all robots allocated at any node in the path
+ * Returns count of unique robots used along the entire path
+ */
+uint16_t Tree_Node::getNumUtilizedRobots() const {
+    // Start with a vector of all false (all robots unused)
+    std::vector<bool> utilizedRobots(robo_task_allocation.size(), false);
+    
+    // Traverse up the path from current node to root, marking allocated robots
+    Tree_Node* current = const_cast<Tree_Node*>(this);
+    while (current != nullptr) {
+        // Mark robots allocated at this node
+        for (size_t i = 0; i < current->robo_task_allocation.size(); ++i) {
+            if (current->robo_task_allocation[i]) {
+                utilizedRobots[i] = true;
+            }
+        }
+        current = current->ParentNode;
+    }
+    
+    // Count the number of utilized robots
+    uint16_t count = 0;
+    for (bool isUtilized : utilizedRobots) {
+        if (isUtilized) ++count;
+    }
+    return count;
 }
 
 /**

@@ -83,6 +83,7 @@ public:
         double memory_reduction_ratio = 0.0;             // tree_memory / product_memory
         double optimality_gap_percent = 0.0;             // (J_tree - J_full) / J_full * 100
         double runtime_speedup_percent = 0.0;            // (time_prod - time_tree) / time_prod * 100
+        double percent_nodes_in_tree = 0.0;              // (generated / traversed) * 100
         long long state_space_reduction = 0;             // product_nodes - tree_nodes
     };
     
@@ -133,6 +134,15 @@ public:
     void exportToCSV(const std::string& filename) const;
     void exportToJSON(const std::string& filename) const;
     
+    // Solution quality metrics updates
+    void setSolutionMakespan(double tree_makespan_sec, double product_makespan_sec = 0.0);
+    void setSumOfTravelTimes(double sum_seconds);
+    void setTravelDistance(double total_distance, double max_individual_distance = 0.0);
+    void setRobotsUtilized(int count);
+    void setIndividualTravelTime(int robot_id, double time_seconds);
+    void setIndividualTravelDistance(int robot_id, double distance);
+    void setTasksPerRobot(int robot_id, int task_count);
+    
     // Batch runtime parameter updates
     void addRuntimeVsRobots(int num_robots, double time_ms);
     void addRuntimeVsAutomatonStates(int states, double time_ms);
@@ -156,6 +166,7 @@ private:
     
     // Helper methods
     double computePruningRatio() const;
+    double computePercentNodesInTree() const;
     double computeExploredProductRatio() const;
     double computeTreeProductRatio() const;
     double computeMemoryReductionRatio() const;

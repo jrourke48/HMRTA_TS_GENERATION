@@ -35,12 +35,12 @@ int main() {
         TS* ts = new TS();
         
         // Add 6 states 
-        Node* node0 = new Node(0, "R0");
-        Node* node1 = new Node(1, "R1");
-        Node* node2 = new Node(2, "R2");
-        Node* node3 = new Node(3, "R3");
-        Node* node4 = new Node(4, "R4");
-        Node* node5 = new Node(5, "R5");
+        Node* node0 = new Node(0, "S0");
+        Node* node1 = new Node(1, "S1");
+        Node* node2 = new Node(2, "S2");
+        Node* node3 = new Node(3, "S3");
+        Node* node4 = new Node(4, "S4");
+        Node* node5 = new Node(5, "S5");
 
         //with edges: 0-2 1-2 2-3 2-4 2-5
         node0->addEdge(Edge(2));
@@ -88,34 +88,34 @@ int main() {
         }
         
         // Position all robots in room 0 (centered at Point(18, 14))
-        Robot* r1 = new Robot(1, "Rover_1", Point(18, 14));
+        Robot* r0 = new Robot(0, "R0", Point(18, 14));
+        r0->initializeCapabilities(13);
+        r0->enableCapability(RobotCapability::SENSOR_GPS); //C
+        mrs->addRobot(r0);
+        
+        Robot* r1 = new Robot(1, "R1", Point(17, 14));
         r1->initializeCapabilities(13);
-        r1->enableCapability(RobotCapability::SENSOR_GPS); //C
+        r1->enableCapability(RobotCapability::MOVEMENT_GROUND); //A
         mrs->addRobot(r1);
         
-        Robot* r2 = new Robot(2, "Rover_2", Point(17, 14));
+        Robot* r2 = new Robot(2, "R2", Point(19, 14));
         r2->initializeCapabilities(13);
-        r2->enableCapability(RobotCapability::MOVEMENT_GROUND); //A
+        r2->enableCapability(RobotCapability::SENSOR_CAMERA); // B
         mrs->addRobot(r2);
-        
-        Robot* r3 = new Robot(3, "Rover_3", Point(19, 14));
+        Robot* r3 = new Robot(3, "R3", Point(18, 13));
         r3->initializeCapabilities(13);
-        r3->enableCapability(RobotCapability::SENSOR_CAMERA); // B
+        r3->enableCapability(RobotCapability::SENSOR_GPS); // C
         mrs->addRobot(r3);
-        Robot* r4 = new Robot(4, "Rover_4", Point(18, 13));
+        
+        Robot* r4 = new Robot(4, "R4", Point(18, 15));
         r4->initializeCapabilities(13);
-        r4->enableCapability(RobotCapability::SENSOR_GPS); // C
+        r4->enableCapability(RobotCapability::MOVEMENT_GROUND);
         mrs->addRobot(r4);
         
-        Robot* r5 = new Robot(5, "Rover_5", Point(18, 15));
+        Robot* r5 = new Robot(5, "R5", Point(17, 15));
         r5->initializeCapabilities(13);
-        r5->enableCapability(RobotCapability::MOVEMENT_GROUND);
+        r5->enableCapability(RobotCapability::SENSOR_CAMERA);
         mrs->addRobot(r5);
-        
-        Robot* r6 = new Robot(6, "Rover_6", Point(17, 15));
-        r6->initializeCapabilities(13);
-        r6->enableCapability(RobotCapability::SENSOR_CAMERA);
-        mrs->addRobot(r6);
     
     std::cout << "✓ MultiRobotSystem created with 6 robots" << std::endl;
         
@@ -145,6 +145,11 @@ int main() {
         PlanningDecisionTree* planningTree = taa1->getPlanningTree();
         std::vector<Tree_Node*> optimalPath = planningTree->getPathtoFrontierNode(planningTree->getOptimalFrontierNode(true));
         
+        // Print metrics after algorithm completes
+        std::cout << "\n=== Algorithm Metrics ===" << std::endl;
+        taa1->getMetrics().printSummary();
+        std::cout << std::endl;
+        
         // Visualize planning tree and optimal path
         taa1->visualizeTree("output/planning_tree");
         taa1->visualizeOptimalPath("output/optimal_path");
@@ -155,7 +160,7 @@ int main() {
         std::cout << "Displaying visualization (close window to exit)..." << std::endl;
         std::cout << "  - Green/Blue/Orange regions: TS states" << std::endl;
         std::cout << "  - Dark gray: obstacles" << std::endl;
-        std::cout << "  - Colored circles: robots (R0, R1, R2)" << std::endl;
+        std::cout << "  - Colored circles: robots (0-5)" << std::endl;
         std::cout << "  - Colored squares: robot paths (D* computed)" << std::endl;
         
         visualize_environment(

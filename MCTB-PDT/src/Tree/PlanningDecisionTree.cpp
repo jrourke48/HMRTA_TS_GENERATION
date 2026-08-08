@@ -215,6 +215,13 @@ size_t PlanningDecisionTree::getNodeCount() const {
 }
 
 /**
+ * getNumNodes - Get the total number of nodes in the tree
+ */
+long long PlanningDecisionTree::getNumNodes() const {
+    return static_cast<long long>(nodeCount);
+}
+
+/**
  * clearTree - Clear all nodes in the tree (recursive delete)
  */
 void PlanningDecisionTree::clearTree() {

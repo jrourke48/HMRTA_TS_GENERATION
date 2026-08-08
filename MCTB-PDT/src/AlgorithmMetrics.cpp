@@ -30,19 +30,55 @@ void AlgorithmMetrics::startTimer() {
 
 void AlgorithmMetrics::stopTimer() {
     auto end_time = std::chrono::high_resolution_clock::now();
-    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(
+    auto duration = std::chrono::duration_cast<std::chrono::microseconds>(
         end_time - overall_start_time_);
-    runtime_.total_computation_time_ms = duration.count();
+    runtime_.total_computation_time_ms = duration.count() / 1000.0;  // Convert microseconds to milliseconds
 }
 
-// ==================== RECORD METRICS ====================
+// ==================== SOLUTION QUALITY METRICS UPDATES ====================
 
-void AlgorithmMetrics::recordSubtreeEfficiency(const SubtreeEfficiencyMetrics& efficiency) {
-    subtree_efficiency_ = efficiency;
+void AlgorithmMetrics::setSolutionMakespan(double tree_makespan_sec, double product_makespan_sec) {
+    solution_quality_.tree_makespan_seconds = tree_makespan_sec;
+    solution_quality_.product_makespan_seconds = product_makespan_sec;
 }
 
-void AlgorithmMetrics::recordSolutionQuality(const SolutionQualityMetrics& quality) {
-    solution_quality_ = quality;
+void AlgorithmMetrics::setSumOfTravelTimes(double sum_seconds) {
+    solution_quality_.sum_of_travel_times_seconds = sum_seconds;
+}
+
+void AlgorithmMetrics::setTravelDistance(double total_distance, double max_individual_distance) {
+    solution_quality_.total_travel_distance = total_distance;
+    solution_quality_.max_individual_travel_distance = max_individual_distance;
+}
+
+void AlgorithmMetrics::setRobotsUtilized(int count) {
+    solution_quality_.robots_utilized = count;
+    // Immediately recompute the ratio
+    solution_quality_.robot_utilization_ratio = computeRobotUtilizationRatio();
+}
+
+void AlgorithmMetrics::setIndividualTravelTime(int robot_id, double time_seconds) {
+    if (robot_id >= 0 && robot_id < static_cast<int>(solution_quality_.individual_travel_times.size())) {
+        solution_quality_.individual_travel_times[robot_id] = time_seconds;
+    } else if (robot_id == static_cast<int>(solution_quality_.individual_travel_times.size())) {
+        solution_quality_.individual_travel_times.push_back(time_seconds);
+    }
+}
+
+void AlgorithmMetrics::setIndividualTravelDistance(int robot_id, double distance) {
+    if (robot_id >= 0 && robot_id < static_cast<int>(solution_quality_.individual_travel_distances.size())) {
+        solution_quality_.individual_travel_distances[robot_id] = distance;
+    } else if (robot_id == static_cast<int>(solution_quality_.individual_travel_distances.size())) {
+        solution_quality_.individual_travel_distances.push_back(distance);
+    }
+}
+
+void AlgorithmMetrics::setTasksPerRobot(int robot_id, int task_count) {
+    if (robot_id >= 0 && robot_id < static_cast<int>(solution_quality_.tasks_per_robot.size())) {
+        solution_quality_.tasks_per_robot[robot_id] = task_count;
+    } else if (robot_id == static_cast<int>(solution_quality_.tasks_per_robot.size())) {
+        solution_quality_.tasks_per_robot.push_back(task_count);
+    }
 }
 
 // ==================== DERIVED METRICS COMPUTATION ====================
@@ -53,9 +89,15 @@ double AlgorithmMetrics::computePruningRatio() const {
            subtree_efficiency_.total_nodes_generated;
 }
 
+double AlgorithmMetrics::computePercentNodesInTree() const {
+    if (subtree_efficiency_.total_nodes_traversed == 0) return 0.0;
+    return (static_cast<double>(subtree_efficiency_.total_nodes_generated) / 
+           subtree_efficiency_.total_nodes_traversed)*100.0;
+}
+
 double AlgorithmMetrics::computeExploredProductRatio() const {
     if (subtree_efficiency_.full_product_automaton_nodes == 0) return 0.0;
-    return static_cast<double>(subtree_efficiency_.total_nodes_generated) / 
+    return static_cast<double>(subtree_efficiency_.total_nodes_traversed) / 
            subtree_efficiency_.full_product_automaton_nodes;
 }
 
@@ -67,7 +109,7 @@ double AlgorithmMetrics::computeTreeProductRatio() const {
 
 double AlgorithmMetrics::computeMemoryReductionRatio() const {
     if (subtree_efficiency_.product_automaton_memory_bytes == 0) return 0.0;
-    return static_cast<double>(subtree_efficiency_.tree_memory_bytes) / 
+    return static_cast<double>(subtree_efficiency_.planning_tree_memory_bytes) / 
            subtree_efficiency_.product_automaton_memory_bytes;
 }
 
@@ -96,6 +138,7 @@ void AlgorithmMetrics::computeDerivedMetrics() {
     subtree_efficiency_.explored_product_ratio = computeExploredProductRatio();
     subtree_efficiency_.tree_product_ratio = computeTreeProductRatio();
     subtree_efficiency_.memory_reduction_ratio = computeMemoryReductionRatio();
+    subtree_efficiency_.percent_nodes_in_tree = computePercentNodesInTree();
     subtree_efficiency_.state_space_reduction = 
         subtree_efficiency_.full_product_automaton_nodes - 
         subtree_efficiency_.total_nodes_generated;
@@ -167,17 +210,28 @@ void AlgorithmMetrics::printSummary() const {
     // Subtree Efficiency
     std::cout << "SUBTREE EFFICIENCY METRICS:" << std::endl;
     std::cout << "  Total Nodes Generated: " << subtree_efficiency_.total_nodes_generated << std::endl;
-    std::cout << "  Total Nodes Expanded: " << subtree_efficiency_.total_nodes_expanded << std::endl;
+    std::cout << "  Total Nodes Traversed: " << subtree_efficiency_.total_nodes_traversed << std::endl;
     std::cout << "  Total Nodes Pruned: " << subtree_efficiency_.total_nodes_pruned << std::endl;
     std::cout << "  Pruning Ratio: " << std::fixed << std::setprecision(4) 
               << subtree_efficiency_.pruning_ratio << std::endl;
-    std::cout << "  Memory Reduction Ratio: " << subtree_efficiency_.memory_reduction_ratio << std::endl;
+    std::cout << "  Percent Nodes in Tree: " << std::fixed << std::setprecision(2) 
+              << subtree_efficiency_.percent_nodes_in_tree << "%" << std::endl;
+    std::cout << "  Explored Product Ratio: " << std::fixed << std::setprecision(4) 
+              << subtree_efficiency_.explored_product_ratio << std::endl;
+    std::cout << "  Tree Product Ratio: " << std::fixed << std::setprecision(4) 
+              << subtree_efficiency_.tree_product_ratio << std::endl;
+    std::cout << "  Memory Reduction Ratio: " << std::fixed << std::setprecision(4) 
+              << subtree_efficiency_.memory_reduction_ratio << std::endl;
+    std::cout << "  Optimality Gap: " << std::fixed << std::setprecision(2) 
+              << subtree_efficiency_.optimality_gap_percent << "%" << std::endl;
+    std::cout << "  Runtime Speedup: " << std::fixed << std::setprecision(2) 
+              << subtree_efficiency_.runtime_speedup_percent << "%" << std::endl;
     std::cout << "  State-Space Reduction: " << subtree_efficiency_.state_space_reduction << "\n" << std::endl;
     
     // Solution Quality
     std::cout << "SOLUTION QUALITY METRICS:" << std::endl;
-    std::cout << "  Makespan: " << std::fixed << std::setprecision(2) 
-              << solution_quality_.makespan_seconds << " sec" << std::endl;
+    std::cout << "  Tree Makespan: " << std::fixed << std::setprecision(2) 
+              << solution_quality_.tree_makespan_seconds << " sec" << std::endl;
     std::cout << "  Sum of Travel Times: " << solution_quality_.sum_of_travel_times_seconds << " sec" << std::endl;
     std::cout << "  Total Travel Distance: " << solution_quality_.total_travel_distance << std::endl;
     std::cout << "  Max Individual Distance: " << solution_quality_.max_individual_travel_distance << std::endl;
@@ -272,8 +326,8 @@ void AlgorithmMetrics::exportToCSV(const std::string& filename) const {
     outfile << "State-Space Reduction," << subtree_efficiency_.state_space_reduction << ",count\n";
     
     // Solution Quality
-    outfile << "Makespan," << std::fixed << std::setprecision(2) 
-            << solution_quality_.makespan_seconds << ",seconds\n";
+    outfile << "Tree Makespan," << std::fixed << std::setprecision(2) 
+            << solution_quality_.tree_makespan_seconds << ",seconds\n";
     outfile << "Sum of Travel Times," << solution_quality_.sum_of_travel_times_seconds << ",seconds\n";
     outfile << "Total Travel Distance," << solution_quality_.total_travel_distance << ",units\n";
     outfile << "Max Individual Distance," << solution_quality_.max_individual_travel_distance << ",units\n";
@@ -312,7 +366,7 @@ void AlgorithmMetrics::exportToJSON(const std::string& filename) const {
     
     outfile << "  \"subtree_efficiency_metrics\": {\n";
     outfile << "    \"total_nodes_generated\": " << subtree_efficiency_.total_nodes_generated << ",\n";
-    outfile << "    \"total_nodes_expanded\": " << subtree_efficiency_.total_nodes_expanded << ",\n";
+    outfile << "    \"total_nodes_traversed\": " << subtree_efficiency_.total_nodes_traversed << ",\n";
     outfile << "    \"total_nodes_pruned\": " << subtree_efficiency_.total_nodes_pruned << ",\n";
     outfile << "    \"pruning_ratio\": " << std::fixed << std::setprecision(4) 
             << subtree_efficiency_.pruning_ratio << ",\n";
@@ -323,8 +377,8 @@ void AlgorithmMetrics::exportToJSON(const std::string& filename) const {
     outfile << "  },\n";
     
     outfile << "  \"solution_quality_metrics\": {\n";
-    outfile << "    \"makespan_seconds\": " << std::fixed << std::setprecision(2) 
-            << solution_quality_.makespan_seconds << ",\n";
+    outfile << "    \"tree_makespan_seconds\": " << std::fixed << std::setprecision(2) 
+            << solution_quality_.tree_makespan_seconds << ",\n";
     outfile << "    \"sum_of_travel_times\": " 
             << solution_quality_.sum_of_travel_times_seconds << ",\n";
     outfile << "    \"total_travel_distance\": " 

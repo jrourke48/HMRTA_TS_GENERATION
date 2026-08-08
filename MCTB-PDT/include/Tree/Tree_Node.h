@@ -47,10 +47,14 @@ class Tree_Node {
         const std::vector<bool>& getRoboTaskAllocation() const;
         bool isRobotAllocated(uint16_t robotIndex) const;
         const std::vector<uint16_t>& getTimes() const;
+        const std::vector<Point>& getRobotPositions() const;
+        uint16_t getSumOfTimes() const;
+        uint16_t getNumUtilizedRobots() const;
         uint16_t getMaxTime() const;
         uint16_t getTimeForRobot(uint16_t robotIndex) const;
         int8_t getBatch() const;
         TASK_PROGRESS getProgress() const;
+
         
         // Setter methods
         void setAutomatonState(Node* state);
@@ -61,9 +65,6 @@ class Tree_Node {
         void setProgress(TASK_PROGRESS curProg);
         void setId(uint32_t newId);
         void setRobotPositions(const std::vector<Point>& positions);
-        
-        // Robot positions
-        const std::vector<Point>& getRobotPositions() const;
         bool hasRobotPositions() const;
         
         // Sorting methods

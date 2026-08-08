@@ -345,7 +345,7 @@ void visualize_environment(
             DrawCircleLines(centerX, centerY, radius + 2, BLACK);
 
             // Draw robot ID
-            std::string robotLabel = "R" + std::to_string(i);
+            std::string robotLabel = mrs.getRobot(i)->getName();
             DrawText(robotLabel.c_str(), centerX - 8, centerY - 8, 14, WHITE);
         }
 
@@ -358,7 +358,7 @@ void visualize_environment(
         for (uint32_t i = 0; i < mrs.getNumRobots() && i < 6; ++i) {
             Color robotColor = robotColors[i % numRobotColors];
             DrawCircle(17, legendY + 8, 5, robotColor);
-            std::string label = "Robot " + std::to_string(i);
+            std::string label = mrs.getRobot(i)->getName();
             DrawText(label.c_str(), 30, legendY, 12, BLACK);
             legendY += 20;
         }
