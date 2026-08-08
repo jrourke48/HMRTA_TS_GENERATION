@@ -2,6 +2,8 @@
 #include <memory>
 #include <vector>
 #include <string>
+#include <cstdlib>
+#include <ctime>
 #include "../include/Environment/Environment.h"
 #include "../include/Environment/GridWorld.h"
 #include "../include/Environment/gridvis.h"
@@ -70,12 +72,12 @@ int main() {
         std::cout << "✓ Environment created" << std::endl;
         
         // Map states to grid regions
-        env->mapTSStateToGrid(0, Point(18, 14), 5, 14);    // State 0 centered at (17,15), 4x6 region
-        env->mapTSStateToGrid(1, Point(18, 4), 5, 7);   // State 1 centered at (17,4)
-        env->mapTSStateToGrid(2, Point(10, 10), 6, 20);   // State 2 centered at (10,11)
-        env->mapTSStateToGrid(3, Point(5, 3), 5, 18);   // State 3 centered at (5,5)
-        env->mapTSStateToGrid(4, Point(5, 10), 5, 11);   // State 4 centered at (5,10)
-        env->mapTSStateToGrid(5, Point(5, 15), 5, 4);   // State 5 centered at (5,15)
+        env->mapTSStateToGrid(0, Point(17, 15), 8, 12);    // State 0 centered at (17,15), 4x6 region
+        env->mapTSStateToGrid(1, Point(17, 4), 8, 8);   // State 1 centered at (17,4)
+        env->mapTSStateToGrid(2, Point(10, 10), 6, 22);   // State 2 centered at (10,11)
+        env->mapTSStateToGrid(3, Point(3, 3), 8, 6);   // State 3 centered at (5,5)
+        env->mapTSStateToGrid(4, Point(3, 10), 8, 8);   // State 4 centered at (5,10)
+        env->mapTSStateToGrid(5, Point(3, 17), 8, 8);   // State 5 centered at (5,15)
         std::cout << "✓ Mapped 6 states to grid regions" << std::endl;
         
         // Create MultiRobotSystem
@@ -117,19 +119,21 @@ int main() {
     
     std::cout << "✓ MultiRobotSystem created with 6 robots" << std::endl;
         
-        // Add some obstacles for interesting pathfinding
-        std::cout << "Adding obstacles..." << std::endl;
-        for (int x = 10; x < 15; ++x) {
-            env->addObstacle(Point(x, 15));  // Horizontal wall
+        // Add random obstacles for interesting pathfinding
+        std::cout << "Adding random obstacles..." << std::endl;
+        srand(time(0));
+        int numObstacles = 15;
+        for (int i = 0; i < numObstacles; i++) {
+            int x = rand() % 20;
+            int y = rand() % 20;
+            env->addObstacle(Point(x, y));
         }
-        for (int y = 18; y < 20; ++y) {
-            env->addObstacle(Point(12, y));  // Vertical wall
-        }
-        std::string ltl_str = "(F\"p1\" && F\"p2\")";
+        std::cout << "✓ Added " << numObstacles << " random obstacles" << std::endl;
+        std::string ltl_str = "(F\"p1\") && (F\"p2\")";
     
         std::vector<BatchAtomicProposition> batchAPs;
-        batchAPs.push_back(BatchAtomicProposition(1, 1, {true, false, false, false, false, false, false, false, false, false, false, false, false}, 0));
-        batchAPs.push_back(BatchAtomicProposition(2, 2, {false, false, false, true, false, true, false, false, false, false, false, false, false}, 0));
+        batchAPs.push_back(BatchAtomicProposition(1, 1, {true, false, false, false, false, true, false, false, false, false, false, false, false}, 0));
+        batchAPs.push_back(BatchAtomicProposition(2, 2, {true, false, false, false, false, true, false, false, false, false, false, false, false}, 0));
         
         LTLFormula* ltlFormula = new LTLFormula(ltl_str, batchAPs);
         BuchiAutomaton* buchi = new BuchiAutomaton(ltlFormula);
@@ -140,9 +144,14 @@ int main() {
         taa1->intensiveInterTaskRelationshipTreeSearch(buchi, env, mrs);
         PlanningDecisionTree* planningTree = taa1->getPlanningTree();
         std::vector<Tree_Node*> optimalPath = planningTree->getPathtoFrontierNode(planningTree->getOptimalFrontierNode(true));
+        
+        // Visualize planning tree and optimal path
+        taa1->visualizeTree("output/planning_tree");
+        taa1->visualizeOptimalPath("output/optimal_path");
+        std::cout << "✓ Visualizations saved" << std::endl;
+        
         std::cout << "Computing D* paths for robots..." << std::endl;
         RobotPathMap robotPaths = compute_dstar_paths(*env, *mrs, optimalPath);
-        
         std::cout << "Displaying visualization (close window to exit)..." << std::endl;
         std::cout << "  - Green/Blue/Orange regions: TS states" << std::endl;
         std::cout << "  - Dark gray: obstacles" << std::endl;

@@ -1,5 +1,13 @@
 # Environment Module
 
+## TO-DO:
+gridvis:
+1. Robots use the same goal position so they lie directly on top of eachother
+2. The ts regions have no meaningful borders in the gridworld (ie. obstacles) meaning robots can enter and exit any where from one ts to another.
+3. currently not working for infinite need to figure out why
+4. **Atomic Proposition Checking** - Evaluate task conditions at states
+5. **Cost Tracking** - Support for weighted motion planning
+
 ## Overview
 
 The Environment module provides the abstraction layer between discrete transition systems and continuous workspace representations. It enables the planning algorithms to reason about both symbolic state transitions and geometric robot motion.
@@ -154,6 +162,153 @@ if (grid->isObstacle(25, 25)) {
 // Set cost for traversable but difficult area
 grid->setCost(30, 30, 150);  // High cost, but traversable
 ```
+
+---
+
+### DStarGridWorld
+
+**Files**: `DStarGridWorld.h`
+
+D* Lite path planner for optimal motion planning in 2D grid environments with dynamic obstacle updates.
+
+#### Key Features
+
+- **Backward A* search** - Plans from goal to start for efficient replanning
+- **Incremental replanning** - Efficiently updates paths when obstacles change
+- **Cost-aware planning** - Respects grid costmap (obstacles, difficult terrain)
+- **Heuristic guidance** - Straight-line distance heuristic for optimal paths
+
+#### Key Members
+
+```cpp
+GridWorld* gridworld_;              // Reference to grid environment
+Point sstart_;                      // Start position
+Point sgoal_;                       // Goal position
+Point scurrent_;                    // Current position for replanning
+std::unordered_map<Point, double> g_;   // g(s): cost-to-goal estimates
+std::unordered_map<Point, double> rhs_; // rhs(s): one-step lookahead values
+std::priority_queue<...> open_;     // Priority queue for A* search
+double km_;                         // Key modifier for incremental updates
+```
+
+#### Key Methods
+
+```cpp
+// Planning
+std::vector<Point> plan(const Point& start, const Point& goal);
+
+// Dynamic replanning
+std::vector<Point> replan(const Point& current, 
+                         const std::vector<Point>& changed_cells);
+
+// Queries
+double getCost(const Point& pos) const;
+bool hasValidPath() const;
+
+// Diagnostics
+int getNumExpanded() const;
+int getNumUpdated() const;
+```
+
+#### Usage Example
+
+```cpp
+GridWorld* grid = new GridWorld(100, 100);
+grid->setObstacle(50, 50);
+
+DStarGridWorldPlanner planner(grid);
+
+// Initial plan
+std::vector<Point> path = planner.plan(Point(10, 10), Point(90, 90));
+
+// If obstacles change, replan efficiently
+std::vector<Point> changed = {Point(51, 50)};
+std::vector<Point> newPath = planner.replan(Point(15, 15), changed);
+
+if (planner.hasValidPath()) {
+    cout << "Path found with cost: " << planner.getCost(Point(10, 10)) << endl;
+}
+```
+
+---
+
+### Grid Visualization (gridvis)
+
+**Files**: `gridvis.h`
+
+Visualization module for rendering environments, robots, and task execution paths using raylib graphics.
+
+#### Key Types
+
+```cpp
+// Robot path storage
+using RobotPathMap = std::map<uint32_t, std::vector<Point>>;
+```
+
+#### Key Functions
+
+```cpp
+/**
+ * compute_dstar_paths - Compute concrete D* paths for each robot
+ * 
+ * For each node in the task tree path:
+ * - Determines which robots are allocated to that task
+ * - Runs D* Lite from robot's current position to TS state goal
+ * - Concatenates paths to build complete trajectories
+ */
+RobotPathMap compute_dstar_paths(
+    const Environment& env,
+    const MultiRobotSystem& mrs,
+    const std::vector<Tree_Node*>& optimalPath
+);
+
+/**
+ * visualize_environment - Display interactive environment visualization
+ * 
+ * Renders:
+ * - Grid cells colored by TS state region
+ * - Obstacles in dark gray
+ * - Each robot as a colored circle at current position
+ * - Concrete D* paths for each robot in distinct colors
+ * 
+ * Automatically computes paths if not provided.
+ * Window closes on user click.
+ */
+void visualize_environment(
+    const Environment& env,
+    const MultiRobotSystem& mrs,
+    const std::vector<Tree_Node*>& optimalPath,
+    const RobotPathMap& robotPaths = RobotPathMap(),
+    const char* windowTitle = "Multi-Robot Task Planner"
+);
+```
+
+#### Usage Example
+
+```cpp
+// After computing optimal task allocation path
+std::vector<Tree_Node*> optimalPath = planningTree->getPathtoFrontierNode(...);
+
+// Option 1: Compute paths automatically
+visualize_environment(env, multiRobotSystem, optimalPath, 
+                     RobotPathMap(), "Task Execution Visualization");
+
+// Option 2: Pre-compute paths for inspection
+RobotPathMap paths = compute_dstar_paths(env, multiRobotSystem, optimalPath);
+for (const auto& [robotId, path] : paths) {
+    cout << "Robot " << robotId << " has " << path.size() << " waypoints" << endl;
+}
+visualize_environment(env, multiRobotSystem, optimalPath, paths);
+```
+
+#### Integration with Task Allocation
+
+The visualization workflow:
+
+1. **Task Planning** - `TaskAllocationAlgorithms` builds optimal task tree
+2. **Path Extraction** - Get optimal path through task tree
+3. **Path Computation** - `compute_dstar_paths()` converts task allocation to concrete robot trajectories
+4. **Visualization** - `visualize_environment()` renders execution plan
 
 ---
 

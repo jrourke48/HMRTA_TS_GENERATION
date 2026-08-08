@@ -104,6 +104,64 @@ PlanningDecisionTree* TaskAllocationAlgorithms::intensiveInterTaskRelationshipTr
     Environment* envPtr,
     MultiRobotSystem* multiRobotSystemPtr) {
     
+    // Reset algorithm metrics at the start of the search
+    resetMetrics();
+    
+
+    // ===== SET INDEPENDENT VARIABLES =======================================
+    //========================================================================
+    // Initialize independent variables for algorithm metrics
+    AlgorithmMetrics::IndependentVariables indVars;
+    
+    // Automaton characteristics
+    indVars.num_automaton_states = nbaPtr->getNumStates();
+    indVars.num_automaton_edges = 0;  // TODO: add getNumEdges() to BuchiAutomaton
+    indVars.num_atomic_propositions = nbaPtr->getLTLFormula()->getBatchAtomicPropositions().size();
+    
+    // Robot fleet characteristics
+    indVars.num_robots = multiRobotSystemPtr->getNumRobots();
+    indVars.num_ts_regions = envPtr->getNumStates();
+    
+    // Calculate total capabilities across all robots
+    int totalCaps = 0;
+    const auto& robots = multiRobotSystemPtr->getRobots();
+    for (const auto* robot : robots) {
+        if (robot) {
+            const auto& caps = robot->getCapabilities();
+            for (bool hasCapability : caps) {
+                if (hasCapability) totalCaps++;
+            }
+        }
+    }
+    indVars.total_robot_capabilities = totalCaps;
+    indVars.avg_capabilities_per_robot = indVars.num_robots > 0 ? 
+        static_cast<double>(totalCaps) / indVars.num_robots : 0.0;
+    
+    // Capability homogeneity: count how many robots have the SAME capabilities
+    // If all robots are identical, homogeneity = 1.0
+    // If all robots are different, homogeneity = 1/num_robots
+    std::map<std::vector<bool>, int> capabilityGroups;
+    for (const auto* robot : robots) {
+        if (robot) {
+            capabilityGroups[robot->getCapabilities()]++;
+        }
+    }
+    int identicalRobots = 0;
+    for (const auto& [caps, count] : capabilityGroups) {
+        identicalRobots = std::max(identicalRobots, count);
+    }
+    indVars.capability_homogeneity = indVars.num_robots > 0 ? 
+        static_cast<double>(identicalRobots) / indVars.num_robots : 0.0;
+    
+    // TODO: Set inter-task constraints from LTL formula
+    indVars.num_inter_task_constraints = 0;
+    
+    // Store in metrics
+    metrics->setIndependentVariables(indVars);
+    //=======================================================================
+    //=======================================================================
+
+
     // Get initial automaton state from the Büchi automaton
     Node* initialAutomatonState = nbaPtr->getNode(nbaPtr->getInitialState());
     // Get environment initial state ID
@@ -147,7 +205,6 @@ PlanningDecisionTree* TaskAllocationAlgorithms::intensiveInterTaskRelationshipTr
     // Process nodes from untraversed queue until empty
     Tree_Node* currentNode = nullptr;
     while ((currentNode = getNextUntraversedNode()) != nullptr) {
-        
         // Create subtree for current node
         PlanningDecisionTree* subtree = new PlanningDecisionTree(currentNode);
         uint16_t buchisize = nbaPtr->getNumStates();
@@ -172,6 +229,8 @@ PlanningDecisionTree* TaskAllocationAlgorithms::intensiveInterTaskRelationshipTr
                 // Note: nodeId is a placeholder; insertNode will auto-assign the correct ID
                 Tree_Node* newNode = new Tree_Node(0, currentNode, nbaState, 
                                                    TSState, batchVal);
+                // Increment the algorithm metric for total nodes generated
+                metrics->subtree_efficiency_.total_nodes_generated++;
 
                 
                 // Route based on batch value - don't use isBatchValueInTree() for routing!
@@ -234,7 +293,9 @@ PlanningDecisionTree* TaskAllocationAlgorithms::intensiveInterTaskRelationshipTr
     }
     
     Tree_Node* finalOptimalNode = planningTree->getOptimalFrontierNode(nba->isFinite()); // Final optimal node after search completion
-    
+    //get the total number of nodes traversed and in expanded in the planning tree
+    metrics->subtree_efficiency_.total_nodes_traversed = traversedTree->getNumNodes();
+    metrics->subtree_efficiency_.total_nodes_generated = planningTree->getNumNodes();
     // Final tree state
     // Reassign node IDs to ensure proper hierarchy order (root = 0, then by depth)
     tree->reassignNodeIds();
@@ -790,11 +851,16 @@ PlanningDecisionTree* TaskAllocationAlgorithms::pruneSubtree(PlanningDecisionTre
         if (node->getProgress() == Tree_Node::TASK_PROGRESS::OTH) {
             nodesToRemove.push_back(node);  // Mark OTH nodes for removal so they don't re-enter queue
             planningTree->addFrontierNode(node);
+            // Increment the algorithm metric for total nodes satisfying the ltl
+            metrics->subtree_efficiency_.nodes_satisfying_ltl++;
+            
         }  
     } else{ 
         if (node->getProgress() == Tree_Node::TASK_PROGRESS::TRA) {
             nodesToRemove.push_back(node);  // Mark TRA nodes for removal so they don't re-enter queue
             planningTree->addFrontierNode(node);
+            // Increment the algorithm metric for total nodes satisfying the ltl
+            metrics->subtree_efficiency_.nodes_satisfying_ltl++;
         }
     }
     }
@@ -879,6 +945,9 @@ PlanningDecisionTree* TaskAllocationAlgorithms::pruneSubtree(PlanningDecisionTre
         traversedTree->insertNode(node);
         // Remove from subtree's frontier (transfers ownership semantically)
         subtree->removeFrontierNode(node);
+
+        // Increment the algorithm metric for total nodes pruned
+        metrics->subtree_efficiency_.total_nodes_pruned++;
     } 
     
     return subtree;

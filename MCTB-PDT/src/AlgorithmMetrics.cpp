@@ -35,33 +35,7 @@ void AlgorithmMetrics::stopTimer() {
     runtime_.total_computation_time_ms = duration.count();
 }
 
-void AlgorithmMetrics::recordHighLevelStart() {
-    high_level_start_time_ = std::chrono::high_resolution_clock::now();
-}
-
-void AlgorithmMetrics::recordHighLevelStop() {
-    auto end_time = std::chrono::high_resolution_clock::now();
-    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(
-        end_time - high_level_start_time_);
-    runtime_.high_level_runtime_ms = duration.count();
-}
-
-void AlgorithmMetrics::recordLowLevelStart() {
-    low_level_start_time_ = std::chrono::high_resolution_clock::now();
-}
-
-void AlgorithmMetrics::recordLowLevelStop() {
-    auto end_time = std::chrono::high_resolution_clock::now();
-    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(
-        end_time - low_level_start_time_);
-    runtime_.low_level_runtime_ms = duration.count();
-}
-
 // ==================== RECORD METRICS ====================
-
-void AlgorithmMetrics::recordCorrectness(const CorrectnessMetrics& correctness) {
-    correctness_ = correctness;
-}
 
 void AlgorithmMetrics::recordSubtreeEfficiency(const SubtreeEfficiencyMetrics& efficiency) {
     subtree_efficiency_ = efficiency;
@@ -185,21 +159,10 @@ void AlgorithmMetrics::printSummary() const {
     std::cout << "  Capability Homogeneity: " << iv_.capability_homogeneity << std::endl;
     std::cout << "  Inter-task Constraints: " << iv_.num_inter_task_constraints << "\n" << std::endl;
     
-    // Correctness Metrics
-    std::cout << "CORRECTNESS METRICS:" << std::endl;
-    std::cout << "  LTL Satisfaction Rate: " << std::fixed << std::setprecision(4) 
-              << correctness_.ltl_satisfaction_rate << std::endl;
-    std::cout << "  Capability Satisfaction Rate: " << correctness_.capability_satisfaction_rate << std::endl;
-    std::cout << "  Constraint Violations: " << correctness_.inter_task_constraint_violations << std::endl;
-    std::cout << "  Acceptance Reached: " << (correctness_.acceptance_condition_reached ? "YES" : "NO") << std::endl;
-    std::cout << "  Feasibility: " << correctness_.feasibility_status << "\n" << std::endl;
-    
     // Runtime Metrics
     std::cout << "RUNTIME METRICS:" << std::endl;
     std::cout << "  Total Computation Time: " << std::fixed << std::setprecision(2) 
-              << runtime_.total_computation_time_ms << " ms" << std::endl;
-    std::cout << "  High-Level Runtime: " << runtime_.high_level_runtime_ms << " ms" << std::endl;
-    std::cout << "  Low-Level Runtime: " << runtime_.low_level_runtime_ms << " ms" << "\n" << std::endl;
+              << runtime_.total_computation_time_ms << " ms" << "\n" << std::endl;
     
     // Subtree Efficiency
     std::cout << "SUBTREE EFFICIENCY METRICS:" << std::endl;
@@ -299,14 +262,6 @@ void AlgorithmMetrics::exportToCSV(const std::string& filename) const {
     // Runtime Metrics
     outfile << "Total Computation Time," << std::fixed << std::setprecision(2) 
             << runtime_.total_computation_time_ms << ",ms\n";
-    outfile << "High-Level Runtime," << runtime_.high_level_runtime_ms << ",ms\n";
-    outfile << "Low-Level Runtime," << runtime_.low_level_runtime_ms << ",ms\n";
-    
-    // Correctness Metrics
-    outfile << "LTL Satisfaction Rate," << std::fixed << std::setprecision(4) 
-            << correctness_.ltl_satisfaction_rate << ",ratio\n";
-    outfile << "Capability Satisfaction Rate," << correctness_.capability_satisfaction_rate << ",ratio\n";
-    outfile << "Constraint Violations," << correctness_.inter_task_constraint_violations << ",count\n";
     
     // Subtree Efficiency
     outfile << "Total Nodes Generated," << subtree_efficiency_.total_nodes_generated << ",count\n";
@@ -352,21 +307,7 @@ void AlgorithmMetrics::exportToJSON(const std::string& filename) const {
     
     outfile << "  \"runtime_metrics\": {\n";
     outfile << "    \"total_computation_time_ms\": " << std::fixed << std::setprecision(2) 
-            << runtime_.total_computation_time_ms << ",\n";
-    outfile << "    \"high_level_runtime_ms\": " << runtime_.high_level_runtime_ms << ",\n";
-    outfile << "    \"low_level_runtime_ms\": " << runtime_.low_level_runtime_ms << "\n";
-    outfile << "  },\n";
-    
-    outfile << "  \"correctness_metrics\": {\n";
-    outfile << "    \"ltl_satisfaction_rate\": " << std::fixed << std::setprecision(4) 
-            << correctness_.ltl_satisfaction_rate << ",\n";
-    outfile << "    \"capability_satisfaction_rate\": " 
-            << correctness_.capability_satisfaction_rate << ",\n";
-    outfile << "    \"constraint_violations\": " 
-            << correctness_.inter_task_constraint_violations << ",\n";
-    outfile << "    \"acceptance_condition_reached\": " 
-            << (correctness_.acceptance_condition_reached ? "true" : "false") << ",\n";
-    outfile << "    \"feasibility_status\": \"" << correctness_.feasibility_status << "\"\n";
+            << runtime_.total_computation_time_ms << "\n";
     outfile << "  },\n";
     
     outfile << "  \"subtree_efficiency_metrics\": {\n";

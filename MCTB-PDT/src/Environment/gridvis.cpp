@@ -126,8 +126,17 @@ void visualize_environment(
     const uint32_t gridW = gridWorld->getWidth();
     const uint32_t gridH = gridWorld->getHeight();
 
-    const int cellSize = 60;
     const int margin = 40;
+    const int maxScreenW = 1400;
+    const int maxScreenH = 900;
+    
+    // Calculate cell size to fit the entire grid within max screen dimensions
+    int cellSize = std::min(
+        (maxScreenW - 2 * margin) / (int)gridW,
+        (maxScreenH - 2 * margin) / (int)gridH
+    );
+    cellSize = std::max(cellSize, 10);  // minimum cell size of 10 pixels
+    
     const int screenW = margin * 2 + gridW * cellSize;
     const int screenH = margin * 2 + gridH * cellSize;
 
@@ -140,6 +149,15 @@ void visualize_environment(
         std::cout << "Computing D* paths for robots..." << std::endl;
         paths = compute_dstar_paths(env, mrs, optimalPath);
     }
+
+    // Animation state: track current position index for each robot on its path
+    std::map<uint32_t, size_t> robotPathIndices;
+    std::map<uint32_t, float> robotPathProgress;  // Fractional progress along current path segment
+    for (uint32_t i = 0; i < mrs.getNumRobots(); ++i) {
+        robotPathIndices[i] = 0;
+        robotPathProgress[i] = 0.0f;
+    }
+    float animationSpeed = 0.02f;  // Fraction of waypoint to move per frame (0.0-1.0)
 
     // Color palette for TS states
     Color stateColors[] = {
@@ -171,6 +189,17 @@ void visualize_environment(
         BeginDrawing();
         ClearBackground(RAYWHITE);
 
+        // Update robot positions along their paths
+        for (uint32_t i = 0; i < mrs.getNumRobots(); ++i) {
+            if (paths.count(i) && robotPathIndices[i] < paths[i].size() - 1) {
+                robotPathProgress[i] += animationSpeed;
+                if (robotPathProgress[i] >= 1.0f) {
+                    robotPathIndices[i]++;  // Move to next waypoint
+                    robotPathProgress[i] -= 1.0f;  // Reset progress
+                }
+            }
+        }
+
         // Draw grid cells with TS state coloring
         for (uint32_t y = 0; y < gridH; ++y) {
             for (uint32_t x = 0; x < gridW; ++x) {
@@ -180,24 +209,85 @@ void visualize_environment(
 
                 // Fill cell based on obstacle status and TS state
                 if (env.isObstacle(cellPos)) {
-                    DrawRectangle(screenX, screenY, cellSize, cellSize, DARKGRAY);
+                    DrawRectangle(screenX, screenY, cellSize, cellSize, BLACK);
+                    DrawRectangleLines(screenX, screenY, cellSize, cellSize, RED);  // Red outline for obstacles
                 } else {
                     // Color by TS state
                     uint32_t stateId = env.gridToTSStateId(cellPos);
                     Color stateCol = stateColors[stateId % numStateColors];
                     DrawRectangle(screenX, screenY, cellSize, cellSize, stateCol);
+                    DrawRectangleLines(screenX, screenY, cellSize, cellSize, LIGHTGRAY);
                 }
-
-                // Draw grid lines
-                DrawRectangleLines(screenX, screenY, cellSize, cellSize, LIGHTGRAY);
             }
+        }
+
+        // Draw bold borders between different TS state regions
+        for (uint32_t y = 0; y < gridH; ++y) {
+            for (uint32_t x = 0; x < gridW; ++x) {
+                Point cellPos(x, y);
+                uint32_t stateId = env.gridToTSStateId(cellPos);
+                int screenX, screenY;
+                gridToScreen(cellPos, cellSize, margin, screenX, screenY);
+
+                // Check neighbors for state changes and draw bold borders
+                // Right edge
+                if (x + 1 < gridW) {
+                    Point rightPos(x + 1, y);
+                    if (env.gridToTSStateId(rightPos) != stateId) {
+                        DrawLine(screenX + cellSize, screenY, screenX + cellSize, screenY + cellSize, BLACK);
+                        DrawLine(screenX + cellSize + 1, screenY, screenX + cellSize + 1, screenY + cellSize, BLACK);
+                    }
+                }
+                // Bottom edge
+                if (y + 1 < gridH) {
+                    Point bottomPos(x, y + 1);
+                    if (env.gridToTSStateId(bottomPos) != stateId) {
+                        DrawLine(screenX, screenY + cellSize, screenX + cellSize, screenY + cellSize, BLACK);
+                        DrawLine(screenX, screenY + cellSize + 1, screenX + cellSize, screenY + cellSize + 1, BLACK);
+                    }
+                }
+            }
+        }
+
+        // Label TS state regions with their IDs
+        std::map<uint32_t, std::vector<Point>> stateRegions;
+        for (uint32_t y = 0; y < gridH; ++y) {
+            for (uint32_t x = 0; x < gridW; ++x) {
+                Point cellPos(x, y);
+                uint32_t stateId = env.gridToTSStateId(cellPos);
+                if (!env.isObstacle(cellPos)) {
+                    stateRegions[stateId].push_back(cellPos);
+                }
+            }
+        }
+
+        // Draw labels at the center of each region
+        for (const auto& [stateId, cells] : stateRegions) {
+            if (cells.empty()) continue;
+
+            // Find center of region
+            int centerX = 0, centerY = 0;
+            for (const Point& p : cells) {
+                centerX += p.getX();
+                centerY += p.getY();
+            }
+            centerX /= cells.size();
+            centerY /= cells.size();
+
+            int screenX, screenY;
+            gridToScreen(Point(centerX, centerY), cellSize, margin, screenX, screenY);
+            screenX += cellSize / 2;
+            screenY += cellSize / 2;
+
+            std::string label = "TS" + std::to_string(stateId);
+            DrawText(label.c_str(), screenX - 12, screenY - 8, 14, BLACK);
         }
 
         // Draw each robot's D* path
         for (const auto& [robotId, path] : paths) {
             Color pathColor = robotColors[robotId % numRobotColors];
-            // Reduce opacity for path visualization
-            pathColor.a = 100;
+            // Use full opacity to match robot color exactly
+            pathColor.a = 255;
             
             for (const Point& p : path) {
                 int screenX, screenY;
@@ -206,10 +296,43 @@ void visualize_environment(
             }
         }
 
-        // Draw robots at their current positions
-        std::vector<Point> robotPositions = mrs.getRobotPositions();
-        for (uint32_t i = 0; i < mrs.getNumRobots() && i < robotPositions.size(); ++i) {
-            const Point& robotPos = robotPositions[i];
+        // Draw origin axes (X=red, Y=green)
+        Point origin(0, 0);
+        int originScreenX, originScreenY;
+        gridToScreen(origin, cellSize, margin, originScreenX, originScreenY);
+        int originCenterX = originScreenX + cellSize / 2;
+        int originCenterY = originScreenY + cellSize / 2;
+        
+        // Draw X axis (horizontal, red)
+        int axisLength = cellSize * 5;
+        DrawLine(originCenterX, originCenterY, originCenterX + axisLength, originCenterY, RED);
+        DrawText("X", originCenterX + axisLength + 5, originCenterY - 8, 14, RED);
+        
+        // Draw Y axis (vertical, green)
+        DrawLine(originCenterX, originCenterY, originCenterX, originCenterY + axisLength, GREEN);
+        DrawText("Y", originCenterX - 8, originCenterY + axisLength + 5, 14, GREEN);
+        
+        // Draw origin marker
+        DrawCircle(originCenterX, originCenterY, 5, BLACK);
+        DrawText("O", originCenterX - 4, originCenterY - 20, 14, BLACK);
+
+        // Draw robots at their current positions along their paths
+        for (uint32_t i = 0; i < mrs.getNumRobots(); ++i) {
+            Point robotPos;
+            
+            // Get robot position from animated path if available
+            if (paths.count(i) && robotPathIndices[i] < paths[i].size()) {
+                robotPos = paths[i][robotPathIndices[i]];
+            } else {
+                // Fallback to starting position if no path
+                std::vector<Point> robotPositions = mrs.getRobotPositions();
+                if (i < robotPositions.size()) {
+                    robotPos = robotPositions[i];
+                } else {
+                    continue;  // Skip if no position available
+                }
+            }
+            
             int screenX, screenY;
             gridToScreen(robotPos, cellSize, margin, screenX, screenY);
 

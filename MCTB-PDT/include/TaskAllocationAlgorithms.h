@@ -1,6 +1,7 @@
 #ifndef TASK_ALLOCATION_ALGORITHMS_H
 #define TASK_ALLOCATION_ALGORITHMS_H
 
+#include "AlgorithmMetrics.h"
 #include "Tree/PlanningDecisionTree.h"
 #include "Environment/Environment.h"
 #include "../Automatons/BuchiAutomaton.h"
@@ -28,7 +29,7 @@ class TaskAllocationAlgorithms {
         std::vector<std::tuple<uint16_t, uint16_t, uint8_t>> visitedStateAPProgressTriples; // Track (automatonStateId, apId, progress) tuples
         std::vector<uint8_t> treebatchvals; // To keep track of batch values in the tree (if needed for cost calculations)
         std::queue<Tree_Node*> untraversedPlanningQueue; // Queue of nodes in planning tree not yet traversed
-    
+        AlgorithmMetrics* metrics;
         
     public:
         // Constructor
@@ -90,6 +91,10 @@ class TaskAllocationAlgorithms {
         void addUntraversedPlanningNode(Tree_Node* node);
         Tree_Node* getNextUntraversedNode();
         void clearUntraversedQueue();
+        
+        //algorithm metrics methods
+        const AlgorithmMetrics& getMetrics() const { return *metrics; }
+        void resetMetrics() { *metrics = AlgorithmMetrics(); }
 
         // Parse edge labels to extract AP IDs
         // Removes !, &, | symbols and returns vector of AP IDs that are TRUE (not negated)

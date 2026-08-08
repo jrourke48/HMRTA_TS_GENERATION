@@ -9,7 +9,7 @@
 class PlanningDecisionTree {
     private:
         Tree_Node* root; // Root node of the tree
-        size_t nodeCount; // Total number of nodes in the tree
+        long long nodeCount; // Total number of nodes in the tree
         std::vector<Tree_Node*> frontierNodes; // Current frontier/leaf nodes for tree traversal
         
     public:
@@ -38,6 +38,8 @@ class PlanningDecisionTree {
         // Tree traversal
         std::vector<Tree_Node*> getAllNodes();
         std::vector<Tree_Node*> getLeafNodes();
+        // num nodes getter
+        long long getNumNodes() const;
         
         // Frontier management
         void addFrontierNode(Tree_Node* node);

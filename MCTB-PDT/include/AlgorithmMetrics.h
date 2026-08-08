@@ -37,24 +37,11 @@ public:
         int num_inter_task_constraints = 0;
     };
     
-    // ==================== CORRECTNESS METRICS ====================
-    
-    struct CorrectnessMetrics {
-        double ltl_satisfaction_rate = 0.0;              // [0, 1]
-        double capability_satisfaction_rate = 0.0;       // [0, 1]
-        int inter_task_constraint_violations = 0;
-        bool acceptance_condition_reached = false;
-        
-        std::string feasibility_status = "UNKNOWN";      // FEASIBLE, INFEASIBLE, UNKNOWN
-    };
-    
     // ==================== RUNTIME AND SCALABILITY METRICS ====================
     
     struct RuntimeMetrics {
         // Primary timing measurements
-        double total_computation_time_ms = 0.0;          // milliseconds
-        double high_level_runtime_ms = 0.0;              // High-level algorithm
-        double low_level_runtime_ms = 0.0;               // Low-level algorithm
+        double total_computation_time_ms = 0.0;          // milliseconds  
         
         // Parameterized runtime analysis (collected across runs)
         std::vector<std::pair<int, double>> runtime_vs_num_robots;           // (N, time_ms)
@@ -71,13 +58,19 @@ public:
     
     struct SubtreeEfficiencyMetrics {
         // Node counts
+        //nodes in the search tree
         long long total_nodes_generated = 0;
-        long long total_nodes_expanded = 0;
+        //total nodes planning
+        long long total_nodes_planning = 0;
+        // nodes pruned difference between the two above
+        long long total_nodes_traversed = 0;
         long long total_nodes_pruned = 0;
+        // nodes satisfying the LTL formula gives you the number of feasible paths
         long long nodes_satisfying_ltl = 0;              // OTH or TRA nodes
         
-        // Memory usage
-        long long tree_memory_bytes = 0;
+        // Memory usage: currently do not know how to get this. 
+        long long traversed_tree_memory_bytes = 0;
+        long long planning_tree_memory_bytes = 0;
         long long product_automaton_memory_bytes = 0;
         
         // Product automaton comparison (for small instances)
@@ -97,7 +90,8 @@ public:
     
     struct SolutionQualityMetrics {
         // Time-based metrics
-        double makespan_seconds = 0.0;                   // Total mission completion time
+        double tree_makespan_seconds = 0.0;                   // Total mission completion time
+        double product_makespan_seconds = 0.0;           // Total mission completion time for the full product automaton
         double sum_of_travel_times_seconds = 0.0;        // Total team effort
         double total_travel_distance = 0.0;
         double max_individual_travel_distance = 0.0;
@@ -123,22 +117,12 @@ public:
     void setIndependentVariables(const IndependentVariables& vars);
     void startTimer();
     void stopTimer();
-    void recordHighLevelStart();
-    void recordHighLevelStop();
-    void recordLowLevelStart();
-    void recordLowLevelStop();
-    
-    // Record metrics
-    void recordCorrectness(const CorrectnessMetrics& correctness);
-    void recordSubtreeEfficiency(const SubtreeEfficiencyMetrics& efficiency);
-    void recordSolutionQuality(const SolutionQualityMetrics& quality);
     
     // Compute derived metrics
     void computeDerivedMetrics();
     
     // Data access
     const IndependentVariables& getIndependentVariables() const { return iv_; }
-    const CorrectnessMetrics& getCorrectness() const { return correctness_; }
     const RuntimeMetrics& getRuntime() const { return runtime_; }
     const SubtreeEfficiencyMetrics& getSubtreeEfficiency() const { return subtree_efficiency_; }
     const SolutionQualityMetrics& getSolutionQuality() const { return solution_quality_; }
@@ -159,18 +143,16 @@ public:
     void addRuntimeVsEnvironmentSize(int env_size, double time_ms);
     void addRuntimeVsRegions(int regions, double time_ms);
     
-private:
-    // Timer management
-    std::chrono::high_resolution_clock::time_point overall_start_time_;
-    std::chrono::high_resolution_clock::time_point high_level_start_time_;
-    std::chrono::high_resolution_clock::time_point low_level_start_time_;
-    
-    // Metric storage
+public:
+    // Direct access to metric structures for algorithm tracking
     IndependentVariables iv_;
-    CorrectnessMetrics correctness_;
     RuntimeMetrics runtime_;
     SubtreeEfficiencyMetrics subtree_efficiency_;
     SolutionQualityMetrics solution_quality_;
+    
+private:
+    // Timer management
+    std::chrono::high_resolution_clock::time_point overall_start_time_;
     
     // Helper methods
     double computePruningRatio() const;
