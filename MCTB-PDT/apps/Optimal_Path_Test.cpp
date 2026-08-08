@@ -178,6 +178,8 @@ cout << "\n" << string(80, '-') << endl;
     finiteSearchResults.push_back(taa1->intensiveInterTaskRelationshipTreeSearch(finite1, env, mrs));
     cout << "  → Search Result: " << (finiteSearchResults.back() ? "SUCCESS" : "FAILED") << endl;
     if (finiteSearchResults.back()) {
+        cout << "\n  Metrics Summary:" << endl;
+        taa1->getMetrics().printSummary();
         taa1->visualizeTree("output/finite_test_1_tree");
         taa1->visualizeOptimalPath("output/finite_test_1_path");
     }
@@ -189,6 +191,8 @@ cout << "\n" << string(80, '-') << endl;
     finiteSearchResults.push_back(taa2->intensiveInterTaskRelationshipTreeSearch(finite2, env, mrs));
     cout << "  → Search Result: " << (finiteSearchResults.back() ? "SUCCESS" : "FAILED") << endl;
     if (finiteSearchResults.back()) {
+        cout << "\n  Metrics Summary:" << endl;
+        taa2->getMetrics().printSummary();
         taa2->visualizeTree("output/finite_test_2_tree");
         taa2->visualizeOptimalPath("output/finite_test_2_path");
     }
@@ -201,6 +205,8 @@ cout << "\n" << string(80, '-') << endl;
     finiteSearchResults.push_back(taa3->intensiveInterTaskRelationshipTreeSearch(finite3, env, mrs));
     cout << "  → Search Result: " << (finiteSearchResults.back() ? "SUCCESS" : "FAILED") << endl;
     if (finiteSearchResults.back()) {
+        cout << "\n  Metrics Summary:" << endl;
+        taa3->getMetrics().printSummary();
         taa3->visualizeTree("output/finite_test_3_tree");
         taa3->visualizeOptimalPath("output/finite_test_3_path");
     }
@@ -212,6 +218,8 @@ cout << "\n" << string(80, '-') << endl;
     finiteSearchResults.push_back(taa4->intensiveInterTaskRelationshipTreeSearch(finite4, env, mrs));
     cout << "  → Search Result: " << (finiteSearchResults.back() ? "SUCCESS" : "FAILED") << endl;
     if (finiteSearchResults.back()) {
+        cout << "\n  Metrics Summary:" << endl;
+        taa4->getMetrics().printSummary();
         taa4->visualizeTree("output/finite_test_4_tree");
         taa4->visualizeOptimalPath("output/finite_test_4_path");
     }
@@ -233,6 +241,8 @@ void infiniteAutomataTests(Environment* env, MultiRobotSystem* mrs) {
     infiniteSearchResults.push_back(taa5->intensiveInterTaskRelationshipTreeSearch(infinite1, env, mrs));
     cout << "  → Search Result: " << (infiniteSearchResults.back() ? "SUCCESS" : "FAILED") << endl;
     if (infiniteSearchResults.back()) {
+        cout << "\n  Metrics Summary:" << endl;
+        taa5->getMetrics().printSummary();
         taa5->visualizeTree("output/infinite_test_1_tree");
         taa5->visualizeOptimalPath("output/infinite_test_1_path");
     }
@@ -244,6 +254,8 @@ void infiniteAutomataTests(Environment* env, MultiRobotSystem* mrs) {
     infiniteSearchResults.push_back(taa6->intensiveInterTaskRelationshipTreeSearch(infinite2, env, mrs));
     cout << "  → Search Result: " << (infiniteSearchResults.back() ? "SUCCESS" : "FAILED") << endl;
     if (infiniteSearchResults.back()) {
+        cout << "\n  Metrics Summary:" << endl;
+        taa6->getMetrics().printSummary();
         taa6->visualizeTree("output/infinite_test_2_tree");
         taa6->visualizeOptimalPath("output/infinite_test_2_path");
     }
@@ -255,6 +267,8 @@ void infiniteAutomataTests(Environment* env, MultiRobotSystem* mrs) {
     infiniteSearchResults.push_back(taa7->intensiveInterTaskRelationshipTreeSearch(infinite3, env, mrs));
     cout << "  → Search Result: " << (infiniteSearchResults.back() ? "SUCCESS" : "FAILED") << endl;
     if (infiniteSearchResults.back()) {
+        cout << "\n  Metrics Summary:" << endl;
+        taa7->getMetrics().printSummary();
         taa7->visualizeTree("output/infinite_test_3_tree");
         taa7->visualizeOptimalPath("output/infinite_test_3_path");
     }
@@ -266,6 +280,8 @@ void infiniteAutomataTests(Environment* env, MultiRobotSystem* mrs) {
     infiniteSearchResults.push_back(taa8->intensiveInterTaskRelationshipTreeSearch(infinite4, env, mrs));
     cout << "  → Search Result: " << (infiniteSearchResults.back() ? "SUCCESS" : "FAILED") << endl;
     if (infiniteSearchResults.back()) {
+        cout << "\n  Metrics Summary:" << endl;
+        taa8->getMetrics().printSummary();
         taa8->visualizeTree("output/infinite_test_4_tree");
         taa8->visualizeOptimalPath("output/infinite_test_4_path");
     }

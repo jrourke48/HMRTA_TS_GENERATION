@@ -88,7 +88,7 @@ $(PLANNING_TREE_BIN): $(PLANNING_TREE_TEST_OBJ) $(COMMON_OBJS)
 # Build the optimal path tests executable
 $(OPTIMAL_PATH_BIN): $(OPTIMAL_PATH_OBJ) $(COMMON_OBJS) $(TASK_ALLOC_OBJS)
 	@mkdir -p $(OUT_DIR)
-	$(CXX) $(CXXFLAGS) $(INCLUDES) $^ -o $@ $(LIBS)
+	$(CXX) $(CXXFLAGS) $(INCLUDES) $^ -o $@ $(LIBS) $(RAYLIB_FLAGS)
 	@echo "✓ Build successful: $(OPTIMAL_PATH_BIN)"
 
 # Build the D* GridWorld tests executable
