@@ -1,5 +1,26 @@
 # Task Batch Planning Decision Tree Module
 
+## TO-DO
+### Before Tuesday:
+1. Implement a low-level path planning algorithm for the robots
+2. Implement the gridworld visualizations
+3. Add Algorithm Performance metrics
+4. Work on a more comprehensive, detailed README
+### Before School:
+5. Implement the exclusive and complementary task algorithms
+6. Build the product automaton
+7. Finish introduction and literature review
+8. Add Tests for the Multi-Capability robots
+9. Add Tests for the exclusive and complementary task algorithms
+### Fall: 
+10. Test against the product automaton
+11. Test test test
+12. Rest of writing
+### Reach Goals:
+13. Test Against a MILP Formulation
+14. Weighing other costs than time
+
+
 ## Overview
 
 This module implements the core task allocation algorithms for the thesis project for multi-robot systems using a hierarchical decision tree search. The main algorithm named the IITRTS (Intensive Inter-Task Relationship Tree Search) takes 3 inputs to produce the Planning Decision Tree ([Tree/](../Tree/README.md)) that is then searched the optimal path from root to frontier tree node is the completed robot allocation for the specified task. The three inputs to the main algorithm are the buchi automatons (NBA)[Automatons](../../Automatons/README.md), environment (Env)[Environment](../Environment/README.md), and Multi-robot system (MRS)[MultiRobotSystem](../MultiRobotSystem/README.md). The environment is comprised of a gridworld and a Transition System (TS). The transition system is an automaton that represents a partition of the entire workspace into meaningful sections such as rooms or aisles. While the gridworld divides the workspace into cells with an arbitrary resolutuion to allow robots to navigate the workspace. Next the Multi-Robot System details the number of robots, their resepctive capabilities, and their positions in the environment. Lastly, the NBA is an automaton that describes the specified task for the robots. The task is specefied as an LTL formula [LTLFormula](../LTLFormula/README.md) comprised of Batch Atomic Propostions and Temportal and logic operators that is then converted to a buchi automaton using the SPOT library.    These three inputs are then used by the main algorithm, IITRTS, to build the Tree, which is a subset of the entire product automaton. Then once the tree is built we do a tree search to find the optimal frontier node.
