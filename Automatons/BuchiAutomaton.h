@@ -19,8 +19,8 @@
 #include <spot/twaalgos/translate.hh>
 #include <spot/twaalgos/degen.hh>
 #include <spot/tl/formula.hh>
-#include "../Task Batch Planning Decision Tree/LTLFormula/LTLFormula.h"
-#include "../Task Batch Planning Decision Tree/LTLFormula/BatchAtomicProposition.h"
+#include "../MCTB-PDT/include/LTLFormula/LTLFormula.h"
+#include "../MCTB-PDT/include/LTLFormula/BatchAtomicProposition.h"
 
 class BuchiAutomaton : public Automaton {
 private:

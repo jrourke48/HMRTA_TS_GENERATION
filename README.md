@@ -2,14 +2,109 @@
 
 ## Project Overview
 
-**HMRTA with Multi-Capability Robots** (Heterogenous Multi-Robot Task Allocation with Multi-Capability Robots )This repository contains the source code and guide to use a comprehensive framework for automatic task allocation to heterogeneous robot teams. The task is encoded into a Linear Temporal Logic (LTL) formula which can be used to create a Non-Deterministic Buchi Automaton (NBA): a form of Directed Graph that shows paths that are consistent with the task specification (LTL formula). Previous research has This thesis research implements formal methods for specifying complex, temporally-constrained tasks and automatically distributing them among robots with different capabilities.
+**HMRTA with Multi-Capability Robots** (Heterogenous Multi-Robot Task Allocation with Multi-Capability Robots) This repository contains the source code and guide to use a comprehensive framework for automatic task allocation to heterogeneous robot teams. The task is encoded into a Linear Temporal Logic (LTL) formula which can be used to create a Non-Deterministic Buchi Automaton (NBA): a form of Directed Graph that shows paths that are consistent with the task specification (LTL formula). Previous research has This thesis research implements formal methods for specifying complex, temporally-constrained tasks and automatically distributing them among robots with different capabilities.
+
+---
+
+## Project Requirements
+
+This document outlines the dependencies required for the HMRTA with Multi-Capability Robots project.
+
+### Spot Library
+- **Version**: 2.14.4.dev
+- **Location**: `C:/Users/johnn/Spot Library/spot-2.14.4.dev`
+- **Libraries**: libspot, libbddx
+- **Windows Build Dependencies**:
+  - g++ (C++20 or later)
+  - MinGW-w64 compiler
+  - BDD library (buddy)
+
+#### Building Spot on Linux/Ubuntu (for reference):
+```bash
+# Install build dependencies
+sudo apt update
+sudo apt install -y \
+  build-essential git pkg-config \
+  autoconf automake libtool \
+  flex bison \
+  libbdd-dev libgmp-dev libboost-all-dev \
+  python3-dev swig
+
+# Clone and build
+git clone --recurse-submodules https://gitlab.lre.epita.fr/spot/spot.git
+cd spot
+autoreconf -vfi
+./configure --prefix=/usr/local
+make -j$(nproc)
+sudo make install
+sudo ldconfig
+```
+
+**Note**: The development version has assertions and debugging code enabled. Use `--disable-devel` flag if benchmarking.
+
+### dstar (D* Lite Algorithm)
+- **Location**: `dstar/`
+- **Build Tool**: Make
+- **C++ Compiler**: g++
+- **Graphics Dependencies**:
+  - **macOS**: OpenGL framework, GLUT framework
+  - **Linux**: libGL, libGLU, libglut
+  - **Windows**: OpenGL (typically included), GLUT libraries
+
+### Compiler & Tools
+- **C++ Standard**: C++20
+- **Compiler**: g++ (MinGW on Windows)
+- **Build System**: Make/CMake
+- **Compiler Flags**: `-std=c++20 -Wall -Wextra -g3`
+- **C++ Compiler Location**: `C:/Users/johnn/Cpp compiler/mingw64/bin/g++.exe`
+
+### Visualization (Required)
+Visualization is a core feature of this project and is required for full functionality.
+
+#### raylib
+- **Purpose**: Real-time graphics and simulation visualization
+- **Installation**:
+  - **Windows**: Download from [raylib.com](https://www.raylib.com/) or use vcpkg: `vcpkg install raylib`
+  - **Ubuntu/Linux**: `sudo apt install libraylib-dev` or build from source
+  - **macOS**: `brew install raylib`
+- **Reference**: [Working on GNU/Linux](https://github.com/raysan5/raylib/wiki/Working-on-GNU-Linux)
+
+#### Additional Visualization Tools
+- **graphviz** (for automata and formula visualization)
+  - Ubuntu/Linux: `sudo apt install graphviz`
+  - macOS: `brew install graphviz`
+  - Windows: Download from [graphviz.org](https://graphviz.org/)
+- **xdot** (for interactive dot file viewer)
+  - Ubuntu/Linux: `sudo apt install xdot`
+  - macOS: `brew install xdot`
+
+#### Visualization Usage
+```bash
+# View LTL formula as automaton
+ltl2tgba -f "GFa & GFb" --dot | xdot -
+
+# Open PDF example
+xdg-open automaton.pdf
+
+# Build and visualize gridworld (raylib)
+./test 2> aut.dot
+xdot aut.dot
+```
+
+### Robotics_Research
+- **Location**: `Robotics_Research/`
+- **Dependencies**: Inherits Spot library dependencies
+
+---
 
 ## Repository Breakdown
  - **Transition_Systems**: Discrete workspace abstractions and state-space representations for formal planning. Provides GeneralTransitionSystem (generic AP-based states) and GridWorldTransitionSystem (2D grid coordinates with atomic propositions). Bridges physical workspace dynamics with symbolic planning framework. See [Transition_Systems/README.md](Transition_Systems/README.md) for detailed architecture.
  - **Automatons**: Polymorphic graph-based automata framework implementing node-edge hierarchies. Base Automaton class with three specialized subclasses: BüchiAutomaton (Encodes Task Specification), ProductAutomaton (synchronous product), and TransitionSystem (workspace discretization). Core synthesis component of MCTB-PDT. See [Automatons/README.md](Automatons/README.md) for detailed architecture.
 - **MCTB-PDT (Multi-Capability Task Batch Planning Decision Tree)**: Core thesis contribution addressing state-space explosion in product automaton synthesis (TS × NBA). Implements hierarchical tree-based search encoding NBA states and TS configurations in recursive hierarchy. By growing from root to leaf nodes with memoized pruning strategies (finiteness-differentiated), MCTB-PDT discovers optimal task allocations while exploring only a fraction of the full product automaton, enabling scalable synthesis as robot count and state space complexity increase. See [Task Batch Planning Decision Tree/README.md](Task%20Batch%20Planning%20Decision%20Tree/README.md) for implementation details.
 
-### Required Background Knowledge
+---
+
+## Required Background Knowledge
 
 To understand this thesis project, you should be familiar with:
 
@@ -20,45 +115,7 @@ To understand this thesis project, you should be familiar with:
 - **Graph Algorithms**: Reachability, connectivity, and path-finding in directed graphs
 - **Formal Methods**: Model checking, LTL synthesis, and automata theory fundamentals
 
-### System Architecture
-
-```
-┌─────────────────────────────────────────────────────────┐
-│          LTL Task Specifications (Formulas)             │
-└─────────────────┬───────────────────────────────────────┘
-                  │ (Parse & Convert)
-                  ▼
-┌─────────────────────────────────────────────────────────┐
-│     Generalized Büchi Automata (GBA) Generation         |
-│              (via Spot Library)                         │
-└─────────────────┬───────────────────────────────────────┘
-                  │
-        ┌─────────┴─────────┐
-        ▼                   ▼
-┌───────────────┐  ┌──────────────────┐
-│ Transition    │  │ Büchi Automaton  │
-│ System (TS)   │  │ States/Edges     │
-└───────┬───────┘  └────────┬─────────┘
-        │                   │
-        └─────────┬─────────┘
-                  ▼
-┌─────────────────────────────────────────────────────────┐
-│          Product Automaton (TS × GBA)                   │
-│       Combined State Space with Acceptance Marks        │
-└─────────────────┬───────────────────────────────────────┘
-                  │
-                  ▼
-┌─────────────────────────────────────────────────────────┐
-│      Planning Decision Tree (Task Allocation)           │
-│     Hierarchical Search with Pruning Strategies         │
-└─────────────────┬───────────────────────────────────────┘
-                  │
-                  ▼
-┌─────────────────────────────────────────────────────────┐
-│    Allocated Task Sequences for Robot Team             │
-│         (Paths satisfying LTL specifications)           │
-└─────────────────────────────────────────────────────────┘
-```
+---
 
 ## Directory Structure
 
@@ -97,24 +154,23 @@ To understand this thesis project, you should be familiar with:
   - Academic papers and documentation
   - Spot library reference materials
 
+---
+
 ## Building the Project
 
 ### Prerequisites
 
 - **C++20 Compiler** (g++ recommended)
-  - Located at: `C:/Users/johnn/Cpp compiler/mingw64/bin/g++.exe`
-  - Flags: `-std=c++20 -Wall -Wextra -g3`
-
 - **Spot Model Checking Library** (v2.14.4.dev)
-  - Location: `C:/Users/johnn/Spot Library/spot-2.14.4.dev/`
-  - Headers: `spot/twa/twagraph.hh`, `spot/twaalgos/dot.hh`, `spot/tl/parse.hh`
-  - Linking: `-lspot -lbddx`
 
 ### Build Commands
 
 ```bash
 # Build all task allocation tests
 make test-optimal-path
+
+# Build the gridworld visualization tests
+make vis
 
 # Build individual components
 make clean
@@ -126,6 +182,14 @@ make
 1. **"build (script)"** - Uses `.vscode/build.bat` for active file compilation
 2. **"g++ build active file (quoted)"** - Direct g++ compilation with Spot library linking
 
+### Makefile Options
+
+The makefile has `sim` and `test` flags:
+- **test**: Verifies Spot library is working correctly
+- **sim**: Grid world simulation using raylib visualization
+
+---
+
 ## Core Concepts
 
 ### Linear Temporal Logic (LTL)
@@ -136,6 +200,7 @@ LTL formulas specify temporal constraints on tasks:
 - **X φ** (Next): φ must be true in the next state
 - **φ U ψ** (Until): φ holds until ψ becomes true
 - **φ R ψ** (Release): ψ is released when φ becomes true (or always if φ never becomes true)
+- **φ & ψ**: Conjunction (AND)
 
 **Example Task**: "Visit location A, then visit location B, then stay at B forever"
 ```
@@ -173,9 +238,9 @@ Hierarchical search structure for finding valid task allocations:
 - **Leaves** = complete task assignments with success/failure status
 - **Pruning** removes duplicate (state, progress) pairs and infeasible branches
 
-## Finite vs. Infinite Automata
+### Finite vs. Infinite Automata
 
-### Finite Automata
+#### Finite Automata
 - No globally (G) operators in LTL formula
 - All tasks must eventually complete
 - Aggressive pruning: removes duplicate (state, progress) pairs after first traversal
@@ -183,13 +248,224 @@ Hierarchical search structure for finding valid task allocations:
 
 **Example**: `F("pick_up") & F("deliver")`
 
-### Infinite Automata
+#### Infinite Automata
 - Contains globally (G) operators for perpetual constraints
 - Tasks require repeated/cyclic behavior
 - Relaxed pruning: allows multiple traversals of same (state, progress) pairs
 - Requires infinite edge cycles for acceptance
 
 **Example**: `G(F("monitor")) & G(F("adjust"))`
+
+---
+
+## SPOT Automata Format Differences: Standard vs Generalized Büchi
+
+### Overview
+
+SPOT uses fundamentally different representations for finite and infinite LTL formulas:
+- **Finite formulas** (no `G` operator): Standard Büchi Automata with **state-based acceptance**
+- **Infinite formulas** (with `G` operator): Generalized Büchi Automata with **transition-based acceptance**
+
+This difference impacts how we detect accepting paths and increment progress through the planning tree.
+
+### Standard Büchi Automata (Finite Tests)
+
+#### Definition
+- **Acceptance**: Achieved when visiting an **accepting STATE** at least once
+- **Representation**: Accepting states marked in DOT with `peripheries=2` (double circle)
+- **Example DOT Label**: (No "Inf" prefix)
+  ```
+  label="[Büchi]"
+  ```
+
+#### Visual Representation
+```
+State 0 → State 1 → State 2 (accepting: peripheries=2)
+                       ↑
+                       └─────────┘
+```
+
+#### Algorithm Implication
+```cpp
+if (isAcceptingState(stateId)) {
+    incrementProgress();  // PRE → TRA
+}
+```
+
+#### When Accepting
+- Visit any accepting state once → Path satisfies formula (finite)
+- Multiple cycles possible but not required
+
+### Generalized Büchi Automata (Infinite Tests)
+
+#### Definition
+- **Acceptance**: Achieved when visiting ALL required **acceptance SETS infinitely often**
+- **Representation**: Acceptance sets marked on **edges** in DOT with `{0}`, `{1}`, `{2}`, etc.
+- **Example DOT Label**: 
+  ```
+  label="Inf(0)&Inf(1)&Inf(2)\n[gen. Büchi 3]"
+  ```
+  This means: Must visit transitions in set {0} infinitely AND set {1} infinitely AND set {2} infinitely
+
+#### Visual Representation
+```
+Edge 0→1: label="p0 & p1\n{0}"        (belongs to acceptance set {0})
+Edge 1→2: label="p2 & p3\n{0,1}"      (belongs to sets {0} AND {1})
+Edge 2→0: label="p4\n{2}"              (belongs to acceptance set {2})
+
+Required: Visit {0} infinitely, {1} infinitely, AND {2} infinitely
+```
+
+#### Algorithm Implication
+```cpp
+// Track which acceptance sets have been visited
+node.visitedSets = {0, 1, 2}  // All required sets visited once
+
+if (allRequiredSetsVisited(node.visitedSets)) {
+    incrementProgress();  // PRE → TRA on first complete cycle
+    node.visitedSets.clear();
+    
+    if (allRequiredSetsVisited(node.visitedSets)) {
+        acceptingPath();  // TRA complete on second cycle
+    }
+}
+```
+
+#### When Accepting
+- Visit transitions containing {0}, {1}, {2} once each → Progress to TRA
+- Visit transitions containing {0}, {1}, {2} once more → Path is accepting
+
+### Key Differences Summary
+
+| Feature | Standard Büchi | Generalized Büchi |
+|---------|---|---|
+| **Acceptance Mechanism** | Visiting accepting state | Visiting all acceptance sets infinitely |
+| **Marked On** | Nodes (states) | Edges (transitions) |
+| **DOT Marker** | `peripheries=2` on nodes | `{0}`, `{1}`, `{2}` on edges |
+| **DOT Label** | No "Inf" prefix | `Inf(0)&Inf(1)&Inf(2)` format |
+| **Cycles Required** | 1+ visit to accepting state | Multiple cycles to visit all sets |
+| **Tracking** | Node IDs in `acceptingStates` | Edge labels + set membership |
+| **Use Case** | Finite task sequences | Infinite patrol/monitoring tasks |
+
+### SPOT Implementation Details
+
+#### How to Detect Format
+```cpp
+// In DOT generation by SPOT:
+
+// Standard Büchi - finite formula
+label="[Büchi]"
+label="[Büchi 1]"
+
+// Generalized Büchi - infinite formula  
+label="Inf(0)&Inf(1)&Inf(2)\n[gen. Büchi 3]"
+label="Inf(0)&Inf(1)\n[gen. Büchi 2]"
+```
+
+The presence of `Inf(` in the label indicates generalized format.
+
+#### Parsing Required Sets
+```
+From: label="Inf(0)&Inf(1)&Inf(2)\n[gen. Büchi 3]"
+Extract: {0, 1, 2}
+
+From: label="[Büchi]"
+Extract: {} (standard, no sets)
+```
+
+### Algorithm Updates Required
+
+#### Current Progress Incrementation (Standard Büchi)
+```cpp
+// TaskAllocationAlgorithms.cpp - Line 309-320
+if (nba->isAccepting(newNode->getAutomatonState()->getId())) {
+    // Reached accepting state once
+    newNode->setProgress(TRA);  // Mark as satisfying
+}
+
+// Path is accepting when reaching TRA state
+```
+
+#### New Progress Incrementation (Generalized Büchi)
+```cpp
+// For each edge transition, check acceptance sets
+std::set<int> edgeSets = extractAcceptanceSets(edge.getLabel());
+node->addVisitedSets(edgeSets);
+
+if (node->hasAllRequiredSets()) {
+    // Completed first cycle through all sets
+    if (node->progress == PRE) {
+        node->setProgress(TRA);
+        node->clearVisitedSets();  // Reset for second cycle
+    } else if (node->progress == TRA) {
+        // Completed second cycle through all sets
+        acceptingPath = true;
+        break;
+    }
+}
+```
+
+### Data Structure Changes Needed
+
+#### BuchiAutomaton Class
+```cpp
+class BuchiAutomaton {
+    // Existing
+    bool isInfinite;  // Cached from DOT label check
+    
+    // New for GBA support
+    std::set<int> requiredAcceptanceSets;  // {0}, {1}, {2} from Inf()
+    
+    // New method
+    std::set<int> getRequiredAcceptanceSets() const;
+    // Parses "Inf(0)&Inf(1)&Inf(2)" to extract {0, 1, 2}
+}
+```
+
+#### Tree_Node Class  
+```cpp
+class Tree_Node {
+    // Existing
+    TASK_PROGRESS progress;
+    
+    // New for GBA support (only used when automaton is infinite)
+    std::set<int> visitedAcceptanceSets;  // Sets visited in current cycle
+    
+    // New methods
+    void addVisitedSet(int setId);
+    bool hasAllRequiredSets(const std::set<int>& required) const;
+    void clearVisitedSets();
+}
+```
+
+### Examples by Test Type
+
+#### Example 1: Finite Test (Standard Büchi)
+**Formula**: `(F"p0" & F"p1")`  
+**DOT Label**: `[Büchi]`  
+**Algorithm**: Reach any accepting state → mark PRE, reach again → mark TRA → done
+
+#### Example 2: Infinite Test (Generalized Büchi)  
+**Formula**: `G(F"p0" & F"p1")`  
+**DOT Label**: `Inf(0)&Inf(1)`  
+**Required Sets**: {0, 1}  
+**Algorithm**:
+1. Take transition with {0} → visitedSets = {0}
+2. Take transition with {1} → visitedSets = {0, 1}
+3. All required sets visited → Progress to TRA, clear visitedSets
+4. Take transition with {0} again → visitedSets = {0}
+5. Take transition with {1} again → visitedSets = {0, 1}
+6. All required sets visited again → Path is ACCEPTING
+
+### Integration Strategy
+
+1. ✅ **Phase 1** (Complete): Detect automaton type via `isInfinite` field
+2. **Phase 2** (Next): Extract required acceptance sets from DOT label
+3. **Phase 3** (Next): Modify Tree_Node to track visitedAcceptanceSets
+4. **Phase 4** (Next): Update TaskAllocationAlgorithms progress logic
+5. **Phase 5** (Next): Test with infinite test suite
+
+---
 
 ## Key Algorithms
 
@@ -220,6 +496,8 @@ Manages task completion phases in the context of GBA acceptance:
 - Rule 1: Add OTH nodes to traversedTree (no removal)
 - Rules 2-3: Skipped (allow revisits for cycle support)
 - Visit-count pruning: Limit revisits to MAX_REVISITS to prevent infinite growth
+
+---
 
 ## Main API
 
@@ -267,6 +545,8 @@ uint32_t initialState = env->getInitialState();
 vector<uint32_t> successors = env->getSuccessorStates(initialState);
 ```
 
+---
+
 ## Testing
 
 ### Test Suite
@@ -289,6 +569,8 @@ The project includes comprehensive tests in [Task Batch Planning Decision Tree/T
 ./output/TestTaskAllocation
 ```
 
+---
+
 ## File Formats
 
 ### DOT Format Output
@@ -304,14 +586,7 @@ Automata and product spaces are exported in DOT format for visualization:
 - **Complex**: "p0 & p1 | p2" (boolean expressions)
 - **With Acceptance**: "p0 & p1:{0,1,2}" (propositions with GBA acceptance marks)
 
-## Documentation
-
-For detailed information on specific components:
-
-- [Automatons/README.md](Automatons/README.md) - Automata classes and architecture
-- [Task Batch Planning Decision Tree/README.md](Task%20Batch%20Planning%20Decision%20Tree/README.md) - Planning algorithms and decision tree
-- [AUTOMATONS_README.md](AUTOMATONS_README.md) - Comprehensive automata format documentation
-- [SPOT_AUTOMATA_FORMATS.md](SPOT_AUTOMATA_FORMATS.md) - Spot library format specifications
+---
 
 ## Usage Example
 
@@ -341,11 +616,15 @@ allocator.unrelatedTaskSearch(robot, env, gba, initialAcceptingSets);
 // (Implementation depends on specific tree structure)
 ```
 
+---
+
 ## Performance Characteristics
 
 - **Time Complexity**: Depends on TS size and GBA complexity; generally O(|TS| × |GBA| × branching_factor)
 - **Space Complexity**: O(|TS| × |GBA|) for product automaton; additional memory for decision tree nodes
 - **Pruning Impact**: Reduces search space significantly for finite automata; minimal impact for infinite automata (as intended)
+
+---
 
 ## Known Limitations
 
@@ -353,6 +632,8 @@ allocator.unrelatedTaskSearch(robot, env, gba, initialAcceptingSets);
 2. **Discrete Workspace**: Transition system must be discretized; continuous spaces require pre-processing
 3. **Single Robot Focus**: Current implementation optimized for single-robot task allocation; multi-robot coordination in development
 4. **Finite vs Infinite**: Different pruning strategies required; may need tuning for specific automata types
+
+---
 
 ## Future Enhancements
 
@@ -363,9 +644,13 @@ allocator.unrelatedTaskSearch(robot, env, gba, initialAcceptingSets);
 - [ ] Weighted propositions for probabilistic planning
 - [ ] Reactive synthesis for real-time task assignment
 
+---
+
 ## Contributing
 
 This is a thesis research project. For questions or contributions, please contact the project maintainer.
+
+---
 
 ## References
 
@@ -373,6 +658,9 @@ This is a thesis research project. For questions or contributions, please contac
 - LTL Specification: [https://en.wikipedia.org/wiki/Linear_temporal_logic](https://en.wikipedia.org/wiki/Linear_temporal_logic)
 - Büchi Automata: [https://en.wikipedia.org/wiki/Büchi_automaton](https://en.wikipedia.org/wiki/B%C3%BCchi_automaton)
 - Formal Methods in Robotics: Various ICRA, RSS, and IROS proceedings
+- Raylib Graphics: [https://www.raylib.com/](https://www.raylib.com/)
+
+---
 
 ## License
 
@@ -380,5 +668,5 @@ Internal Research Project - Cal Poly
 
 ---
 
-**Last Updated**: 2026-07-21  
-**Project Status**: Active Development - GBA Semantics Implementation Phase
+**Last Updated**: 2026-08-10  
+**Project Status**: Active Development - Algorithm Testing Phase
