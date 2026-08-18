@@ -129,11 +129,12 @@ int main() {
             env->addObstacle(Point(x, y));
         }
         std::cout << "✓ Added " << numObstacles << " random obstacles" << std::endl;
-        std::string ltl_str = "(F\"p1\") && (F\"p2\")";
+        std::string ltl_str = "G(F\"p1\") && G(F\"p2\") && G(F\"p3\")";
     
         std::vector<BatchAtomicProposition> batchAPs;
         batchAPs.push_back(BatchAtomicProposition(1, 1, {true, false, false, false, false, true, false, false, false, false, false, false, false}, 0));
         batchAPs.push_back(BatchAtomicProposition(2, 2, {true, false, false, false, false, true, false, false, false, false, false, false, false}, 0));
+        batchAPs.push_back(BatchAtomicProposition(3, 3, {true, false, false, false, false, true, false, false, false, false, false, false, false}, 0));
         
         LTLFormula* ltlFormula = new LTLFormula(ltl_str, batchAPs);
         BuchiAutomaton* buchi = new BuchiAutomaton(ltlFormula);
@@ -143,7 +144,7 @@ int main() {
         TaskAllocationAlgorithms* taa1 = new TaskAllocationAlgorithms(buchi, env, mrs);
         taa1->intensiveInterTaskRelationshipTreeSearch(buchi, env, mrs);
         PlanningDecisionTree* planningTree = taa1->getPlanningTree();
-        std::vector<Tree_Node*> optimalPath = planningTree->getPathtoFrontierNode(planningTree->getOptimalFrontierNode(true));
+        std::vector<Tree_Node*> optimalPath = planningTree->getPathtoFrontierNode(planningTree->getOptimalFrontierNode(false));
         
         // Print metrics after algorithm completes
         std::cout << "\n=== Algorithm Metrics ===" << std::endl;

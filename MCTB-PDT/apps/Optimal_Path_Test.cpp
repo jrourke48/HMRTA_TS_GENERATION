@@ -4,6 +4,7 @@
 #include <memory>
 #include <algorithm>
 #include "../include/TaskAllocationAlgorithms.h"
+#include "../include/Environment/gridvis.h"
 #include "../include/Tree/PlanningDecisionTree.h"
 #include "../include/Tree/Tree_Node.h"
 #include "../include/Environment/Environment.h"
@@ -209,6 +210,16 @@ cout << "\n" << string(80, '-') << endl;
         taa3->getMetrics().printSummary();
         taa3->visualizeTree("output/finite_test_3_tree");
         taa3->visualizeOptimalPath("output/finite_test_3_path");
+        
+        PlanningDecisionTree* planningTree = taa3->getPlanningTree();
+        std::vector<Tree_Node*> optimalPath = planningTree->getPathtoFrontierNode(planningTree->getOptimalFrontierNode(true));
+        visualize_environment(
+            *env,
+            *mrs,
+            optimalPath,
+            compute_dstar_paths(*env, *mrs, optimalPath),
+            "Multi-Robot Task Plan Visualization - D* Lite Pathfinding"
+        );
     }
     
     BuchiAutomaton* finite4 = createTestFiniteBuchiAutomaton4();
@@ -433,7 +444,7 @@ BuchiAutomaton* createTestBuchiAutomaton2() {
  * Linear progression with no cycles
  */
 BuchiAutomaton* createTestFiniteBuchiAutomaton1() {
-    string ltl_str = "((!\"p1\" & !\"p2\") U(\"p4\" & X\"p3\")) & F\"p1\"& F\"p2\")";
+    string ltl_str = "(((!\"p1\" & !\"p2\") U(\"p4\" & X\"p3\")) & F\"p1\"& F\"p2\")";
     
     vector<BatchAtomicProposition> batchAPs;
     batchAPs.push_back(BatchAtomicProposition(1, 1, {true, false, false, true, false, false, false, false, false, false, false, false, false}, 0));
@@ -619,7 +630,7 @@ BuchiAutomaton* createTestInfiniteBuchiAutomaton3() {
  * Tests multi-level nesting with mixed safety and liveness properties using 5 locations
  */
 BuchiAutomaton* createTestInfiniteBuchiAutomaton4() {
-    string ltl_str = "G((F(\"p0\" & X(\"p1\" U \"p2\")))) & (G(F\"p3\") | G(F(\"p4\" & X(\"p0\")))";
+    string ltl_str = "G((F(\"p0\" & X(\"p1\" U \"p2\")))) & (G(F\"p3\") | G(F(\"p4\" & X(\"p0\"))))";
     
     vector<BatchAtomicProposition> batchAPs;
     // Main nested pattern: p0 then until pattern

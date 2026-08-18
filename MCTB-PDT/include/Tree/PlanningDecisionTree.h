@@ -48,6 +48,9 @@ class PlanningDecisionTree {
         void clearFrontierNodes();
         Tree_Node* getOptimalFrontierNode(bool finite_nba) const; // Returns the frontier node with the lowest max time (heuristic)
         std::vector<Tree_Node*> getPathtoFrontierNode(Tree_Node* frontierNode);
+        // Get task allocation from batch value
+        std::vector<bool> getAllocationfromBatchValue(uint16_t batchValue) const;
+        
 
         // Tree manipulation
         void deleteSubtree(Tree_Node* node);

@@ -5,7 +5,7 @@
 /**
  * MultiRobotSystem - Constructor
  */
-MultiRobotSystem::MultiRobotSystem(uint32_t numRobots)
+MultiRobotSystem::MultiRobotSystem(uint8_t numRobots)
     : numRobots(numRobots) {
 }
 
@@ -25,13 +25,23 @@ MultiRobotSystem::~MultiRobotSystem() {
 void MultiRobotSystem::addRobot(Robot* robot) {
     if (!robot) return;
     robots.push_back(robot);
-    numRobots = getNumRobots()+1;  // Update the count of robots
+    numRobots++;  // Update the count of robots
+}
+void MultiRobotSystem::removeRobot(uint8_t robotId) {
+    for (auto it = robots.begin(); it != robots.end(); ++it) {
+        if ((*it)->getRobotId() == robotId) {
+            delete *it;
+            robots.erase(it);
+            numRobots--;  // Update the count of robots
+            return;
+        }
+    }
 }
 
 /**
  * getRobot - Get a robot by ID
  */
-Robot* MultiRobotSystem::getRobot(uint32_t robotId) const {
+Robot* MultiRobotSystem::getRobot(uint8_t robotId) const {
     for (auto* robot : robots) {
         if (robot->getRobotId() == robotId) {
             return robot;
@@ -48,6 +58,7 @@ void MultiRobotSystem::clear() {
         delete robot;
     }
     robots.clear();
+    numRobots = 0;  // Update the count of robots
 }
 
 /**
@@ -66,8 +77,8 @@ std::vector<Robot*> MultiRobotSystem::getRobotsWithCapability(RobotCapability ca
 /**
  * getRobotIdsWithCapability - Get IDs of all robots with a specific capability
  */
-std::vector<uint32_t> MultiRobotSystem::getRobotIdsWithCapability(RobotCapability cap) const {
-    std::vector<uint32_t> result;
+std::vector<uint8_t> MultiRobotSystem::getRobotIdsWithCapability(RobotCapability cap) const {
+    std::vector<uint8_t> result;
     for (auto* robot : robots) {
         if (robot->hasCapability(cap)) {
             result.push_back(robot->getRobotId());
@@ -91,8 +102,8 @@ bool MultiRobotSystem::hasRobotWithCapability(RobotCapability cap) const {
 /**
  * countRobotsWithCapability - Count how many robots have a specific capability
  */
-uint32_t MultiRobotSystem::countRobotsWithCapability(RobotCapability cap) const {
-    uint32_t count = 0;
+uint8_t MultiRobotSystem::countRobotsWithCapability(RobotCapability cap) const {
+    uint8_t count = 0;
     for (auto* robot : robots) {
         if (robot->hasCapability(cap)) {
             count++;

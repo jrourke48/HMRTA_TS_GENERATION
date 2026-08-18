@@ -372,6 +372,26 @@ Tree_Node* PlanningDecisionTree::getOptimalFrontierNode(bool finite_nba) const {
     
     return optimal;
 }
+/**
+ * getAllocationfromBatchValue - Get task allocation vector from batch value
+ * Searches the tree for a node with matching batch value and returns its allocation
+ * Returns empty vector if no matching node found
+ */
+std::vector<bool> PlanningDecisionTree::getAllocationfromBatchValue(uint16_t batchValue) const {
+    // Get all nodes in the tree
+    std::vector<Tree_Node*> allNodes = const_cast<PlanningDecisionTree*>(this)->getAllNodes();
+    
+    // Search for a node with matching batch value
+    for (Tree_Node* node : allNodes) {
+        if (node != nullptr && node->getBatch() == static_cast<int8_t>(batchValue)) {
+            // Found matching batch - return its allocation
+            return node->getRoboTaskAllocation();
+        }
+    }
+    
+    // No matching batch value found, return empty vector
+    return std::vector<bool>();
+}
 
 /**
  * reassignNodeIds - Reassign all node IDs in tree hierarchy order

@@ -141,7 +141,8 @@ class TaskAllocationAlgorithms {
         void exclusiveTaskSearch(
             Tree_Node* newNode,
             Node* TSState,
-            Tree_Node* currentNode);
+            Tree_Node* currentNode,
+            uint16_t apId);
         PlanningDecisionTree* pruneSubtree(PlanningDecisionTree* subtree);
         
         /**

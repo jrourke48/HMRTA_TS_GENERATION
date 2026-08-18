@@ -12,26 +12,27 @@
 class MultiRobotSystem {
 private:
     std::vector<Robot*> robots;
-    uint32_t numRobots;
+    uint8_t numRobots;
     
 public:
     // Constructor
-    MultiRobotSystem(uint32_t numRobots = 0);
+    MultiRobotSystem(uint8_t numRobots = 0);
     
     // Destructor
     ~MultiRobotSystem();
     
     // Robot management
     void addRobot(Robot* robot);
-    Robot* getRobot(uint32_t robotId) const;
+    void removeRobot(uint8_t robotId);
+    Robot* getRobot(uint8_t robotId) const;
     const std::vector<Robot*>& getRobots() const { return robots; }
-    uint32_t getNumRobots() const { return numRobots; }
+    uint8_t getNumRobots() const { return numRobots; }
     
     // Capability queries
     std::vector<Robot*> getRobotsWithCapability(RobotCapability cap) const;
-    std::vector<uint32_t> getRobotIdsWithCapability(RobotCapability cap) const;
+    std::vector<uint8_t> getRobotIdsWithCapability(RobotCapability cap) const;
     bool hasRobotWithCapability(RobotCapability cap) const;
-    uint32_t countRobotsWithCapability(RobotCapability cap) const;
+    uint8_t countRobotsWithCapability(RobotCapability cap) const;
     std::vector<Robot*> getRobotsWithAllCapabilities(const std::vector<RobotCapability>& caps) const;
     std::vector<Robot*> getRobotsWithAnyCapability(const std::vector<RobotCapability>& caps) const;
     std::string to_string() const;

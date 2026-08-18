@@ -62,37 +62,57 @@ RobotPathMap compute_dstar_paths(
         robotPaths[i] = std::vector<Point>();
     }
     
+    // Track the last position of each robot for continuous path segments
+    std::map<uint32_t, Point> robotLastPositions;
+    for (uint32_t i = 0; i < mrs.getNumRobots(); ++i) {
+        const std::vector<Point>& positions = mrs.getRobotPositions();
+        if (i < positions.size()) {
+            robotLastPositions[i] = positions[i];
+        }
+    }
+    
     // For each node in the optimal path
     for (const Tree_Node* node : optimalPath) {
-        if (!node) continue;
+        if (!node) {
+            continue;
+        }
         
         // Get which robots are allocated to this node
         const std::vector<bool>& allocation = node->getRoboTaskAllocation();
-        const std::vector<Point>& robotPositions = node->getRobotPositions();
+        const std::vector<Point>& nodePositions = node->getRobotPositions();
         
         // For each allocated robot
         for (uint32_t robotId = 0; robotId < allocation.size(); ++robotId) {
-            if (!allocation[robotId]) continue;  // Robot not allocated to this node
+            if (!allocation[robotId]) {
+                continue;  // Robot not allocated to this node
+            }
             
-            // Get robot's current position (or use provided position from node)
+            // Start from last position in our tracking
             Point currentPos;
-            if (robotId < robotPositions.size()) {
-                currentPos = robotPositions[robotId];
+            if (robotLastPositions.count(robotId)) {
+                currentPos = robotLastPositions[robotId];
             } else {
                 const std::vector<Point>& positions = mrs.getRobotPositions();
                 if (robotId < positions.size()) {
                     currentPos = positions[robotId];
                 } else {
-                    std::cerr << "compute_dstar_paths: Robot " << robotId << " position not found" << std::endl;
                     continue;
                 }
             }
             
-            //goal position is the ts center
-            Point goalPos = env.TSStateIdToGridCenter(node->getTSState()->getId());
+            // Get goal position from node (updated with circular arrangement)
+            if (robotId >= nodePositions.size()) {
+                continue;
+            }
+            Point goalPos = nodePositions[robotId];
             
             // Compute D* path from current position to goal
             std::vector<Point> segmentPath = compute_dstar_path_single(env, currentPos, goalPos);
+            
+            // Skip if path is empty
+            if (segmentPath.empty()) {
+                continue;
+            }
             
             // Append path, avoiding duplicate endpoints
             for (size_t i = 0; i < segmentPath.size(); ++i) {
@@ -100,6 +120,14 @@ RobotPathMap compute_dstar_paths(
                     continue;  // Skip first point if it's a duplicate of last point
                 }
                 robotPaths[robotId].push_back(segmentPath[i]);
+            }
+            
+            // Update robot's last position to where it ends up from task allocation
+            if (robotId < nodePositions.size()) {
+                robotLastPositions[robotId] = nodePositions[robotId];
+            } else {
+                // Fallback to end of D* path
+                robotLastPositions[robotId] = segmentPath.back();
             }
         }
     }
@@ -120,6 +148,10 @@ void visualize_environment(
     const GridWorld* gridWorld = env.getGridWorld();
     if (!gridWorld) {
         std::cerr << "visualize_environment: GridWorld is null" << std::endl;
+        return;
+    }
+    
+    if (mrs.getNumRobots() == 0) {
         return;
     }
 
@@ -146,7 +178,6 @@ void visualize_environment(
     // Compute paths if not provided
     RobotPathMap paths = robotPaths;
     if (paths.empty() && !optimalPath.empty()) {
-        std::cout << "Computing D* paths for robots..." << std::endl;
         paths = compute_dstar_paths(env, mrs, optimalPath);
     }
 
@@ -191,7 +222,7 @@ void visualize_environment(
 
         // Update robot positions along their paths
         for (uint32_t i = 0; i < mrs.getNumRobots(); ++i) {
-            if (paths.count(i) && robotPathIndices[i] < paths[i].size() - 1) {
+            if (paths.count(i) && paths[i].size() > 1 && robotPathIndices[i] < paths[i].size() - 1) {
                 robotPathProgress[i] += animationSpeed;
                 if (robotPathProgress[i] >= 1.0f) {
                     robotPathIndices[i]++;  // Move to next waypoint
@@ -321,7 +352,7 @@ void visualize_environment(
             Point robotPos;
             
             // Get robot position from animated path if available
-            if (paths.count(i) && robotPathIndices[i] < paths[i].size()) {
+            if (paths.count(i) && paths[i].size() > 0 && robotPathIndices[i] < paths[i].size()) {
                 robotPos = paths[i][robotPathIndices[i]];
             } else {
                 // Fallback to starting position if no path
