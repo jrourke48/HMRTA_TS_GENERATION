@@ -2,6 +2,7 @@
 #include <iostream>
 #include <fstream>
 #include <cstdlib>
+#include <ctime>
 #include <spot/tl/parse.hh>
 #include <spot/tl/print.hh>
 #include <spot/twaalgos/translate.hh>
@@ -12,250 +13,155 @@
 #include <spot/twa/twaproduct.hh>
 #include <spot/twaalgos/emptiness.hh>
 #include <bddx.h>
-#include "Transition_Systems/GridWorldTransitionSystem.h"
-#include "Automatons/TS.h"
-#include "Automatons/BuchiAutomaton.h"
-#include "Automatons/ProductAutomaton.h"
+#include "../Transition_Systems/GridWorldTransitionSystem.h"
+#include "TS.h"
+#include "BuchiAutomaton.h"
+#include "ProductAutomaton.h"
+#include "Environment/Environment.h"
+#include "Environment/Point.h"
+#include "MultiRobotSystem/MultiRobotSystem.h"
+#include "MultiRobotSystem/Robot.h"
+#include "MultiRobotSystem/RobotCapabilities.h"
+#include "LTLFormula/LTLFormula.h"
+#include "LTLFormula/BatchAtomicProposition.h"
 
 int main()
 {
-    //=========================================================================
-    // 1. Create a Grid World Transition System
-    //=========================================================================
-    std::cout << "========================================\n";
-    std::cout << "Testing New Automaton Classes\n";
-    std::cout << "========================================\n\n";
+    try {
+        std::cout << "=== Multi-Robot Task Plan Visualization ===" << std::endl;
+        
+    // Allocate GridWorld
+        GridWorld* grid = new GridWorld(21, 21);
+        std::cout << "✓ GridWorld created (20x20)" << std::endl;
+        
+        // Allocate Transition System
+        TS* ts = new TS();
+        
+        // Add 6 states 
+        Node* node0 = new Node(0, "S0");
+        Node* node1 = new Node(1, "S1");
+        Node* node2 = new Node(2, "S2");
+        Node* node3 = new Node(3, "S3");
+        Node* node4 = new Node(4, "S4");
+        Node* node5 = new Node(5, "S5");
 
-    // Create a 2columx3row grid
-    TransitionSystem gridTS(2, 3);
-
-    std::cout << "Grid World Transition System: " << gridTS.grid_width << "x" << gridTS.grid_height << " grid\n";
-    std::cout << "States: " << gridTS.numStates() << "\n";
-    std::cout << "Atomic Props: " << gridTS.numAPs() << "\n\n";
-
-    //=========================================================================
-    // 2. Convert Grid World TS to new TS Automaton class
-    //=========================================================================
-    TS tsAutomaton(&gridTS);
+        //with edges: 0-2 1-2 2-3 2-4 2-5
+        node0->addEdge(Edge(2));
+        node2->addEdge(Edge(0));
+        node1->addEdge(Edge(2));
+        node2->addEdge(Edge(1));
+        node3->addEdge(Edge(2));
+        node2->addEdge(Edge(3));
+        node4->addEdge(Edge(2));
+        node2->addEdge(Edge(4));
+        node5->addEdge(Edge(2));
+        node2->addEdge(Edge(5));
+        
+        // Add nodes to TS
+        ts->add_Node(node0);
+        ts->add_Node(node1);
+        ts->add_Node(node2);
+        ts->add_Node(node3);
+        ts->add_Node(node4);
+        ts->add_Node(node5);
+        ts->setInitial(0);
+        
+        std::cout << "✓ Transition System created" << std::endl;
+        std::cout << "  - States: " << ts->getNumStates() << std::endl;
+        std::cout << "  - Initial state: 0" << std::endl;
+        
+        // Allocate Environment
+        Environment* env = new Environment(ts, grid);
+        std::cout << "✓ Environment created" << std::endl;
+        
+        // Map states to grid regions
+        env->mapTSStateToGrid(0, Point(17, 15), 8, 12);    // State 0 centered at (17,15), 4x6 region
+        env->mapTSStateToGrid(1, Point(17, 4), 8, 8);   // State 1 centered at (17,4)
+        env->mapTSStateToGrid(2, Point(10, 10), 6, 22);   // State 2 centered at (10,11)
+        env->mapTSStateToGrid(3, Point(3, 3), 8, 6);   // State 3 centered at (5,5)
+        env->mapTSStateToGrid(4, Point(3, 10), 8, 8);   // State 4 centered at (5,10)
+        env->mapTSStateToGrid(5, Point(3, 17), 8, 8);   // State 5 centered at (5,15)
+        std::cout << "✓ Mapped 6 states to grid regions" << std::endl;
+        
+        // Create MultiRobotSystem
+        MultiRobotSystem* mrs = new MultiRobotSystem();
+        if (!mrs) {
+            std::cerr << "Failed to create MultiRobotSystem" << std::endl;
+            return 1;
+        }
+        
+        // Position all robots in room 0 (centered at Point(18, 14))
+        Robot* r0 = new Robot(0, "R0", Point(18, 14));
+        r0->initializeCapabilities(13);
+        r0->enableCapability(RobotCapability::SENSOR_GPS); //C
+        mrs->addRobot(r0);
+        
+        Robot* r1 = new Robot(1, "R1", Point(17, 14));
+        r1->initializeCapabilities(13);
+        r1->enableCapability(RobotCapability::MOVEMENT_GROUND); //A
+        mrs->addRobot(r1);
+        
+        Robot* r2 = new Robot(2, "R2", Point(19, 14));
+        r2->initializeCapabilities(13);
+        r2->enableCapability(RobotCapability::SENSOR_CAMERA); // B
+        mrs->addRobot(r2);
+        Robot* r3 = new Robot(3, "R3", Point(18, 13));
+        r3->initializeCapabilities(13);
+        r3->enableCapability(RobotCapability::SENSOR_GPS); // C
+        // mrs->addRobot(r3);
+        
+        // Robot* r4 = new Robot(4, "R4", Point(18, 15));
+        // r4->initializeCapabilities(13);
+        // r4->enableCapability(RobotCapability::MOVEMENT_GROUND);
+        // mrs->addRobot(r4);
+        
+        // Robot* r5 = new Robot(5, "R5", Point(17, 15));
+        // r5->initializeCapabilities(13);
+        // r5->enableCapability(RobotCapability::SENSOR_CAMERA);
+        // mrs->addRobot(r5);
     
-    std::cout << "=== TS Automaton (New Class) ===" << std::endl;
-    std::cout << "States: " << tsAutomaton.getnumStates() << std::endl;
-    std::cout << "Edges: " << tsAutomaton.getnumEdges() << std::endl;
-
-    //=========================================================================
-    // 3. Parse LTL Formula
-    //=========================================================================
-    std::string input = "GF (\"4\" & X (!\"4\" U \"0\"))";
+    std::cout << "✓ MultiRobotSystem created with 3 robots" << std::endl;
+        
+        // Add random obstacles for interesting pathfinding
+        std::cout << "Adding random obstacles..." << std::endl;
+        srand(time(0));
+        int numObstacles = 15;
+        for (int i = 0; i < numObstacles; i++) {
+            int x = rand() % 20;
+            int y = rand() % 20;
+            env->addObstacle(Point(x, y));
+        }
+        std::cout << "✓ Added " << numObstacles << " random obstacles" << std::endl;
+        std::string ltl_str = "G(F\"p1\") && G(F\"p2\") && G(F\"p3\")";
     
-    spot::parsed_formula pf = spot::parse_infix_psl(input);
-    if (pf.format_errors(std::cerr))
-        return 1;
-    spot::formula f = pf.f;
-    
-    std::cout << "\n=== Input Formula ===" << std::endl;
-    std::cout << "Infix: " << spot::str_psl(f) << std::endl;
-    std::cout << "LaTeX: ";
-    print_latex_psl(std::cout, f) << std::endl;
-
-    //=========================================================================
-    // 4. Translate LTL to Büchi Automaton using new BuchiAutomaton class
-    //=========================================================================
-    spot::translator trans;
-    spot::twa_graph_ptr buchiSpot = trans.run(f);
-    
-    BuchiAutomaton buchiAutomaton;
-    buchiAutomaton.fromSpotAutomaton(buchiSpot);
+        std::vector<BatchAtomicProposition> batchAPs;
+        batchAPs.push_back(BatchAtomicProposition(1, 1, {true, false, false, false, false, true, false, false, false, false, false, false, false}, 0));
+        batchAPs.push_back(BatchAtomicProposition(2, 2, {true, false, false, false, false, true, false, false, false, false, false, false, false}, 0));
+        batchAPs.push_back(BatchAtomicProposition(3, 3, {true, false, false, false, false, true, false, false, false, false, false, false, false}, 0));
+        
+        LTLFormula* ltlFormula = new LTLFormula(ltl_str, batchAPs);
+        BuchiAutomaton* buchi = new BuchiAutomaton(ltlFormula);
+        buchi->visualize("output/buchi_automaton_tree_test");
+        std::cout << "✓ BuchiAutomaton created" << std::endl;
     
     std::cout << "\n=== Büchi Automaton (New Class) ===" << std::endl;
-    std::cout << "States: " << buchiAutomaton.getnumStates() << std::endl;
-    std::cout << "Edges: " << buchiAutomaton.getnumEdges() << std::endl;
-    std::cout << "Accepting States: " << buchiAutomaton.getAcceptingStates().size() << std::endl;
+    std::cout << "States: " << buchi->getNumStates() << std::endl;
+    std::cout << "Edges: " << buchi->getNumEdges() << std::endl;
+    std::cout << "Accepting States: " << buchi->getAcceptingStates().size() << std::endl;
 
     //=========================================================================
     // 5. Compute Product Automaton using new ProductAutomaton class
     //=========================================================================
     // Create product using Spot (for comparison and accepting run detection)
     // Important: both automata must share the same BDD dictionary for product()
-    spot::twa_graph_ptr tsSpot = tsAutomaton.toSpotAutomaton(buchiSpot->get_dict());
-    spot::twa_graph_ptr productSpot = spot::product(tsSpot, buchiSpot);
-    
-    // Create product automaton from Spot result
-    ProductAutomaton productAutomaton(productSpot);
+    ProductAutomaton productAutomaton(*ts, *mrs, *buchi);
 
     std::cout << "\n=== Product Automaton (New Class) ===" << std::endl;
-    std::cout << "States: " << productAutomaton.getnumStates() << std::endl;
-    std::cout << "Edges: " << productAutomaton.getnumEdges() << std::endl;
+    std::cout << "States: " << productAutomaton.getNumStates() << std::endl;
+    std::cout << "Edges: " << productAutomaton.getNumEdges() << std::endl;
 
     //=========================================================================
     // 5b. Validate Product Automaton Conversion
     //=========================================================================
     std::cout << "\n=== Validating Product Automaton Conversion ===" << std::endl;
     
-    bool conversion_valid = true;
-    
-    // Check 1: State count match
-    if (productAutomaton.getnumStates() != productSpot->num_states()) {
-        std::cout << "ERROR: State count mismatch!\n";
-        std::cout << "  Custom: " << productAutomaton.getnumStates() << "\n";
-        std::cout << "  Spot:   " << productSpot->num_states() << "\n";
-        conversion_valid = false;
-    } else {
-        std::cout << "✓ State count matches: " << productAutomaton.getnumStates() << "\n";
-    }
-    
-    // Check 2: Edge count match
-    unsigned long spotEdgeCount = 0;
-    for (auto edge : productSpot->edges()) {
-        spotEdgeCount++;
-    }
-    if (productAutomaton.getnumEdges() != spotEdgeCount) {
-        std::cout << "ERROR: Edge count mismatch!\n";
-        std::cout << "  Custom: " << productAutomaton.getnumEdges() << "\n";
-        std::cout << "  Spot:   " << spotEdgeCount << "\n";
-        conversion_valid = false;
-    } else {
-        std::cout << "✓ Edge count matches: " << productAutomaton.getnumEdges() << "\n";
-    }
-    
-    // Check 3: Verify accepting states
-    unsigned long spotAcceptingEdges = 0;
-    for (auto edge : productSpot->edges()) {
-        if (edge.acc != spot::acc_cond::mark_t()) {
-            spotAcceptingEdges++;
-        }
-    }
-    auto customAcceptingStates = productAutomaton.getAcceptingStates();
-    if (customAcceptingStates.size() == 0 && spotAcceptingEdges > 0) {
-        std::cout << "WARNING: No accepting states in custom automaton but Spot has accepting edges!\n";
-        std::cout << "  Spot has " << spotAcceptingEdges << " accepting edges\n";
-        conversion_valid = false;
-    } else {
-        std::cout << "✓ Accepting states identified: " << customAcceptingStates.size() << "\n";
-    }
-    
-    // Check 4: Spot-check a few edges for correctness
-    bool edges_match = true;
-    unsigned checked_edges = 0;
-    unsigned max_check = std::min(5u, (unsigned)spotEdgeCount);
-    for (auto spotEdge : productSpot->edges()) {
-        if (checked_edges >= max_check) break;
-        
-        // Check if this edge exists in custom automaton
-        if (!productAutomaton.isAdjacent(spotEdge.src, spotEdge.dst)) {
-            std::cout << "ERROR: Edge (" << spotEdge.src << " -> " << spotEdge.dst << ") missing in custom automaton!\n";
-            edges_match = false;
-        }
-        checked_edges++;
-    }
-    
-    if (edges_match && checked_edges > 0) {
-        std::cout << "✓ Spot-checked " << checked_edges << " edges - all present and correct\n";
-    }
-    
-    if (conversion_valid) {
-        std::cout << "✓ Product automaton conversion VALID\n";
-    } else {
-        std::cout << "✗ Product automaton conversion has issues\n";
-    }
-
-    //=========================================================================
-    // 6. Check for Accepting Run (Emptiness Check)
-    //=========================================================================
-    std::cout << "\n=== Emptiness Check ===" << std::endl;
-    
-    auto run = productSpot->accepting_run();
-    if (run) {
-        std::cout << "SATISFIABLE: An accepting run exists!" << std::endl;
-        
-        std::cout << "\n--- Accepting Run ---" << std::endl;
-        std::cout << "Prefix (path to cycle):" << std::endl;
-        for (const auto& step : run->prefix) {
-            std::cout << "  State " << step.s << std::endl;
-        }
-        std::cout << "Cycle (accepting loop):" << std::endl;
-        for (const auto& step : run->cycle) {
-            std::cout << "  State " << step.s << std::endl;
-        }
-        
-        // Highlight the accepting run in the product automaton
-        run->highlight(5);
-    } else {
-        std::cout << "UNSATISFIABLE: No accepting run exists." << std::endl;
-        std::cout << "The LTL formula cannot be satisfied on this transition system." << std::endl;
-    }
-
-    //=========================================================================
-    // 6b. Validate Product Automaton Structure
-    //=========================================================================
-    std::cout << "\n=== Product Automaton Validation ===" << std::endl;
-    std::cout << "Product has " << productSpot->num_states() << " states\n";
-    std::cout << "TS has " << tsSpot->num_states() << " states, Büchi has " << buchiSpot->num_states() << " states\n";
-    std::cout << "Max expected product states: " << (tsSpot->num_states() * buchiSpot->num_states()) << "\n";
-    
-    // Count product edges
-    unsigned long productEdges = 0;
-    for (auto edge : productSpot->edges()) {
-        productEdges++;
-    }
-    std::cout << "Product has " << productEdges << " edges\n";
-    
-    // Check initial states
-    std::cout << "Product initial state: " << productSpot->get_init_state_number() << "\n";
-    
-    // Count accepting states in product
-    unsigned long acceptingCount = 0;
-    for (unsigned s = 0; s < productSpot->num_states(); ++s) {
-        for (auto edge : productSpot->out(s)) {
-            if (edge.acc != spot::acc_cond::mark_t()) {
-                acceptingCount++;
-                break;
-            }
-        }
-    }
-    std::cout << "Product has " << acceptingCount << " states with accepting transitions\n";
-    std::cout << "Emptiness check result: " << (run ? "NOT EMPTY (formula satisfiable)" : "EMPTY (formula unsatisfiable)") << "\n";
-
-    //=========================================================================
-    // 7. Export to DOT files for visualization
-    //=========================================================================
-    std::ofstream buchiDot("output/buchi_automaton.dot");
-    spot::print_dot(buchiDot, buchiSpot);
-    std::cout << "\nExported: output/buchi_automaton.dot\n";
-
-    std::ofstream tsDot("output/ts_automaton.dot");
-    spot::print_dot(tsDot, tsSpot);
-    std::cout << "Exported: output/ts_automaton.dot\n";
-
-    std::ofstream productDot("output/product_automaton.dot");
-    spot::print_dot(productDot, productSpot);
-    std::cout << "Exported: output/product_automaton.dot\n";
-
-    //=========================================================================
-    // 8. Convert DOT files to SVG and PNG
-    //=========================================================================
-    std::cout << "\n=== Generating Visualizations ===" << std::endl;
-    
-    // Convert to SVG
-    int ret_svg_buchi = system("dot -Tsvg output/buchi_automaton.dot -o output/buchi_automaton.svg");
-    int ret_svg_ts = system("dot -Tsvg output/ts_automaton.dot -o output/ts_automaton.svg");
-    int ret_svg_product = system("dot -Tsvg output/product_automaton.dot -o output/product_automaton.svg");
-    
-    // Convert to PNG
-    int ret_png_buchi = system("dot -Tpng output/buchi_automaton.dot -o output/buchi_automaton.png");
-    int ret_png_ts = system("dot -Tpng output/ts_automaton.dot -o output/ts_automaton.png");
-    int ret_png_product = system("dot -Tpng output/product_automaton.dot -o output/product_automaton.png");
-    
-    if (ret_svg_buchi == 0 && ret_svg_ts == 0 && ret_svg_product == 0) {
-        std::cout << "Successfully generated SVG files.\n";
-    } else {
-        std::cout << "Warning: Some SVG files could not be generated. Make sure graphviz is installed.\n";
-    }
-    
-    if (ret_png_buchi == 0 && ret_png_ts == 0 && ret_png_product == 0) {
-        std::cout << "Successfully generated PNG files.\n";
-    } else {
-        std::cout << "Warning: Some PNG files could not be generated. Make sure graphviz is installed.\n";
-    }
-
-    return 0;
-}

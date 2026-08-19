@@ -316,6 +316,11 @@ public:
         return ltlFormula;
     };
 
+    // Method to get the Spot automaton object
+    spot::twa_graph_ptr getSpotAutomaton() const {
+        return spotAutomaton;
+    };
+
     // Visualization methods
     void saveToDot(const std::string& filename) const {
         if (!spotAutomaton) {

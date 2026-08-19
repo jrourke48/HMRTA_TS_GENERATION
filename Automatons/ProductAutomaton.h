@@ -2,6 +2,9 @@
 #define PRODUCT_AUTOMATON_H
 
 #include "Automaton.h"
+#include "TS.h"
+#include "BuchiAutomaton.h"
+#include "MultiRobotSystem/MultiRobotSystem.h"
 #include <cstdint>
 #include <vector>
 #include <memory>
@@ -16,6 +19,9 @@ public:
     
     // Constructor from Spot twa_graph
     ProductAutomaton(spot::twa_graph_ptr spotAutomaton);
+
+    //Constructor from individual components (TS, Mult-Robot System, and automaton states)
+    ProductAutomaton(const TS& ts, const MultiRobotSystem& mrs, const BuchiAutomaton& buchiAutomaton);
     
     ~ProductAutomaton() override;
 

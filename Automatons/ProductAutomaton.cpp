@@ -38,6 +38,31 @@ ProductAutomaton::ProductAutomaton(spot::twa_graph_ptr spotAutomaton) {
         }
     }
 }
+ProductAutomaton::ProductAutomaton(const TS& ts, const MultiRobotSystem& mrs, const BuchiAutomaton& buchiAutomaton) {
+    // Initialize product automaton based on the individual components
+    // This is a placeholder implementation and should be replaced with actual logic
+    if (buchiAutomaton.getNumStates() > 100 || ts.getNumStates() > 20 || mrs.getNumRobots() > 10) return;
+    
+    // Get the number of robots in the multi-robot system 
+    uint8_t numRobots = mrs.getNumRobots();
+    
+    // Convert the Buchi automaton to a Spot automaton
+    spot::twa_graph_ptr buchiSpot = buchiAutomaton.getSpotAutomaton();
+    
+    // Convert the transition system to a Spot automaton
+    spot::twa_graph_ptr tsSpot = ts.toSpotAutomaton(buchiSpot->get_dict());
+
+    // Initialize the product automaton as the transition system Spot automaton
+    spot::twa_graph_ptr productSpot = tsSpot;
+    // Create synchronized product of each TS for each robot
+    for (uint8_t i = 0; i < numRobots; ++i) {
+        productSpot = spot::product(tsSpot, productSpot);
+    }
+    // do the final synchronization of the product automaton
+    productSpot = spot::product(buchiSpot, productSpot);
+    // At this point, productSpot contains the synchronized product of all TS and the Buchi automaton so call the other constructor to convert it into the internal representation of ProductAutomaton
+    *this = ProductAutomaton(productSpot);
+}
 
 ProductAutomaton::~ProductAutomaton() {
     // Clean up dynamically allocated nodes
