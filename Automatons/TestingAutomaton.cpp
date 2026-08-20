@@ -108,7 +108,7 @@ int main()
         Robot* r3 = new Robot(3, "R3", Point(18, 13));
         r3->initializeCapabilities(13);
         r3->enableCapability(RobotCapability::SENSOR_GPS); // C
-        // mrs->addRobot(r3);
+        mrs->addRobot(r3);
         
         // Robot* r4 = new Robot(4, "R4", Point(18, 15));
         // r4->initializeCapabilities(13);
@@ -164,4 +164,12 @@ int main()
     // 5b. Validate Product Automaton Conversion
     //=========================================================================
     std::cout << "\n=== Validating Product Automaton Conversion ===" << std::endl;
+    std::cout << "Note: Spot automata comparison not available" << std::endl;
+    std::cout << "ProductAutomaton contains " << productAutomaton.getNumStates() << " states" << std::endl;
     
+        return 0;
+    } catch (const std::exception& e) {
+        std::cerr << "Exception occurred: " << e.what() << std::endl;
+        return 1;
+    }
+}
