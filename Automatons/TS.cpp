@@ -118,8 +118,8 @@ spot::twa_graph_ptr TS::toSpotAutomaton(spot::bdd_dict_ptr dict) const {
         for (const auto& edge : srcNode->getEdges()) {
             uint32_t dstId = edge.getDstId();
             unsigned dstSpotState = nodeIdToSpotState[dstId];
-            // Add edge with bddtrue (true transition) and no acceptance mark
-            aut->new_edge(srcSpotState, dstSpotState, bddtrue, {0});
+            // Add edge with bddtrue (true transition) and NO acceptance mark
+            aut->new_edge(srcSpotState, dstSpotState, bddtrue, spot::acc_cond::mark_t());
         }
     }
     

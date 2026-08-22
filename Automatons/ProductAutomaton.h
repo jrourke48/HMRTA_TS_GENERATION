@@ -8,12 +8,22 @@
 #include <cstdint>
 #include <vector>
 #include <memory>
+#include <sstream>
+#include <map>
+#include <set>
+#include <algorithm>
 #include <spot/twa/twagraph.hh>
+#include <spot/twaalgos/dot.hh>
 
 class ProductAutomaton : public Automaton {
 private:
-    std::vector<std::pair<uint16_t, uint16_t>> stateMapping;  // Maps product states to (ts_state, automaton_state)
+    std::map<uint16_t, std::string> stateMapping;  // Maps product state ID to its label
     std::vector<uint16_t> acceptingStates;  // Set of accepting states
+    spot::twa_graph_ptr spotAutomaton;  // Pointer to the underlying Spot automaton
+    
+    // DOT parsing helper methods
+    void parseProductFromDot(const std::string& dotContent);
+    std::string extractLabelFromDotBrackets(const std::string& content) const;
 public:
     ProductAutomaton();
     
@@ -22,6 +32,9 @@ public:
 
     //Constructor from individual components (TS, Mult-Robot System, and automaton states)
     ProductAutomaton(const TS& ts, const MultiRobotSystem& mrs, const BuchiAutomaton& buchiAutomaton);
+    
+    // Compute the optimal accepting path starting from the given state
+    std::vector<uint16_t> OptimalAcceptingPath(uint16_t startState);
     
     ~ProductAutomaton() override;
 
@@ -34,8 +47,16 @@ public:
     const std::vector<uint16_t>& getAcceptingStates() const;
 
     // Product-specific methods
-    void addStateMapping(uint16_t productState, uint16_t tsState, uint16_t automataState);
-    std::pair<uint16_t, uint16_t> getStateMapping(uint16_t productState) const;
+    void addStateMapping(uint16_t productState, const std::string& label);
+    void initStateMapping(const std::string& dotContent);
+    void updateStateMapping(const std::string& dotContent);
+    std::string getStateMapping(uint16_t productState) const;
+    // getter for the id in the label
+    uint16_t getIdFromLabel(const std::string& label) const;
+    //replacing the old label for the new label
+    std::string replaceLabel(const std::string& oldLabel, const std::string& additionalLabel);
+    // Getter for Spot automaton
+    spot::twa_graph_ptr getSpotAutomaton() const { return spotAutomaton; }
 };
 
 #endif

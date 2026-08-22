@@ -85,6 +85,7 @@ int main()
     std::cout << "Edges: " << product->num_edges() << std::endl;
     std::cout << "Acceptance sets: " << product->num_sets() << std::endl;
 
+
     //=========================================================================
     // 6. Check for Accepting Run (Emptiness Check)
     //=========================================================================
@@ -125,6 +126,17 @@ int main()
     std::ofstream productDot("output/product_automaton.dot");
     spot::print_dot(productDot, product);
     std::cout << "Exported: output/product_automaton.dot\n";
+
+    // Generate PNG files from DOT files using graphviz
+    std::cout << "\nGenerating PNG visualizations...\n";
+    int ret1 = system("dot -Tpng output/buchi_automaton.dot -o output/buchi_automaton.png");
+    if (ret1 == 0) std::cout << "Exported: output/buchi_automaton.png\n";
+    
+    int ret2 = system("dot -Tpng output/ts_automaton.dot -o output/ts_automaton.png");
+    if (ret2 == 0) std::cout << "Exported: output/ts_automaton.png\n";
+    
+    int ret3 = system("dot -Tpng output/product_automaton.dot -o output/product_automaton.png");
+    if (ret3 == 0) std::cout << "Exported: output/product_automaton.png\n";
 
     return 0;
 }
