@@ -2,6 +2,7 @@
 #include <sstream>
 #include <map>
 #include <set>
+#include <stack>
 #include <algorithm>
 #include <spot/twaalgos/dot.hh>
 
@@ -23,27 +24,18 @@ ProductAutomaton::ProductAutomaton(spot::twa_graph_ptr spotAutomaton) {
 
 // Parse product automaton from DOT representation
 void ProductAutomaton::parseProductFromDot(const std::string& dotContent) {
-    std::cout << "[DEBUG parseProductFromDot] Starting, stateMapping size: " << stateMapping.size() << std::endl;
-    for (const auto& p : stateMapping) {
-        std::cout << "  [DEBUG] stateMapping[" << p.first << "] = " << p.second << std::endl;
-    }
-    
     std::istringstream stream(dotContent);
     std::string line;
     std::map<unsigned, std::vector<std::pair<unsigned, std::string>>> edges;
     std::set<unsigned> acceptingNodeIds;
 
     // Create nodes based on all entries in stateMapping (already populated)
-    std::cout << "[DEBUG] Creating nodes from stateMapping..." << std::endl;
     for (const auto& mappingPair : stateMapping) {
         uint16_t nodeId = mappingPair.first;
         const std::string& label = mappingPair.second;
-        std::cout << "  [DEBUG] Creating node " << nodeId << " with label: " << label << std::endl;
         Node* node = new Node(nodeId, label);
         add_Node(node);
-        std::cout << "    [DEBUG] Node added, numNodes now: " << numNodes << std::endl;
     }
-    std::cout << "[DEBUG] Node creation done, numNodes: " << numNodes << std::endl;
     
     while (std::getline(stream, line)) {
         // Trim line
@@ -59,7 +51,6 @@ void ProductAutomaton::parseProductFromDot(const std::string& dotContent) {
             std::istringstream iss(line);
             if (iss >> nodeId) {
                 if (nodeId != UINT_MAX && line.find("peripheries=2") != std::string::npos) {
-                    std::cout << "  [DEBUG] Found accepting state: " << nodeId << std::endl;
                     acceptingNodeIds.insert(nodeId);
                 }
             }
@@ -89,17 +80,14 @@ void ProductAutomaton::parseProductFromDot(const std::string& dotContent) {
             // Skip initial edge (I -> state)
             if (src == UINT_MAX) continue;
             
-            std::cout << "  [DEBUG] Found edge: " << src << " -> " << dst << std::endl;
             edges[src].push_back(std::make_pair(dst, ""));
         }
     }
     
     // Add edges
-    std::cout << "[DEBUG] Adding edges, total edge sources: " << edges.size() << std::endl;
     for (const auto& srcEntry : edges) {
         Node* srcNode = getNode(static_cast<uint16_t>(srcEntry.first));
         if (srcNode != nullptr) {
-            std::cout << "  [DEBUG] Adding edges from node " << srcEntry.first << std::endl;
             for (const auto& dstLabelPair : srcEntry.second) {
                 unsigned dst = dstLabelPair.first;
                 
@@ -109,20 +97,15 @@ void ProductAutomaton::parseProductFromDot(const std::string& dotContent) {
                     numEdges++;
                 }
             }
-        } else {
-            std::cout << "  [DEBUG] Source node " << srcEntry.first << " NOT FOUND in nodeMap!" << std::endl;
         }
     }
     
     // Mark accepting states (peripheries=2 in DOT)
-    std::cout << "[DEBUG] Marking accepting states, count: " << acceptingNodeIds.size() << std::endl;
     for (unsigned nodeId : acceptingNodeIds) {
         if (nodeId <= UINT16_MAX) {
-            std::cout << "  [DEBUG] Marking state " << nodeId << " as accepting" << std::endl;
             setAccepting(static_cast<uint16_t>(nodeId));
         }
     }
-    std::cout << "[DEBUG] parseProductFromDot done, final numNodes: " << numNodes << ", numEdges: " << numEdges << std::endl;
 }
 
 // Extract label from DOT bracket content

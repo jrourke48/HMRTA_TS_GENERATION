@@ -103,7 +103,9 @@ public:
     };
     //get the edge label for a given source and destination
     std::vector<std::string> getEdgeLabels(uint16_t srcId, uint16_t dstId) const;
-    
+
+    //get the true atomic propositions for a given source and destination
+    std::vector<std::vector<uint16_t>> getTrueAPs(uint16_t srcId, uint16_t dstId) const;
     // Check if the DOT content indicates an infinite automaton (GBA) by looking for Inf() label
     void checkIsInfinite(const std::string& dotContent) {
         // Look for label="Inf(...) in the DOT header
@@ -224,14 +226,8 @@ public:
                 for (const auto& dstLabelPair : srcEntry.second) {
                     unsigned dst = dstLabelPair.first;
                     std::string label = dstLabelPair.second;
-                    
-                    // Check if label contains acceptance mark {0}
-                    bool isAccepting = label.find("{0}") != std::string::npos;
-                    if (isAccepting) {
-                        setAccepting(dst);
-                    }
-                    
-                    Edge e(dst, label, 1);
+                    // Create edge with label and add to source node
+                    Edge e(dst, label, true, 1);
                     srcNode->addEdge(e);
                     numEdges++;
                 }

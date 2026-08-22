@@ -214,6 +214,7 @@ PlanningDecisionTree* TaskAllocationAlgorithms::intensiveInterTaskRelationshipTr
     // Process nodes from untraversed queue until empty
     Tree_Node* currentNode = nullptr;
     while ((currentNode = getNextUntraversedNode()) != nullptr) {
+        
         // Create subtree for current node
         PlanningDecisionTree* subtree = new PlanningDecisionTree(currentNode);
         uint16_t buchisize = nbaPtr->getNumStates();
@@ -224,20 +225,30 @@ PlanningDecisionTree* TaskAllocationAlgorithms::intensiveInterTaskRelationshipTr
             Node* nbaState = nbaPtr->getNode(i);
             uint16_t nbaId = nbaState->getId();
             
-            // Get edge labels from current automaton state to this state
-            std::vector<std::string> edges = nbaPtr->getEdgeLabels(currentNode->getAutomatonState()->getId(), nbaId);
+            uint16_t currentStateId = currentNode->getAutomatonState()->getId();
             
-            // Get APs from the edges between the two NBA states
-            std::vector<uint16_t> apIds = collectUniqueAPsFromEdges(edges);
-             
-            for (uint16_t apId : apIds) {
-                int8_t batchVal = nbaPtr->getLTLFormula()->getBatchVal(apId);
+            // Get edge labels from current automaton state to this state
+            std::vector<std::vector<uint16_t>> apIds = nbaPtr->getTrueAPs(currentStateId, nbaId);
+            
+            for (const auto& apIdVec : apIds) {
+                //should only have one apId per vector, but we iterate in case of multiple
+                for (uint16_t apId : apIdVec) {
+                    int8_t batchVal = nbaPtr->getLTLFormula()->getBatchVal(apId);
+                
                 Node* TSState = envPtr->getTransitionSystem()->getNode(nbaPtr->getLTLFormula()->getTSState(apId));
+                if (!TSState) {
+                    continue;
+                }
                 
                 // Create new tree node with automaton state and task state
                 // Note: nodeId is a placeholder; insertNode will auto-assign the correct ID
                 Tree_Node* newNode = new Tree_Node(0, currentNode, nbaState, 
                                                    TSState, batchVal);
+                
+                if (!newNode) {
+                    continue;
+                }
+                
                 // Increment the algorithm metric for total nodes generated
                 metrics->subtree_efficiency_.total_nodes_generated++;
 
@@ -264,7 +275,6 @@ PlanningDecisionTree* TaskAllocationAlgorithms::intensiveInterTaskRelationshipTr
                 }
                 
                 // Get final progress level AFTER search routines have set it
-                uint8_t currentProgress = static_cast<uint8_t>(currentNode->getProgress());
                 uint8_t newProgress = static_cast<uint8_t>(newNode->getProgress());
                 
                 // Check if this (state, AP, progress) triple was already visited at this exact progress level
@@ -281,7 +291,7 @@ PlanningDecisionTree* TaskAllocationAlgorithms::intensiveInterTaskRelationshipTr
                 visitedNodes.push_back(newNode); // Mark new node as visited
             }
         }
-        
+    }
         // Prune subtree
         PlanningDecisionTree* pruningResult = pruneSubtree(subtree);
         
@@ -292,15 +302,14 @@ PlanningDecisionTree* TaskAllocationAlgorithms::intensiveInterTaskRelationshipTr
             if (node != currentNode) {
                 addUntraversedPlanningNode(node);
             }
-        }
-        
+        } 
         // Attach subtree to planning tree
         // currentNode is the root of the subtree, so attach pruned subtree as children of currentNode
         planningTree->insertSubtree(currentNode, pruningResult);
+        
         // Add currentNode to traversed tree
         traversedTree->insertNode(currentNode);
     }
-    
     Tree_Node* finalOptimalNode = planningTree->getOptimalFrontierNode(nba->isFinite()); // Final optimal node after search completion
     //get the total number of nodes traversed and in expanded in the planning tree
     metrics->subtree_efficiency_.total_nodes_traversed = traversedTree->getNumNodes();
@@ -325,6 +334,8 @@ PlanningDecisionTree* TaskAllocationAlgorithms::intensiveInterTaskRelationshipTr
     
     return tree;
 }
+
+
 /**
  * Algorithm 2: Unrelated-Task Search (US)
  * Searches for unrelated tasks that can be executed independently
@@ -426,7 +437,6 @@ void TaskAllocationAlgorithms::unrelatedTaskSearch(
     // Check if the new node is an accepting state (increment progress when entering accepting)
     if (newNode && nba) {
         bool acceptingState = nba->isAccepting(newNode->getAutomatonState()->getId());
-        uint8_t currentProgress = static_cast<uint8_t>(currentNode->getProgress());
         
         if (acceptingState) {
             // Increment progress when entering accepting state
@@ -864,145 +874,6 @@ void TaskAllocationAlgorithms::clearUntraversedQueue() {
     }
 }
 
-std::vector<uint16_t> TaskAllocationAlgorithms::parseEdgeLabel(const std::string& label) const {
-    std::vector<uint16_t> apIds;
-    
-    // Remove acceptance marks {0}
-    std::string cleaned = label;
-    size_t pos = cleaned.find("{0}");
-    if (pos != std::string::npos) {
-        cleaned.erase(pos, 3);
-    }
-    
-    // Replace | with & to have single delimiter
-    for (size_t i = 0; i < cleaned.length(); ++i) {
-        if (cleaned[i] == '|') {
-            cleaned[i] = '&';
-        }
-    }
-    
-    // Split by &
-    size_t start = 0;
-    size_t end = cleaned.find('&');
-    
-    while (start < cleaned.length()) {
-        // Extract token
-        std::string token = (end == std::string::npos) ? 
-                           cleaned.substr(start) : 
-                           cleaned.substr(start, end - start);
-        
-        // Trim whitespace and quotes
-        token.erase(0, token.find_first_not_of(" \t\n\r\""));
-        token.erase(token.find_last_not_of(" \t\n\r\"") + 1);
-        
-        // Skip if empty or negated (starts with !)
-        if (!token.empty() && token[0] != '!') {
-            try {
-                // Extract number from "p0", "p1", etc. (skip 'p' prefix)
-                if (token[0] == 'p' && token.length() > 1) {
-                    std::string numStr = token.substr(1);
-                    uint16_t apId = static_cast<uint16_t>(std::stoul(numStr));
-                    apIds.push_back(apId);
-                }
-            } catch (const std::exception& e) {
-                // Silent catch
-            }
-        }
-        
-        // Move to next token
-        if (end == std::string::npos) break;
-        start = end + 1;
-        end = cleaned.find('&', start);
-    }
-    
-    return apIds;
-}
-
-std::vector<uint16_t> TaskAllocationAlgorithms::collectUniqueAPsFromEdges(const std::vector<std::string>& edges) const {
-    std::vector<uint16_t> allApIds;
-    
-    // Process each edge label string
-    for (const auto& edgeLabel : edges) {
-        // Remove acceptance marks {0}
-        std::string cleaned = edgeLabel;
-        size_t pos = cleaned.find("{0}");
-        size_t pos2 = cleaned.find("{1}");
-        if (pos != std::string::npos) {
-            cleaned.erase(pos, 3);
-        }
-        
-        // Check if there are 2+ true APs connected by AND (not OR)
-        // Split by OR first to get independent clauses
-        bool hasMultipleTrueAPsInAndClause = false;
-        
-        size_t orStart = 0;
-        size_t orEnd = cleaned.find('|');
-        
-        while (orStart < cleaned.length() && !hasMultipleTrueAPsInAndClause) {
-            // Extract OR-separated clause
-            std::string orClause = (orEnd == std::string::npos) ? 
-                                   cleaned.substr(orStart) : 
-                                   cleaned.substr(orStart, orEnd - orStart);
-            
-            // Count true APs in this AND-clause (don't replace | with &)
-            int trueApCount = 0;
-            size_t andStart = 0;
-            size_t andEnd = orClause.find('&');
-            
-            while (andStart < orClause.length()) {
-                // Extract token
-                std::string token = (andEnd == std::string::npos) ? 
-                                   orClause.substr(andStart) : 
-                                   orClause.substr(andStart, andEnd - andStart);
-                
-                // Trim whitespace and quotes
-                token.erase(0, token.find_first_not_of(" \t\n\r\""));
-                token.erase(token.find_last_not_of(" \t\n\r\"") + 1);
-                
-                // Count if this is a true (non-negated) AP
-                if (!token.empty() && token[0] != '!') {
-                    trueApCount++;
-                }
-                
-                // Move to next token
-                if (andEnd == std::string::npos) break;
-                andStart = andEnd + 1;
-                andEnd = orClause.find('&', andStart);
-            }
-            
-            // If 2+ true APs AND-ed together, skip this edge
-            if (trueApCount >= 2) {
-                hasMultipleTrueAPsInAndClause = true;
-            }
-            
-            // Move to next OR clause
-            if (orEnd == std::string::npos) break;
-            orStart = orEnd + 1;
-            orEnd = cleaned.find('|', orStart);
-        }
-        
-        // Skip edges with 2+ true APs connected by AND
-        if (hasMultipleTrueAPsInAndClause) {
-            continue;
-        }
-        
-        // Parse the edge label to extract AP IDs
-        std::vector<uint16_t> apIds = parseEdgeLabel(edgeLabel);
-        
-        // Merge parsed AP IDs into the result, avoiding duplicates
-        for (uint16_t apId : apIds) {
-            // Check if this AP ID is already in the collection
-            auto it = std::find(allApIds.begin(), allApIds.end(), apId);
-            if (it == allApIds.end()) {
-                // Add only if not already present
-                allApIds.push_back(apId);
-            }
-        }
-    }
-    
-    return allApIds;
-}
-
 /**
  * getTaskAllocation
  * Greedily selects minimum set of robots from sorted times that satisfy all required capabilities
@@ -1121,6 +992,7 @@ PlanningDecisionTree* TaskAllocationAlgorithms::pruneSubtree(PlanningDecisionTre
             nodesToRemove.push_back(node);
         }
     }
+    
     
     // Rule 3: For nodes with same automaton state and progress, keep only minimum cost
     // (Only apply for finite automata; infinite automata need to explore multiple paths for cycles)

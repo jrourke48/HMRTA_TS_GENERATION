@@ -47,3 +47,20 @@ std::string BatchAtomicProposition::capabilityToString(int cap) const {
     }
 }
 
+std::string BatchAtomicProposition::toString() const {
+    std::string result = "AP[" + std::to_string(apId) + "] ";
+    result += "(TS state " + std::to_string(ap) + ") ";
+    result += "Batch: " + std::to_string(batch) + " | ";
+    result += "Capabilities: ";
+    bool hasCapability = false;
+    for (size_t i = 0; i < capabilityRequirements.size(); ++i) {
+        if (capabilityRequirements[i]) {
+            if (hasCapability) result += ", ";
+            result += capabilityToString(i);
+            hasCapability = true;
+        }
+    }
+    if (!hasCapability) result += "None";
+    return result;
+}
+

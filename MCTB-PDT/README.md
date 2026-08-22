@@ -15,6 +15,10 @@
 ### Reach Goals:
 10. Test Against a MILP Formulation
 11. Weighing other costs than time
+### Algorithm Innefficiencies
+1. Could parse the edge labels during buchi construction
+instead of over and over in the algorithm loop
+2. 
 
 
 ## Overview

@@ -95,13 +95,6 @@ class TaskAllocationAlgorithms {
         //algorithm metrics methods
         const AlgorithmMetrics& getMetrics() const { return *metrics; }
         void resetMetrics() { *metrics = AlgorithmMetrics(); }
-
-        // Parse edge labels to extract AP IDs
-        // Removes !, &, | symbols and returns vector of AP IDs that are TRUE (not negated)
-        std::vector<uint16_t> parseEdgeLabel(const std::string& label) const;
-        
-        // Collect and merge AP IDs from multiple edges, removing duplicates
-        std::vector<uint16_t> collectUniqueAPsFromEdges(const std::vector<std::string>& edges) const;
         
         /**
          * Algorithm 1: Intensive Inter-Task Relationship Tree Search

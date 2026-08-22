@@ -32,7 +32,7 @@ int main() {
         std::cout << "Creating formula: " << ltl1_str << std::endl;
         
         std::vector<BatchAtomicProposition> batchAPs1;
-        batchAPs1.push_back(BatchAtomicProposition(0, {true, false, false, false, false, false, false, false, false, false, false, false, false}, 0));
+        batchAPs1.push_back(BatchAtomicProposition(0, 0, {true, false, false, false, false, false, false, false, false, false, false, false, false}, 0));
         
         LTLFormula ltl1(ltl1_str, batchAPs1);
         std::cout << "✓ LTL Formula created: " << ltl1.getFormula() << std::endl;
@@ -50,8 +50,8 @@ int main() {
         std::cout << "Creating formula: " << ltl2_str << std::endl;
         
         std::vector<BatchAtomicProposition> batchAPs2;
-        batchAPs2.push_back(BatchAtomicProposition(0, {true, false, false, false, false, false, false, false, false, false, false, false, false}, 0));
-        batchAPs2.push_back(BatchAtomicProposition(1, {false, true, false, false, false, false, false, false, false, false, false, false, false}, 1));
+        batchAPs2.push_back(BatchAtomicProposition(0, 0, {true, false, false, false, false, false, false, false, false, false, false, false, false}, 0));
+        batchAPs2.push_back(BatchAtomicProposition(1, 1, {false, true, false, false, false, false, false, false, false, false, false, false, false}, 1));
         
         LTLFormula ltl2(ltl2_str, batchAPs2);
         std::cout << "✓ LTL Formula created: " << ltl2.getFormula() << std::endl;
@@ -132,6 +132,40 @@ int main() {
             std::cout << "  ✓ Edge labels successfully extracted from LTL formula!" << std::endl;
         } else {
             std::cout << "  ⚠ No edge labels found (may be normal for some formulas)" << std::endl;
+        }
+        
+        // Test 3.5: Edge True AP Extraction
+        std::cout << "\n=== Test 3.5: Edge True AP Extraction ===" << std::endl;
+        std::cout << "  Testing that Edge objects correctly parse and cache APs..." << std::endl;
+        std::cout << "  (Filtering out AND clauses - only single APs used in task allocation)" << std::endl;
+        bool foundAPs = false;
+        for (uint16_t i = 0; i < buchi2->getNumStates(); i++) {
+            // Use BuchiAutomaton::getTrueAPs() which filters out AND clauses
+            Node* state = buchi2->getNode(i);
+            if (state != nullptr) {
+                const auto& edges = state->getEdges();
+                for (const auto& edge : edges) {
+                    // This calls BuchiAutomaton's getTrueAPs which filters
+                    auto filteredAPs = buchi2->getTrueAPs(i, edge.getDstId());
+                    if (!filteredAPs.empty()) {
+                        foundAPs = true;
+                        std::cout << "  State " << i << " -> " << edge.getDstId() 
+                                  << " | Label: '" << edge.getLabel() << "'" << std::endl;
+                        std::cout << "    Filtered APs: " << filteredAPs.size() << " single AP(s)" << std::endl;
+                        for (size_t idx = 0; idx < filteredAPs.size(); ++idx) {
+                            if (!filteredAPs[idx].empty()) {
+                                std::cout << "      AP[" << idx << "]: p" << filteredAPs[idx][0] << std::endl;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        
+        if (foundAPs) {
+            std::cout << "  ✓ Edge APs successfully extracted, parsed, and filtered!" << std::endl;
+        } else {
+            std::cout << "  ⚠ No single APs found after filtering (AND clauses excluded)" << std::endl;
         }
         
         // Test 4: Visualize Buchi Automaton as PNG
@@ -290,8 +324,8 @@ void testComponentCreation() {
     std::cout << "Creating LTL formula: " << ltl2_str << std::endl;
     
     std::vector<BatchAtomicProposition> batchAPs;
-    batchAPs.push_back(BatchAtomicProposition(1, {true, false, false, false, false, false, false, false, false, false, false, false, false}, 0));
-    batchAPs.push_back(BatchAtomicProposition(2, {false, false, false, true, false, true, false, false, false, false, false, false, false}, 1));
+    batchAPs.push_back(BatchAtomicProposition(1, 1, {true, false, false, false, false, false, false, false, false, false, false, false, false}, 0));
+    batchAPs.push_back(BatchAtomicProposition(2, 2, {false, false, false, true, false, true, false, false, false, false, false, false, false}, 1));
     
     LTLFormula ltlFormula(ltl2_str, batchAPs);
     std::cout << "✓ LTL Formula created" << std::endl;

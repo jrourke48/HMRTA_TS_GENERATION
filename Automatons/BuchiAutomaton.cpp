@@ -46,3 +46,23 @@ std::vector<std::string> BuchiAutomaton::getEdgeLabels(uint16_t srcId, uint16_t 
     return labels;
 }
 
+std::vector<std::vector<uint16_t>> BuchiAutomaton::getTrueAPs(uint16_t srcId, uint16_t dstId) const {
+    std::vector<std::vector<uint16_t>> trueAPsList;
+    auto it = nodeMap.find(srcId);
+    if (it == nodeMap.end()) return trueAPsList;
+    
+    Node* srcNode = it->second;
+    std::vector<Edge> edges = srcNode->getEdges();
+    
+    for (const auto& edge : edges) {
+        if (edge.getDstId() == dstId) {
+            for (const auto& apVec : edge.getTrueAPs()) {
+                //check if the vector is over length 1 if so skip the and clauses for now
+                if (apVec.size() <= 1) {
+                    trueAPsList.push_back(apVec);
+                }
+            }
+        }
+    }
+    return trueAPsList;
+}

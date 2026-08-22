@@ -24,6 +24,8 @@ PLANNING_TREE_TEST_SRC = apps/TestPlanningTreeComprehensive.cpp
 OPTIMAL_PATH_SRC = apps/Optimal_Path_Test.cpp
 DSTAR_SRC = apps/Test_DStarGridWorld.cpp
 VIS_SRC = apps/VisualizationApp.cpp
+# GridVis - only included in visualization targets
+GRIDVIS_SRC = src/Environment/gridvis.cpp
 # TaskAllocationAlgorithms - algorithms for task allocation
 TASK_ALLOC_SRCS = src/TaskAllocationAlgorithms.cpp
 
@@ -32,7 +34,6 @@ COMMON_SRCS = \
 	src/Environment/GridWorld.cpp \
 	src/Environment/Environment.cpp \
 	src/Environment/DStarGridWorld.cpp \
-	src/Environment/gridvis.cpp \
 	src/Tree/Tree_Node.cpp \
 	src/Tree/PlanningDecisionTree.cpp \
 	src/MultiRobotSystem/Robot.cpp \
@@ -52,9 +53,10 @@ PLANNING_TREE_TEST_OBJ = $(PLANNING_TREE_TEST_SRC:.cpp=.o)
 OPTIMAL_PATH_OBJ = $(OPTIMAL_PATH_SRC:.cpp=.o)
 DSTAR_OBJ = $(DSTAR_SRC:.cpp=.o)
 VIS_OBJ = $(VIS_SRC:.cpp=.o)
+GRIDVIS_OBJ = $(GRIDVIS_SRC:.cpp=.o)
 COMMON_OBJS = $(COMMON_SRCS:.cpp=.o)
 TASK_ALLOC_OBJS = $(TASK_ALLOC_SRCS:.cpp=.o)
-ALL_OBJS = $(TEST_OBJ) $(TREE_TEST_OBJ) $(TASK_ALLOC_OBJ) $(PLANNING_TREE_TEST_OBJ) $(OPTIMAL_PATH_OBJ) $(DSTAR_OBJ) $(VIS_OBJ) $(COMMON_OBJS) $(TASK_ALLOC_OBJS)
+ALL_OBJS = $(TEST_OBJ) $(TREE_TEST_OBJ) $(TASK_ALLOC_OBJ) $(PLANNING_TREE_TEST_OBJ) $(OPTIMAL_PATH_OBJ) $(DSTAR_OBJ) $(VIS_OBJ) $(GRIDVIS_OBJ) $(COMMON_OBJS) $(TASK_ALLOC_OBJS)
 
 # Targets
 .PHONY: all clean run rebuild help test test-tree test-task test-planning-tree test-optimal-path test-dstar test-all tree-only task-only planning-tree-only optimal-path-only dstar-only vis vis-only
@@ -86,7 +88,7 @@ $(PLANNING_TREE_BIN): $(PLANNING_TREE_TEST_OBJ) $(COMMON_OBJS)
 	@echo "✓ Build successful: $(PLANNING_TREE_BIN)"
 
 # Build the optimal path tests executable
-$(OPTIMAL_PATH_BIN): $(OPTIMAL_PATH_OBJ) $(COMMON_OBJS) $(TASK_ALLOC_OBJS)
+$(OPTIMAL_PATH_BIN): $(OPTIMAL_PATH_OBJ) $(COMMON_OBJS) $(TASK_ALLOC_OBJS) $(GRIDVIS_OBJ)
 	@mkdir -p $(OUT_DIR)
 	$(CXX) $(CXXFLAGS) $(INCLUDES) $^ -o $@ $(LIBS) $(RAYLIB_FLAGS)
 	@echo "✓ Build successful: $(OPTIMAL_PATH_BIN)"
@@ -98,7 +100,7 @@ $(DSTAR_BIN): $(DSTAR_OBJ) $(COMMON_OBJS)
 	@echo "✓ Build successful: $(DSTAR_BIN)"
 
 # Build the visualization executable
-$(VIS_BIN): $(VIS_OBJ) $(COMMON_OBJS) $(TASK_ALLOC_OBJS)
+$(VIS_BIN): $(VIS_OBJ) $(GRIDVIS_OBJ) $(COMMON_OBJS) $(TASK_ALLOC_OBJS)
 	@mkdir -p $(OUT_DIR)
 	$(CXX) $(CXXFLAGS) $(INCLUDES) $^ -o $@ $(LIBS) $(RAYLIB_FLAGS)
 	@echo "✓ Build successful: $(VIS_BIN)"
