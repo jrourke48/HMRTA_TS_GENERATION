@@ -1,7 +1,7 @@
 #ifndef ENVIRONMENT_H
 #define ENVIRONMENT_H
 
-#include "../Automatons/TS.h"
+#include "../../Automatons/TS.h"
 #include "GridWorld.h"
 #include "Point.h"
 #include <cstdint>

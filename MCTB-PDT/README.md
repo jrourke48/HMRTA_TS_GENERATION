@@ -2,23 +2,19 @@
 
 ## TO-DO
 ### Before Tuesday:
-1. Implement a low-level path planning algorithm for the robots
-2. Implement the gridworld visualizations
-3. Add Algorithm Performance metrics
-4. Work on a more comprehensive, detailed README
+1. Work on a more comprehensive, detailed README
 ### Before School:
-5. Implement the exclusive and complementary task algorithms
-6. Build the product automaton
-7. Finish introduction and literature review
-8. Add Tests for the Multi-Capability robots
-9. Add Tests for the exclusive and complementary task algorithms
+3. Build the product automaton
+4. Finish introduction and literature review
+5. Add Tests for the Multi-Capability robots
+6. Add Tests for the exclusive and complementary task algorithms
 ### Fall: 
-10. Test against the product automaton
-11. Test test test
-12. Rest of writing
+7. Test against the product automaton
+8. Test test test
+9. Rest of writing
 ### Reach Goals:
-13. Test Against a MILP Formulation
-14. Weighing other costs than time
+10. Test Against a MILP Formulation
+11. Weighing other costs than time
 
 
 ## Overview
