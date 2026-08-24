@@ -257,7 +257,7 @@ PlanningDecisionTree* TaskAllocationAlgorithms::intensiveInterTaskRelationshipTr
                 // batchVal = 0: unrelated tasks
                 // batchVal > 0: compatible tasks (same batch)
                 // batchVal < 0: exclusive tasks (conflicting batch)
-                if (batchVal == 0) {
+                if (batchVal == 0 || !isBatchValueInTree(batchVal)) {
                     unrelatedTaskSearch(newNode, TSState, currentNode, apId);
                 }
                 else if (batchVal > 0) {
@@ -269,10 +269,11 @@ PlanningDecisionTree* TaskAllocationAlgorithms::intensiveInterTaskRelationshipTr
                     exclusiveTaskSearch(newNode, TSState, currentNode, apId);
                 }
                 
-                // Now track that we've seen this batch value
-                if (batchVal != 0) {
-                    isBatchValueInTree(batchVal);  // Side effect: adds to tree tracking
-                }
+                // // Now track that we've seen this batch value
+                // if (batchVal != 0) {
+                //     bool batchValWasInTree = isBatchValueInTree(batchVal);  // Side effect: adds to tree tracking
+                //     std::cerr << "[DEBUG-BATCHVAL] batchVal=" << static_cast<int>(batchVal) << " was already in tree: " << (batchValWasInTree ? "YES" : "NO") << std::endl;
+                // }
                 
                 // Get final progress level AFTER search routines have set it
                 uint8_t newProgress = static_cast<uint8_t>(newNode->getProgress());
@@ -356,8 +357,10 @@ void TaskAllocationAlgorithms::unrelatedTaskSearch(
     
     // current task state information
     uint16_t tsStateId = TSState->getId();
+    
     // Get task location from environment mapping p_an
     Point taskLocation = environment->TSStateIdToGridCenter(tsStateId);
+    
     multiRobotSystem->setRobotPositions(currentNode->getRobotPositions()); // Ensure current node has robot positions stored
     
     std::vector<uint16_t> updatedtimes = multiRobotSystem->updateRobotTimesToGoal(currentNode->getTimes(), taskLocation);
@@ -387,8 +390,10 @@ void TaskAllocationAlgorithms::unrelatedTaskSearch(
     if (!hasAllocation) {
         return;
     }
+    
     // Start with parent node's times and only update allocated robots with their individual travel times
     std::vector<uint16_t> updatedTimes = currentNode->getTimes();
+    
     for (size_t i = 0; i < taskAllocation.size() && i < updatedTimes.size(); ++i) {
         if (taskAllocation[i]) {
             // Use individual calculated travel time for each allocated robot
@@ -418,9 +423,15 @@ void TaskAllocationAlgorithms::unrelatedTaskSearch(
     };
     
     int robotIndex = 0;
+    
     for (size_t i = 0; i < taskAllocation.size(); ++i) {
         if (taskAllocation[i]) {
+            if (robotIndex >= adjacentOffsets.size()) {
+                robotIndex = robotIndex % adjacentOffsets.size();
+            }
+            
             int offsetIdx = robotIndex % adjacentOffsets.size();
+            
             int newX = taskLocation.getX() + adjacentOffsets[offsetIdx].first;
             int newY = taskLocation.getY() + adjacentOffsets[offsetIdx].second;
             
@@ -428,10 +439,17 @@ void TaskAllocationAlgorithms::unrelatedTaskSearch(
             newX = std::max(0, std::min(newX, 20));
             newY = std::max(0, std::min(newY, 20));
             
-            updatedPositions[i] = Point(newX, newY);
+            if (i < updatedPositions.size()) {
+                updatedPositions[i] = Point(newX, newY);
+            }
             robotIndex++;
         }
     }
+    
+    if (!newNode) {
+        return;
+    }
+    
     newNode->setRobotPositions(updatedPositions);
     
     // Check if the new node is an accepting state (increment progress when entering accepting)
@@ -475,25 +493,37 @@ void TaskAllocationAlgorithms::compatibleTaskSearch(
     
     // current task state information
     uint16_t tsStateId = TSState->getId();
+    
     // Get task location from environment mapping p_an
     Point taskLocation = environment->TSStateIdToGridCenter(tsStateId);
-    multiRobotSystem->setRobotPositions(currentNode->getRobotPositions()); // Ensure current node has robot positions stored
     
-    std::vector<uint16_t> updatedtimes = multiRobotSystem->updateRobotTimesToGoal(currentNode->getTimes(), taskLocation);
+    std::vector<Point> currentPositions = currentNode->getRobotPositions();
+    
+    multiRobotSystem->setRobotPositions(currentPositions);
+    
+    std::vector<uint16_t> currentTimes = currentNode->getTimes();
+    
+    std::vector<uint16_t> updatedtimes = multiRobotSystem->updateRobotTimesToGoal(currentTimes, taskLocation);
 
     // Get the sort of the times vector and get the corresponding robot indices to find the best robot assignment
     std::vector<std::pair<uint16_t, uint16_t>> sortedTimes = Tree_Node::getSortedTimes(updatedtimes);
     
     //Get the batch value for the newnode
     uint16_t batchValue = newNode->getBatch();
+    
     //get the allocation of the other node with the same batch value
+    if (!planningTree) {
+        return;
+    }
     std::vector<bool> taskAllocation = planningTree->getAllocationfromBatchValue(batchValue);
+    
     if (taskAllocation.empty()) {
         return; // No valid task allocation found for the given batch value
     }
 
     // Start with parent node's times and only update allocated robots with their individual travel times
     std::vector<uint16_t> updatedTimes = currentNode->getTimes();
+    
     for (size_t i = 0; i < taskAllocation.size() && i < updatedTimes.size(); ++i) {
         if (taskAllocation[i]) {
             // Use individual calculated travel time for each allocated robot
@@ -509,6 +539,11 @@ void TaskAllocationAlgorithms::compatibleTaskSearch(
     // Update robot positions to the task location for all allocated robots
     std::vector<Point> updatedPositions = currentNode->getRobotPositions();
     
+    // CRITICAL: If positions vector is empty or too small, initialize with default positions
+    if (updatedPositions.size() != taskAllocation.size()) {
+        updatedPositions.resize(taskAllocation.size(), Point(0, 0));
+    }
+    
     // Place allocated robots at adjacent cells around goal (closest possible)
     // Pattern: N, E, S, W, NE, NW, SE, SW
     std::vector<std::pair<int, int>> adjacentOffsets = {
@@ -523,8 +558,13 @@ void TaskAllocationAlgorithms::compatibleTaskSearch(
     };
     
     int robotIndex = 0;
+    
     for (size_t i = 0; i < taskAllocation.size(); ++i) {
         if (taskAllocation[i]) {
+            if (i >= updatedPositions.size()) {
+                continue;
+            }
+            
             int offsetIdx = robotIndex % adjacentOffsets.size();
             int newX = taskLocation.getX() + adjacentOffsets[offsetIdx].first;
             int newY = taskLocation.getY() + adjacentOffsets[offsetIdx].second;
@@ -537,6 +577,7 @@ void TaskAllocationAlgorithms::compatibleTaskSearch(
             robotIndex++;
         }
     }
+    
     newNode->setRobotPositions(updatedPositions);
     
     // Check if the new node is an accepting state (increment progress when entering accepting)
@@ -647,6 +688,11 @@ void TaskAllocationAlgorithms::exclusiveTaskSearch(
     // Update robot positions to the task location for all allocated robots
     std::vector<Point> updatedPositions = currentNode->getRobotPositions();
     
+    // CRITICAL: If positions vector is empty or too small, initialize with default positions
+    if (updatedPositions.size() != taskAllocation.size()) {
+        updatedPositions.resize(taskAllocation.size(), Point(0, 0));
+    }
+    
     // Place allocated robots at adjacent cells around goal (closest possible)
     // Pattern: N, E, S, W, NE, NW, SE, SW
     std::vector<std::pair<int, int>> adjacentOffsets = {
@@ -663,6 +709,10 @@ void TaskAllocationAlgorithms::exclusiveTaskSearch(
     int robotIndex = 0;
     for (size_t i = 0; i < taskAllocation.size(); ++i) {
         if (taskAllocation[i]) {
+            if (i >= updatedPositions.size()) {
+                continue;  // Skip if out of bounds
+            }
+            
             int offsetIdx = robotIndex % adjacentOffsets.size();
             int newX = taskLocation.getX() + adjacentOffsets[offsetIdx].first;
             int newY = taskLocation.getY() + adjacentOffsets[offsetIdx].second;

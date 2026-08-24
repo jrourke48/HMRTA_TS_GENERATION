@@ -1,0 +1,106 @@
+digraph ComprehensiveOptimalPath {
+  rankdir=TB;
+  concentrate=true;
+  node [fontname=Arial];
+  edge [fontname=Arial, fontsize=9];
+
+  subgraph cluster_environment {
+    label="Environment & Gridworld";
+    style=filled;
+    fillcolor="#F0F0F0";
+    color=black;
+
+    env_info [shape=box, label="GridWorld: 21x21\nTotal States: 8\nInitial State: 3\n", fillcolor="#E8F4F8"];
+
+    env_tasks [shape=plaintext, label=<
+      <TABLE BORDER="1" CELLBORDER="1" CELLSPACING="0">
+        <TR><TD COLSPAN="3"><B>Task Locations</B></TD></TR>
+        <TR><TD><B>State ID</B></TD><TD><B>Position</B></TD><TD><B>Type</B></TD></TR>
+        <TR><TD>0</TD><TD>(3,3)</TD><TD>Task</TD></TR>
+        <TR><TD>1</TD><TD>(3,18)</TD><TD>Task</TD></TR>
+        <TR><TD>2</TD><TD>(18,3)</TD><TD>Task</TD></TR>
+        <TR><TD>3</TD><TD>(10,10)</TD><TD>Task</TD></TR>
+        <TR><TD>4</TD><TD>(18,18)</TD><TD>Task</TD></TR>
+        <TR><TD>5</TD><TD>(10,2)</TD><TD>Task</TD></TR>
+        <TR><TD>6</TD><TD>(10,18)</TD><TD>Task</TD></TR>
+        <TR><TD>7</TD><TD>(2,10)</TD><TD>Task</TD></TR>
+      </TABLE>
+    >];
+  }
+
+  subgraph cluster_robots {
+    label="Robot Team & Capabilities";
+    style=filled;
+    fillcolor="#F0F8F0";
+    color=black;
+
+    team_info [shape=box, label="Team Size: 8 robots\n", fillcolor="#E8F8E8"];
+
+    robot_caps [shape=plaintext, label=<
+      <TABLE BORDER="1" CELLBORDER="1" CELLSPACING="0">
+        <TR><TD COLSPAN="3"><B>Robot Capabilities</B></TD></TR>
+        <TR><TD><B>Robot ID</B></TD><TD><B>Name</B></TD><TD><B>Capabilities</B></TD></TR>
+        <TR><TD>R1</TD><TD>GroundGPS_1</TD><TD>Movement_Ground, Sensor_GPS</TD></TR>
+        <TR><TD>R2</TD><TD>GroundCamera_1</TD><TD>Movement_Ground, Sensor_Camera</TD></TR>
+        <TR><TD>R3</TD><TD>AerialGPS_1</TD><TD>Movement_Aerial, Sensor_GPS</TD></TR>
+        <TR><TD>R4</TD><TD>GroundGPS_Camera_1</TD><TD>Movement_Ground, Sensor_Camera, Sensor_GPS</TD></TR>
+        <TR><TD>R5</TD><TD>AerialCamera_1</TD><TD>Movement_Aerial, Sensor_Camera</TD></TR>
+        <TR><TD>R6</TD><TD>AquaticGPS_1</TD><TD>Movement_Aquatic, Sensor_GPS</TD></TR>
+        <TR><TD>R7</TD><TD>HybridMover_GPS_1</TD><TD>Movement_Ground, Movement_Aerial, Sensor_GPS</TD></TR>
+        <TR><TD>R8</TD><TD>OmniRobot_1</TD><TD>Movement_Ground, Movement_Aerial, Sensor_Camera, Sensor_GPS</TD></TR>
+      </TABLE>
+    >];
+  }
+
+  subgraph cluster_ltl {
+    label="LTL Formula & Task Constraints";
+    style=filled;
+    fillcolor="#F8F0F0";
+    color=black;
+
+    ltl_info [shape=box, label="LTL Formula Details:\nAutomaton States: 4\nAccepting States: 1\n", fillcolor="#F8E8E8"];
+
+    ltl_tasks [shape=plaintext, label=<
+      <TABLE BORDER="1" CELLBORDER="1" CELLSPACING="0">
+        <TR><TD COLSPAN="3"><B>Task Requirements (LTL APs)</B></TD></TR>
+        <TR><TD><B>AP ID</B></TD><TD><B>Batch Value</B></TD><TD><B>Required Capabilities</B></TD></TR>
+        <TR><TD>AP0</TD><TD>0 (Unrelated)</TD><TD>Movement_Aerial</TD></TR>
+        <TR><TD>AP1</TD><TD>0 (Unrelated)</TD><TD>Movement_Ground</TD></TR>
+        <TR><TD>AP2</TD><TD>0 (Unrelated)</TD><TD>Sensor_GPS</TD></TR>
+      </TABLE>
+    >];
+  }
+
+  subgraph cluster_path {
+    label="Optimal Execution Path";
+    style=filled;
+    fillcolor="#FFF8F0";
+    color=darkred;
+    penwidth=2;
+
+    path_summary [shape=note, label="Optimal Path Summary\nTotal Steps: 8\nFinal Cost: 10\nTotal Execution Time: 57s\n", fillcolor="#FFFFCC", penwidth=2];
+
+    opt_0 [shape=box, label="Step 0\nNBA: 0 | TS: 3\nCost: 0s | Total: 0s\n-----\nAllocated Robots:\n", fillcolor="#B3E5FC", penwidth=1.5];
+    opt_1 [shape=box, label="Step 1\nNBA: 2 | TS: 2\nCost: 9s | Total: 9s\n-----\nAllocated Robots:\n  R3: 9s\n", fillcolor="#B3E5FC", penwidth=1.5];
+    opt_2 [shape=box, label="Step 2\nNBA: 3 | TS: 1\nCost: 9s | Total: 18s\n-----\nAllocated Robots:\n  R7: 9s\n", fillcolor="#B3E5FC", penwidth=1.5];
+    opt_3 [shape=box, label="Step 3\nNBA: 0 | TS: 0\nCost: 9s | Total: 27s\n-----\nAllocated Robots:\n  R8: 9s\n", fillcolor="#B3E5FC", penwidth=1.5];
+    opt_4 [shape=box, label="Step 4\nNBA: 2 | TS: 2\nCost: 9s | Total: 36s\n-----\nAllocated Robots:\n  R4: 9s\n", fillcolor="#B3E5FC", penwidth=1.5];
+    opt_5 [shape=box, label="Step 5\nNBA: 3 | TS: 1\nCost: 10s | Total: 46s\n-----\nAllocated Robots:\n  R1: 10s\n", fillcolor="#B3E5FC", penwidth=1.5];
+    opt_6 [shape=box, label="Step 6\nNBA: 0 | TS: 0\nCost: 10s | Total: 56s\n-----\nAllocated Robots:\n  R5: 10s\n", fillcolor="#B3E5FC", penwidth=1.5];
+    opt_7 [shape=box, label="Step 7\nNBA: 2 | TS: 2\nCost: 10s | Total: 57s\n-----\nAllocated Robots:\n  R3: 10s\n", fillcolor="#FF6B6B", penwidth=3, color=darkred, fontweight=bold, fontsize=11];
+
+    opt_0 -> opt_1 [label="Δ=9s", penwidth=2, color=darkred];
+    opt_1 -> opt_2 [label="Δ=0s", penwidth=2, color=darkred];
+    opt_2 -> opt_3 [label="Δ=0s", penwidth=2, color=darkred];
+    opt_3 -> opt_4 [label="Δ=0s", penwidth=2, color=darkred];
+    opt_4 -> opt_5 [label="Δ=1s", penwidth=2, color=darkred];
+    opt_5 -> opt_6 [label="Δ=0s", penwidth=2, color=darkred];
+    opt_6 -> opt_7 [label="Δ=0s", penwidth=2, color=darkred];
+  }
+
+  // Connections between clusters
+  env_info -> path_summary [style=dashed, color=gray, label="tasks"];
+  team_info -> path_summary [style=dashed, color=gray, label="robots"];
+  ltl_info -> path_summary [style=dashed, color=gray, label="constraints"];
+
+}
