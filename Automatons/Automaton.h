@@ -49,6 +49,14 @@ class Automaton{
         const std::map<uint16_t, Node*>& getNodes() const {
             return nodeMap;
         }
+        std::string to_String() const {
+            std::string result = "Automaton[numNodes=" + std::to_string(numNodes) + ", numEdges=" + std::to_string(numEdges) + ", nodes=(";
+            for (const auto& pair : nodeMap) {
+                result += pair.second->to_String() + ",";
+            }
+            result += ")]";
+            return result;
+        }
 };
 
 #endif // AUTOMATON_H

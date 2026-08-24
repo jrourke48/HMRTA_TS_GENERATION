@@ -33,7 +33,12 @@ void ProductAutomaton::parseProductFromDot(const std::string& dotContent) {
     for (const auto& mappingPair : stateMapping) {
         uint16_t nodeId = mappingPair.first;
         const std::string& label = mappingPair.second;
-        Node* node = new Node(nodeId, label);
+        Node* node = new Node(nodeId, label, true);
+        std::pair<uint16_t, std::vector<uint16_t>> productStates = node->getProductStates();  // Initialize product states based on label
+        for (uint16_t robotState : productStates.second) {
+            // You can perform additional processing with robotState if needed
+            std::cout << "Node " << nodeId << " has robot state: " << robotState << std::endl;
+        }
         add_Node(node);
     }
     

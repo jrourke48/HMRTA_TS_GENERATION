@@ -115,6 +115,7 @@ public:
         // For a more complex automaton, we can also include additional properties (e.g., labels, accepting state flag).
         uint16_t id;
         std::string label; //label for the node
+        std::pair<uint16_t, std::vector<uint16_t>> productStates; //buchistate, [robot1state, robot2state, ...]
         uint32_t numEdges; //total number of outgoing edges for the node
         std::vector<Edge> edges; // outgoing edges from this node
     public:
@@ -122,6 +123,11 @@ public:
         Node() = default;
         Node(uint16_t id) : id(id), label("Room" + std::to_string(id)), numEdges(0) {}
         Node(uint16_t id, const std::string& label) : id(id), label(label), numEdges(0) {}
+        Node(uint16_t id, const std::string& label, bool isProduct): id(id), label(label), numEdges(0) {
+            if (isProduct) {
+                setProductStates(label);
+            }
+        }
         //constructor for subclasses
         virtual ~Node() = default;
         //getters and setters
@@ -131,6 +137,26 @@ public:
         void setLabel(const std::string& label) { this->label = label; };
         uint16_t getidfromlabel() const { return static_cast<uint16_t>(std::stoul(label.substr(4))); }; //convert label to id if label is numeric
         std::vector<Edge> getEdges() const { return edges; };
+        //get the product states for this node
+        std::pair<uint16_t, std::vector<uint16_t>> getProductStates() const { return productStates; };
+        void setProductStates(const std::string& label) {
+            // Assuming the label format is "Product,buchistate,robot1state,robot2state,..."
+            std::vector<uint16_t> states;
+            size_t pos = label.find(',');
+            if (pos != std::string::npos) {
+                size_t next_pos = label.find(',', pos + 1);
+                if (next_pos != std::string::npos) {
+                    uint16_t buchistate = static_cast<uint16_t>(std::stoul(label.substr(pos + 1, next_pos - pos - 1)));
+                    pos = next_pos;
+                    while ((next_pos = label.find(',', pos + 1)) != std::string::npos) {
+                        states.push_back(static_cast<uint16_t>(std::stoul(label.substr(pos + 1, next_pos - pos - 1))));
+                        pos = next_pos;
+                    }
+                    states.push_back(static_cast<uint16_t>(std::stoul(label.substr(pos + 1))));
+                    productStates = std::make_pair(buchistate, states);
+                }
+            }
+        }
         //add an edge to this node
         void addEdge(const Edge& edge) { edges.push_back(edge);
             numEdges++;
@@ -144,8 +170,16 @@ public:
             }
             return false;
         };
-    //node label can be used for more complex automata where states have labels
-    virtual std::string to_string() { return std::string("Node") + std::to_string(this->id); };
+        //node label can be used for more complex automata where states have labels
+    virtual std::string to_String() { 
+        std::string result = "Node[id=" + std::to_string(this->id) + ", label=" + this->label + ", edges=(";
+        for (size_t i = 0; i < edges.size(); ++i) {
+            result += std::to_string(edges[i].getDstId());
+            if (i < edges.size() - 1) result += "|";
+        }
+        result += ")]";
+        return result;
+    };
 
 };
 

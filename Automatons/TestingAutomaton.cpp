@@ -134,7 +134,7 @@ int main()
             env->addObstacle(Point(x, y));
         }
         std::cout << "✓ Added " << numObstacles << " random obstacles" << std::endl;
-        std::string ltl_str = "GF(\"p1\" && \"p2\")";
+        std::string ltl_str = "(G(F(\"p1\")) && G(F(\"p2\")))";
     
         std::vector<BatchAtomicProposition> batchAPs;
         batchAPs.push_back(BatchAtomicProposition(1, 1, {true, false, false, false, false, false, false, false, false, false, false, false, false}, 0));
