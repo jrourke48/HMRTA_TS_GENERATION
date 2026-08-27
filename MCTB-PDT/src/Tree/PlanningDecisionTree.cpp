@@ -241,6 +241,22 @@ bool PlanningDecisionTree::isEmpty() const {
 }
 
 /**
+ * Remove a node from the tree (but NOT its descendants)
+ * This method removes the specified node from the frontier
+ * Does NOT delete the node from memory - just removes it from tree traversals
+ * Children nodes are not affected - their parent pointers remain intact
+*/
+void PlanningDecisionTree::removeNode(Tree_Node* node) {
+    if (node == nullptr) {
+        return;
+    }
+    
+    // Remove from frontier if present
+    // This prevents the node from being traversed during getAllNodes()
+    removeFrontierNode(node);
+}
+
+/**
  * getAllNodes - Get all nodes in the tree by traversing backward from frontier nodes
  * Traverses from each frontier node back to root, collecting all unique nodes
  * Defensive: also uses frontier nodes if root is somehow still null
@@ -271,6 +287,8 @@ std::vector<Tree_Node*> PlanningDecisionTree::getAllNodes() {
         while (current != nullptr && visited.find(current) == visited.end()) {
             allNodes.push_back(current);
             visited.insert(current);
+            // Stop at this tree's root - don't traverse past it even if root has a parent
+            if (current == root) break;
             current = current->getParent();
         }
     }

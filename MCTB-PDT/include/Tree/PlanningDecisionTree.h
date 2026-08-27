@@ -50,6 +50,7 @@ class PlanningDecisionTree {
         std::vector<Tree_Node*> getPathtoFrontierNode(Tree_Node* frontierNode);
         // Get task allocation from batch value
         std::vector<bool> getAllocationfromBatchValue(uint16_t batchValue) const;
+        void removeNode(Tree_Node* node); // Remove a node from the tree
         
 
         // Tree manipulation

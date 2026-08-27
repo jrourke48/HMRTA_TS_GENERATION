@@ -10,6 +10,62 @@
 
 // ==================== INITIALIZATION ====================
 
+void AlgorithmMetrics::clearMetrics() {
+    // Explicitly clear independent variables
+    iv_.num_automaton_states = 0;
+    iv_.num_automaton_edges = 0;
+    iv_.num_atomic_propositions = 0;
+    iv_.num_robots = 0;
+    iv_.total_robot_capabilities = 0;
+    iv_.num_ts_regions = 0;
+    iv_.avg_capabilities_per_robot = 0.0;
+    iv_.capability_homogeneity = 0.0;
+    iv_.num_inter_task_constraints = 0;
+    
+    // Clear runtime metrics
+    runtime_.total_computation_time_ms = 0.0;
+    runtime_.runtime_vs_num_robots.clear();
+    runtime_.runtime_vs_automaton_states.clear();
+    runtime_.runtime_vs_automaton_edges.clear();
+    runtime_.runtime_vs_capability_density.clear();
+    runtime_.runtime_vs_capability_homogeneity.clear();
+    runtime_.runtime_vs_atomic_propositions.clear();
+    runtime_.runtime_vs_environment_size.clear();
+    runtime_.runtime_vs_ts_regions.clear();
+    
+    // Clear subtree efficiency metrics
+    subtree_efficiency_.total_nodes_generated = 0;
+    subtree_efficiency_.total_nodes_planning = 0;
+    subtree_efficiency_.total_nodes_traversed = 0;
+    subtree_efficiency_.total_nodes_pruned = 0;
+    subtree_efficiency_.nodes_satisfying_ltl = 0;
+    subtree_efficiency_.task_allocation_algorithm_memory_bytes = 0;
+    subtree_efficiency_.full_product_automaton_nodes = 0;
+    subtree_efficiency_.full_product_automaton_edges = 0;
+    subtree_efficiency_.full_product_automaton_memory_bytes = 0;
+    subtree_efficiency_.pruning_ratio = 0.0;
+    subtree_efficiency_.explored_product_ratio = 0.0;
+    subtree_efficiency_.tree_product_ratio = 0.0;
+    subtree_efficiency_.memory_reduction_ratio = 0.0;
+    subtree_efficiency_.optimality_gap_percent = 0.0;
+    subtree_efficiency_.runtime_speedup_percent = 0.0;
+    subtree_efficiency_.percent_nodes_in_tree = 0.0;
+    subtree_efficiency_.state_space_reduction = 0;
+    
+    // Clear solution quality metrics
+    solution_quality_.tree_makespan_seconds = 0.0;
+    solution_quality_.product_makespan_seconds = 0.0;
+    solution_quality_.sum_of_travel_times_seconds = 0.0;
+    solution_quality_.total_travel_distance = 0.0;
+    solution_quality_.max_individual_travel_distance = 0.0;
+    solution_quality_.robots_utilized = 0;
+    solution_quality_.robot_utilization_ratio = 0.0;
+    solution_quality_.load_balance_variance = 0.0;
+    solution_quality_.individual_travel_times.clear();
+    solution_quality_.individual_travel_distances.clear();
+    solution_quality_.tasks_per_robot.clear();
+}
+
 void AlgorithmMetrics::setIndependentVariables(const IndependentVariables& vars) {
     iv_ = vars;
     
@@ -108,9 +164,9 @@ double AlgorithmMetrics::computeTreeProductRatio() const {
 }
 
 double AlgorithmMetrics::computeMemoryReductionRatio() const {
-    if (subtree_efficiency_.product_automaton_memory_bytes == 0) return 0.0;
-    return static_cast<double>(subtree_efficiency_.planning_tree_memory_bytes) / 
-           subtree_efficiency_.product_automaton_memory_bytes;
+    if (subtree_efficiency_.full_product_automaton_memory_bytes == 0) return 0.0;
+    return static_cast<double>(subtree_efficiency_.task_allocation_algorithm_memory_bytes) / 
+           subtree_efficiency_.full_product_automaton_memory_bytes;
 }
 
 double AlgorithmMetrics::computeRobotUtilizationRatio() const {
@@ -210,6 +266,7 @@ void AlgorithmMetrics::printSummary() const {
     // Subtree Efficiency
     std::cout << "SUBTREE EFFICIENCY METRICS:" << std::endl;
     std::cout << "  Total Nodes Generated: " << subtree_efficiency_.total_nodes_generated << std::endl;
+    std::cout << "  Total Nodes Planning: " << subtree_efficiency_.total_nodes_planning << std::endl;
     std::cout << "  Total Nodes Traversed: " << subtree_efficiency_.total_nodes_traversed << std::endl;
     std::cout << "  Total Nodes Pruned: " << subtree_efficiency_.total_nodes_pruned << std::endl;
     std::cout << "  Pruning Ratio: " << std::fixed << std::setprecision(4) 
@@ -393,4 +450,12 @@ void AlgorithmMetrics::exportToJSON(const std::string& filename) const {
     
     outfile.close();
     std::cout << "Metrics exported to: " << filename << std::endl;
+}
+void AlgorithmMetrics::setTaskMemoryUsage(long long bytes) {
+    subtree_efficiency_.task_allocation_algorithm_memory_bytes = bytes;
+}
+void AlgorithmMetrics::setFullProductAutomatonMetrics(long long nodes, long long edges, long long memory_bytes) {
+    subtree_efficiency_.full_product_automaton_nodes = nodes;
+    subtree_efficiency_.full_product_automaton_edges = edges;
+    subtree_efficiency_.full_product_automaton_memory_bytes = memory_bytes;
 }

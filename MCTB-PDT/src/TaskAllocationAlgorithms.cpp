@@ -110,10 +110,9 @@ PlanningDecisionTree* TaskAllocationAlgorithms::intensiveInterTaskRelationshipTr
     Environment* envPtr,
     MultiRobotSystem* multiRobotSystemPtr) {
     
-    // Reset algorithm metrics at the start of the search
-    resetMetrics();
+    // Initialize metrics: clear to ensure clean state
+    metrics->clearMetrics();
     
-
     // ===== SET INDEPENDENT VARIABLES =======================================
     //========================================================================
     // Initialize independent variables for algorithm metrics
@@ -121,7 +120,12 @@ PlanningDecisionTree* TaskAllocationAlgorithms::intensiveInterTaskRelationshipTr
     
     // Automaton characteristics
     indVars.num_automaton_states = nbaPtr->getNumStates();
+    std::cout << "[INFO] Number of automaton states: " << nbaPtr->getNumStates() << std::endl;
     indVars.num_automaton_edges = nbaPtr->getNumEdges();
+    if (!nbaPtr->getLTLFormula()) {
+        std::cerr << "[ERROR] LTL formula is null" << std::endl;
+        return nullptr;
+    }
     indVars.num_atomic_propositions = nbaPtr->getLTLFormula()->getBatchAtomicPropositions().size();
     
     // Robot fleet characteristics
@@ -159,10 +163,10 @@ PlanningDecisionTree* TaskAllocationAlgorithms::intensiveInterTaskRelationshipTr
     indVars.capability_homogeneity = indVars.num_robots > 0 ? 
         static_cast<double>(identicalRobots) / indVars.num_robots : 0.0;
     
-    // TODO: Set inter-task constraints from LTL formula
+    //Set inter-task constraints from LTL formula
     indVars.num_inter_task_constraints = 0;
     
-    // Store in metrics
+    // Store in metrics (must be BEFORE any runtime metric updates)
     metrics->setIndependentVariables(indVars);
     
     // Start timing the algorithm execution
@@ -173,6 +177,10 @@ PlanningDecisionTree* TaskAllocationAlgorithms::intensiveInterTaskRelationshipTr
 
     // Get initial automaton state from the Büchi automaton
     Node* initialAutomatonState = nbaPtr->getNode(nbaPtr->getInitialState());
+    if (!initialAutomatonState) {
+        std::cerr << "[ERROR] Failed to get initial automaton state" << std::endl;
+        return nullptr;
+    }
     // Get environment initial state ID
     uint16_t initialEnvStateId = envPtr->getInitialState();
 
@@ -206,23 +214,30 @@ PlanningDecisionTree* TaskAllocationAlgorithms::intensiveInterTaskRelationshipTr
     
     // Initialize untraversed queue with root node
     addUntraversedPlanningNode(tree->getRoot());
-    
-    //add root to the visited nodes and visited automaton states
-    addVisitedNode(tree->getRoot());
-    addVisitedAutomatonState(initialAutomatonState->getId());
 
     // Process nodes from untraversed queue until empty
     Tree_Node* currentNode = nullptr;
+
+    
     while ((currentNode = getNextUntraversedNode()) != nullptr) {
         
         // Create subtree for current node
         PlanningDecisionTree* subtree = new PlanningDecisionTree(currentNode);
         uint16_t buchisize = nbaPtr->getNumStates();
-        std::vector<uint16_t> acceptingSets = nbaPtr->getAcceptingStates();
+        std::vector<uint16_t> acceptingStates = nbaPtr->getAcceptingStates();
         
+        // Validate current node's automaton state
+        if (!currentNode->getAutomatonState()) {
+            std::cerr << "[WARNING] Current node has null automaton state" << std::endl;
+            continue;
+        }
+
         // Iterate through all automaton states
         for (uint16_t i = 0; i < buchisize; ++i) {
             Node* nbaState = nbaPtr->getNode(i);
+            if (!nbaState) {
+                continue;  // Skip if node not found or if already visited with the same progress
+            }
             uint16_t nbaId = nbaState->getId();
             
             uint16_t currentStateId = currentNode->getAutomatonState()->getId();
@@ -233,9 +248,19 @@ PlanningDecisionTree* TaskAllocationAlgorithms::intensiveInterTaskRelationshipTr
             for (const auto& apIdVec : apIds) {
                 //should only have one apId per vector, but we iterate in case of multiple
                 for (uint16_t apId : apIdVec) {
+                    // Validate LTL formula access
+                    if (!nbaPtr->getLTLFormula()) {
+                        std::cerr << "[ERROR] LTL formula is null during AP processing" << std::endl;
+                        continue;
+                    }
                     int8_t batchVal = nbaPtr->getLTLFormula()->getBatchVal(apId);
                 
-                Node* TSState = envPtr->getTransitionSystem()->getNode(nbaPtr->getLTLFormula()->getTSState(apId));
+                    // Validate transition system access
+                    if (!envPtr->getTransitionSystem()) {
+                        std::cerr << "[ERROR] Transition system is null" << std::endl;
+                        continue;
+                    }
+                    Node* TSState = envPtr->getTransitionSystem()->getNode(nbaPtr->getLTLFormula()->getTSState(apId));
                 if (!TSState) {
                     continue;
                 }
@@ -248,11 +273,6 @@ PlanningDecisionTree* TaskAllocationAlgorithms::intensiveInterTaskRelationshipTr
                 if (!newNode) {
                     continue;
                 }
-                
-                // Increment the algorithm metric for total nodes generated
-                metrics->subtree_efficiency_.total_nodes_generated++;
-
-                
                 // Route based on batch value - don't use isBatchValueInTree() for routing!
                 // batchVal = 0: unrelated tasks
                 // batchVal > 0: compatible tasks (same batch)
@@ -261,60 +281,45 @@ PlanningDecisionTree* TaskAllocationAlgorithms::intensiveInterTaskRelationshipTr
                     unrelatedTaskSearch(newNode, TSState, currentNode, apId);
                 }
                 else if (batchVal > 0) {
-                    // TODO: compatible task search needs to consider sub tasks and main tasks
+                    //Algorithm 3: compatible task search algorithm
                     compatibleTaskSearch(newNode, TSState, currentNode);
                 }
                 else {
-                    // TODO: exclusive task search needs to consider sub tasks and main tasks
+                    //Algorithm 4: exclusive task search algorithm
                     exclusiveTaskSearch(newNode, TSState, currentNode, apId);
-                }
-                
-                // // Now track that we've seen this batch value
-                // if (batchVal != 0) {
-                //     bool batchValWasInTree = isBatchValueInTree(batchVal);  // Side effect: adds to tree tracking
-                //     std::cerr << "[DEBUG-BATCHVAL] batchVal=" << static_cast<int>(batchVal) << " was already in tree: " << (batchValWasInTree ? "YES" : "NO") << std::endl;
-                // }
-                
-                // Get final progress level AFTER search routines have set it
-                uint8_t newProgress = static_cast<uint8_t>(newNode->getProgress());
-                
-                // Check if this (state, AP, progress) triple was already visited at this exact progress level
-                if (isStateAPPairVisited(nbaId, apId, newProgress)) {
-                    delete newNode;  // Skip this duplicate
-                    continue;
-                }
-                
-                // Mark the (state, AP, progress) triple as visited
-                addVisitedStateAPPair(nbaId, apId, newProgress);
-                
+                } 
+
                 // Add to subtree (insertNode will auto-assign the correct nodeId)
                 subtree->insertNode(newNode);
-                visitedNodes.push_back(newNode); // Mark new node as visited
+                metrics->subtree_efficiency_.total_nodes_generated++;
+                }
             }
         }
+    // Prune subtree
+    PlanningDecisionTree* pruningResult = pruneSubtree(subtree);
+    
+    
+    // After pruning, add only frontier nodes back to queue (removed nodes won't be in frontier)
+    std::vector<Tree_Node*> frontierNodes = pruningResult->getFrontierNodes();
+    
+    for (Tree_Node* node : frontierNodes) {
+        if (node != currentNode) {
+            addUntraversedPlanningNode(node);
+        }
     }
-        // Prune subtree
-        PlanningDecisionTree* pruningResult = pruneSubtree(subtree);
-        
-        // After pruning, add all remaining nodes in subtree to untraversed queue (except currentNode)
-        std::vector<Tree_Node*> remainingNodes = pruningResult->getAllNodes();
-        
-        for (Tree_Node* node : remainingNodes) {
-            if (node != currentNode) {
-                addUntraversedPlanningNode(node);
-            }
-        } 
-        // Attach subtree to planning tree
-        // currentNode is the root of the subtree, so attach pruned subtree as children of currentNode
-        planningTree->insertSubtree(currentNode, pruningResult);
-        
-        // Add currentNode to traversed tree
-        traversedTree->insertNode(currentNode);
-    }
+    
+    // Attach subtree to planning tree
+    // currentNode is the root of the subtree, so attach pruned subtree as children of currentNode
+    planningTree->insertSubtree(currentNode, pruningResult);
+    
+    // Add currentNode to traversed tree
+    traversedTree->insertNode(currentNode);
+}
+    // After processing all nodes, get the final optimal frontier node  
     Tree_Node* finalOptimalNode = planningTree->getOptimalFrontierNode(nba->isFinite()); // Final optimal node after search completion
     //get the total number of nodes traversed and in expanded in the planning tree
     metrics->subtree_efficiency_.total_nodes_traversed = traversedTree->getNumNodes();
-    metrics->subtree_efficiency_.total_nodes_generated = planningTree->getNumNodes();
+    metrics->subtree_efficiency_.total_nodes_planning = planningTree->getNumNodes();
     
     // Final tree state
     // Reassign node IDs to ensure proper hierarchy order (root = 0, then by depth)
@@ -471,16 +476,12 @@ void TaskAllocationAlgorithms::unrelatedTaskSearch(
         }
     }
  }
+
 /**
  * Algorithm 3: Compatible-Task Search (CS)
  * Searches for compatible tasks considering both sub-tasks and main tasks
  * Mutates newNode with search results
  * 
- * TODO: Implement cost calculation:
- *   - t_cs = t_us^-1 + (1/V_m) * |ρ_ds^-1 - ρ_prox|
- *   - Adjust costs based on accepting/non-accepting states
- *   - Implement task allocation using greedy robot selection
- *   - Update newNode with allocated robots and updated times
  */
 void TaskAllocationAlgorithms::compatibleTaskSearch(
     Tree_Node* newNode,
@@ -606,14 +607,7 @@ void TaskAllocationAlgorithms::compatibleTaskSearch(
  * Searches for exclusive tasks that have conflicting batches
  * Mutates newNode with search results
  * 
- * TODO: Implement exclusive task search:
- *   - Step 1: Identify exclusive robots (conflicting batch values)
- *   - Step 2: Build exclusive robot set A^- if automaton has accepting states
- *   - Step 3: Create reduced multi-robot system A_new = A \ A^-
- *   - Step 4: Calculate cost t_es = t_cs^-1 + (1/V_m) * |ρ_ds^-1 - ρ_prox|
- *   - Step 5: Allocate tasks using greedy selection on reduced system
- *   - Step 6: Update newNode with allocation and times
- */
+*/
 void TaskAllocationAlgorithms::exclusiveTaskSearch(
     Tree_Node* newNode,
     Node* TSState,
@@ -627,6 +621,7 @@ void TaskAllocationAlgorithms::exclusiveTaskSearch(
     
     // current task state information
     uint16_t tsStateId = TSState->getId();
+    
     // Get task location from environment mapping p_an
     Point taskLocation = environment->TSStateIdToGridCenter(tsStateId);
     multiRobotSystem->setRobotPositions(currentNode->getRobotPositions()); // Ensure current node has robot positions stored
@@ -748,113 +743,52 @@ void TaskAllocationAlgorithms::exclusiveTaskSearch(
     }
 }
 
-
 /**
- * addVisitedNode - Add a node to the visited nodes collection
+ * addVisitedAutomatonState - Add state to visited collection for given progress level
+ * Per Rule 2: Track which automaton states have been visited at each progress level
  */
-void TaskAllocationAlgorithms::addVisitedNode(Tree_Node* node) {
-    if (node) {
-        visitedNodes.push_back(node);
+void TaskAllocationAlgorithms::addVisitedAutomatonState(uint16_t state, uint8_t progress) {
+    std::vector<uint16_t>* targetVector = nullptr;
+    if (progress == static_cast<uint8_t>(Tree_Node::TASK_PROGRESS::PRE)) {
+        targetVector = &visitedAutomatonStates_PRE;
+    } else if (progress == static_cast<uint8_t>(Tree_Node::TASK_PROGRESS::TRA)) {
+        targetVector = &visitedAutomatonStates_TRA;
+    } else if (progress == static_cast<uint8_t>(Tree_Node::TASK_PROGRESS::SUF)) {
+        targetVector = &visitedAutomatonStates_SUF;
+    }
+    
+    if (targetVector && std::find(targetVector->begin(), targetVector->end(), state) == targetVector->end()) {
+        targetVector->push_back(state);
     }
 }
 
 /**
- * isNodeVisited - Check if a node has been visited
+ * isAutomatonStateVisited - Check if state was visited at given progress level
+ * Returns true only if this state was visited at this specific progress level
  */
-bool TaskAllocationAlgorithms::isNodeVisited(Tree_Node* node) const {
-    if (!node) return false;
-    return std::find(visitedNodes.begin(), visitedNodes.end(), node) != visitedNodes.end();
-}
-
-/**
- * getVisitedNodes - Get the collection of visited nodes
- */
-std::vector<Tree_Node*>& TaskAllocationAlgorithms::getVisitedNodes() {
-    return visitedNodes;
-}
-
-/**
- * clearVisitedNodes - Clear all visited nodes
- */
-void TaskAllocationAlgorithms::clearVisitedNodes() {
-    visitedNodes.clear();
-}
-
-/**
- * addVisitedStateAPPair - Add a (automatonState, AP, progress) triple to visited collection
- * Tracks exact progress level so we only skip at that specific progress, allowing revisits at different progress levels
- */
-void TaskAllocationAlgorithms::addVisitedStateAPPair(uint16_t automatonStateId, uint16_t apId, uint8_t progress) {
-    auto triple = std::make_tuple(automatonStateId, apId, progress);
-    if (std::find(visitedStateAPProgressTriples.begin(), visitedStateAPProgressTriples.end(), triple) == visitedStateAPProgressTriples.end()) {
-        visitedStateAPProgressTriples.push_back(triple);
+bool TaskAllocationAlgorithms::isAutomatonStateVisited(uint16_t state, uint8_t progress) const {
+    const std::vector<uint16_t>* targetVector = nullptr;
+    if (progress == static_cast<uint8_t>(Tree_Node::TASK_PROGRESS::PRE)) {
+        targetVector = &visitedAutomatonStates_PRE;
+    } else if (progress == static_cast<uint8_t>(Tree_Node::TASK_PROGRESS::TRA)) {
+        targetVector = &visitedAutomatonStates_TRA;
+    } else if (progress == static_cast<uint8_t>(Tree_Node::TASK_PROGRESS::SUF)) {
+        targetVector = &visitedAutomatonStates_SUF;
     }
-}
-
-/**
- * isStateAPPairVisited - Check if a specific (automatonState, AP, progress) triple has been visited
- * Returns true only if this exact combination at this progress level was visited before
- */
-bool TaskAllocationAlgorithms::isStateAPPairVisited(uint16_t automatonStateId, uint16_t apId, uint8_t progress) const {
-    auto triple = std::make_tuple(automatonStateId, apId, progress);
-    return std::find(visitedStateAPProgressTriples.begin(), visitedStateAPProgressTriples.end(), triple) != visitedStateAPProgressTriples.end();
-}
-
-/**
- * getVisitedStateAPPairs - Get all visited (state, AP, progress) triples
- */
-std::vector<std::tuple<uint16_t, uint16_t, uint8_t>>& TaskAllocationAlgorithms::getVisitedStateAPPairs() {
-    return visitedStateAPProgressTriples;
-}
-
-
-
-/**
- * addVisitedAutomatonState - LEGACY: Kept for backward compatibility
- * Now adds all APs with this state as visited
- */
-void TaskAllocationAlgorithms::addVisitedAutomatonState(uint16_t state) {
-    // For backward compatibility - mark state as visited implicitly
-    // In new code, use addVisitedStateAPPair directly
-    (void)state;  // Suppress unused warning
-}
-
-/**
- * isAutomatonStateVisited - LEGACY: Check if any (state, AP, progress) triple exists for this state
- */
-bool TaskAllocationAlgorithms::isAutomatonStateVisited(uint16_t state) const {
-    // Check if this automaton state appears in ANY (state, AP, progress) triple
-    for (const auto& triple : visitedStateAPProgressTriples) {
-        if (std::get<0>(triple) == state) {
-            return true;
-        }
+    
+    if (targetVector) {
+        return std::find(targetVector->begin(), targetVector->end(), state) != targetVector->end();
     }
     return false;
 }
 
 /**
- * getVisitedAutomatonStates - LEGACY: Extract unique automaton states from visited triples
- */
-std::vector<uint16_t>& TaskAllocationAlgorithms::getVisitedAutomatonStates() {
-    static std::vector<uint16_t> legacyStates;
-    legacyStates.clear();
-    
-    for (const auto& triple : visitedStateAPProgressTriples) {
-        uint16_t state = std::get<0>(triple);
-        if (std::find(legacyStates.begin(), legacyStates.end(), state) == legacyStates.end()) {
-            legacyStates.push_back(state);
-        }
-    }
-    return legacyStates;
-}
-
-/**
- * clearVisitedAutomatonStates - LEGACY: No longer needed with (state, AP, progress) tracking
- * Kept for backward compatibility but does nothing
+ * clearVisitedAutomatonStates - Clear all visited states for all progress levels
  */
 void TaskAllocationAlgorithms::clearVisitedAutomatonStates() {
-    // With 3-tuple tracking, we never need to clear visited pairs
-    // (state, AP, progress) combinations are only skipped at that specific progress level
+    visitedAutomatonStates_PRE.clear();
+    visitedAutomatonStates_TRA.clear();
+    visitedAutomatonStates_SUF.clear();
 }
 
 /**
@@ -1017,30 +951,22 @@ PlanningDecisionTree* TaskAllocationAlgorithms::pruneSubtree(PlanningDecisionTre
         }
     }
     }
+
     
     // Rule 2: Remove nodes with traversed (automaton state, progress) pairs
     // If we've already visited (state S, progress P) in traversedTree, don't sample it again
     std::vector<Tree_Node*> traversedNodes = traversedTree->getAllNodes();
     for (Tree_Node* node : subtreeNodes) {
-        // Skip if already marked for removal
-        if (std::find(nodesToRemove.begin(), nodesToRemove.end(), node) != nodesToRemove.end()) {
-            continue;
-        }
-        
-        // Check if this (automaton state, progress) pair exists in traversedTree
-        bool foundInTraversed = false;
-        for (Tree_Node* traversedNode : traversedNodes) {
-            if (node->getAutomatonState() && traversedNode->getAutomatonState() &&
-                node->getAutomatonState()->getId() == traversedNode->getAutomatonState()->getId() &&
-                node->getProgress() == traversedNode->getProgress()) {
-                foundInTraversed = true;
-                break;
-            }
-        }
-        
-        if (foundInTraversed) {
-            nodesToRemove.push_back(node);
-        }
+        // Rule 2: Track (nbaState, progress) pair as visited
+                // Always add - never clear. Each progress level maintains its own visited set
+                uint8_t nodeProgress = static_cast<uint8_t>(node->getProgress());
+                uint32_t nbaId = node->getAutomatonState()->getId();
+                if (!isAutomatonStateVisited(nbaId, nodeProgress)) {
+                    addVisitedAutomatonState(nbaId, nodeProgress);
+                } else {
+                    nodesToRemove.push_back(node);  // Mark for removal so it doesn't re-enter queue
+                    continue;
+                }
     }
     
     
@@ -1097,8 +1023,8 @@ PlanningDecisionTree* TaskAllocationAlgorithms::pruneSubtree(PlanningDecisionTre
     for (Tree_Node* node : nodesToRemove) {
         // Add to traversedTree first (while node still exists in memory)
         traversedTree->insertNode(node);
-        // Remove from subtree's frontier (transfers ownership semantically)
-        subtree->removeFrontierNode(node);
+        // Remove from subtree (both frontier and tree structure)
+        subtree->removeNode(node);
 
         // Increment the algorithm metric for total nodes pruned
         metrics->subtree_efficiency_.total_nodes_pruned++;

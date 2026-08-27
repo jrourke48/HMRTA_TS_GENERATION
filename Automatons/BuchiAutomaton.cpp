@@ -2,6 +2,7 @@
 #include <algorithm>
 #include <stack>
 #include <set>
+#include <iostream>
 
 BuchiAutomaton::~BuchiAutomaton() {
     // Clean up dynamically allocated nodes
@@ -49,7 +50,9 @@ std::vector<std::string> BuchiAutomaton::getEdgeLabels(uint16_t srcId, uint16_t 
 std::vector<std::vector<uint16_t>> BuchiAutomaton::getTrueAPs(uint16_t srcId, uint16_t dstId) const {
     std::vector<std::vector<uint16_t>> trueAPsList;
     auto it = nodeMap.find(srcId);
-    if (it == nodeMap.end()) return trueAPsList;
+    if (it == nodeMap.end()) {
+        return trueAPsList;
+    }
     
     Node* srcNode = it->second;
     std::vector<Edge> edges = srcNode->getEdges();

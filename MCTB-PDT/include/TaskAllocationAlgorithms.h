@@ -22,11 +22,15 @@ class TaskAllocationAlgorithms {
     private:
         BuchiAutomaton* nba;
         Environment* environment;
+        MultiRobotSystem* multiRobotSystem;
         PlanningDecisionTree* planningTree;
         PlanningDecisionTree* traversedTree; // To keep track of the tree being traversed during search
-        MultiRobotSystem* multiRobotSystem;
-        std::vector<Tree_Node*> visitedNodes; // To keep track of visited nodes during search
-        std::vector<std::tuple<uint16_t, uint16_t, uint8_t>> visitedStateAPProgressTriples; // Track (automatonStateId, apId, progress) tuples
+        //dont think we need this anymore, but keeping it for now
+        //std::vector<Tree_Node*> visitedNodes; // To keep track of visited nodes during search
+        std::vector<uint16_t> visitedAutomatonStates_PRE;   // Visited states at PRE progress
+        std::vector<uint16_t> visitedAutomatonStates_TRA;   // Visited states at TRA progress
+        std::vector<uint16_t> visitedAutomatonStates_SUF;   // Visited states at SUF progress
+        //std::set<std::tuple<uint16_t, uint16_t, uint8_t>> visitedStateProgressTriples; // Track visited (automatonState, tsState, progress) triples
         std::vector<uint8_t> treebatchvals; // To keep track of batch values in the tree (if needed for cost calculations)
         std::queue<Tree_Node*> untraversedPlanningQueue; // Queue of nodes in planning tree not yet traversed
         AlgorithmMetrics* metrics;
@@ -56,29 +60,9 @@ class TaskAllocationAlgorithms {
         void setTraversedTree(PlanningDecisionTree* tree);
         PlanningDecisionTree* getTraversedTree() const;
 
-        // Visited nodes methods
-        void addVisitedNode(Tree_Node* node);
-        bool isNodeVisited(Tree_Node* node) const;
-        std::vector<Tree_Node*>& getVisitedNodes();
-        Tree_Node* getLastVisitedNode() const{
-            if (visitedNodes.empty()) return nullptr;
-            return visitedNodes.back();
-        };
-        Tree_Node* getFirstVisitedNode() const{
-            if (visitedNodes.empty()) return nullptr;
-            return visitedNodes.front();
-        };
-        void clearVisitedNodes();
-
-        // Visited (automatonState, AP, progress) triples methods
-        void addVisitedStateAPPair(uint16_t automatonStateId, uint16_t apId, uint8_t progress);
-        bool isStateAPPairVisited(uint16_t automatonStateId, uint16_t apId, uint8_t progress) const;
-        std::vector<std::tuple<uint16_t, uint16_t, uint8_t>>& getVisitedStateAPPairs();
-
-        // Legacy methods (kept for compatibility, will use state-AP pairs internally)
-        void addVisitedAutomatonState(uint16_t state);
-        bool isAutomatonStateVisited(uint16_t state) const;
-        std::vector<uint16_t>& getVisitedAutomatonStates();
+        // Visited state methods - separate tracking per progress level
+        void addVisitedAutomatonState(uint16_t state, uint8_t progress);
+        bool isAutomatonStateVisited(uint16_t state, uint8_t progress) const;
         void clearVisitedAutomatonStates();
 
         // Batch values in tree methods

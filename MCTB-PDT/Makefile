@@ -17,6 +17,7 @@ DSTAR_BIN = $(OUT_DIR)/Test_DStarGridWorld
 VIS_BIN = $(OUT_DIR)/Visualization
 INTERTASK_BIN = $(OUT_DIR)/InterTaskConstraintTests
 MULTICAP_BIN = $(OUT_DIR)/MultiCapabilityRobotTest
+AUTOMATON_STATES_BIN = $(OUT_DIR)/AutomatonStatesTest
 
 # Source files
 TEST_SRC = apps/TestIntegration.cpp
@@ -28,6 +29,7 @@ DSTAR_SRC = apps/Test_DStarGridWorld.cpp
 VIS_SRC = apps/VisualizationApp.cpp
 INTERTASK_SRC = apps/Inter_task_constraint_tests.cpp
 MULTICAP_SRC = apps/Multi_Capability_Robot_Test.cpp
+AUTOMATON_STATES_SRC = organizedtests/test_automaton_states.cpp
 # GridVis - only included in visualization targets
 GRIDVIS_SRC = src/Environment/gridvis.cpp
 # TaskAllocationAlgorithms - algorithms for task allocation
@@ -45,6 +47,7 @@ COMMON_SRCS = \
 	src/LTLFormula/BatchAtomicProposition.cpp \
 	src/LTLFormula/LTLFormula.cpp \
 	../Automatons/BuchiAutomaton.cpp \
+	../Automatons/ProductAutomaton.cpp \
 	../Automatons/TS.cpp \
 	../Transition_Systems/GeneralTransitionSystem.cpp \
 	src/AlgorithmMetrics.cpp
@@ -59,15 +62,16 @@ DSTAR_OBJ = $(DSTAR_SRC:.cpp=.o)
 VIS_OBJ = $(VIS_SRC:.cpp=.o)
 INTERTASK_OBJ = $(INTERTASK_SRC:.cpp=.o)
 MULTICAP_OBJ = $(MULTICAP_SRC:.cpp=.o)
+AUTOMATON_STATES_OBJ = $(AUTOMATON_STATES_SRC:.cpp=.o)
 GRIDVIS_OBJ = $(GRIDVIS_SRC:.cpp=.o)
 COMMON_OBJS = $(COMMON_SRCS:.cpp=.o)
 TASK_ALLOC_OBJS = $(TASK_ALLOC_SRCS:.cpp=.o)
-ALL_OBJS = $(TEST_OBJ) $(TREE_TEST_OBJ) $(TASK_ALLOC_OBJ) $(PLANNING_TREE_TEST_OBJ) $(OPTIMAL_PATH_OBJ) $(DSTAR_OBJ) $(VIS_OBJ) $(INTERTASK_OBJ) $(MULTICAP_OBJ) $(GRIDVIS_OBJ) $(COMMON_OBJS) $(TASK_ALLOC_OBJS)
+ALL_OBJS = $(TEST_OBJ) $(TREE_TEST_OBJ) $(TASK_ALLOC_OBJ) $(PLANNING_TREE_TEST_OBJ) $(OPTIMAL_PATH_OBJ) $(DSTAR_OBJ) $(VIS_OBJ) $(INTERTASK_OBJ) $(MULTICAP_OBJ) $(AUTOMATON_STATES_OBJ) $(GRIDVIS_OBJ) $(COMMON_OBJS) $(TASK_ALLOC_OBJS)
 
 # Targets
-.PHONY: all clean run rebuild help test test-tree test-task test-planning-tree test-optimal-path test-dstar test-intertask test-multicap test-all tree-only task-only planning-tree-only optimal-path-only dstar-only intertask-only multicap-only vis vis-only
+.PHONY: all clean run rebuild help test test-tree test-task test-planning-tree test-optimal-path test-dstar test-intertask test-multicap test-automaton-states test-all tree-only task-only planning-tree-only optimal-path-only dstar-only intertask-only multicap-only automaton-states-only vis vis-only
 
-all: $(OUT_BIN) $(TREE_BIN) $(TASK_ALLOC_BIN) $(PLANNING_TREE_BIN) $(OPTIMAL_PATH_BIN) $(DSTAR_BIN) $(INTERTASK_BIN) $(MULTICAP_BIN) $(VIS_BIN)
+all: $(OUT_BIN) $(TREE_BIN) $(TASK_ALLOC_BIN) $(PLANNING_TREE_BIN) $(OPTIMAL_PATH_BIN) $(DSTAR_BIN) $(INTERTASK_BIN) $(MULTICAP_BIN) $(AUTOMATON_STATES_BIN) $(VIS_BIN)
 
 # Build the test executable
 $(OUT_BIN): $(TEST_OBJ) $(COMMON_OBJS)
@@ -116,6 +120,12 @@ $(MULTICAP_BIN): $(MULTICAP_OBJ) $(COMMON_OBJS) $(TASK_ALLOC_OBJS) $(GRIDVIS_OBJ
 	@mkdir -p $(OUT_DIR)
 	$(CXX) $(CXXFLAGS) $(INCLUDES) $^ -o $@ $(LIBS) $(RAYLIB_FLAGS)
 	@echo "✓ Build successful: $(MULTICAP_BIN)"
+
+# Build the automaton states scaling tests executable
+$(AUTOMATON_STATES_BIN): $(AUTOMATON_STATES_OBJ) $(COMMON_OBJS) $(TASK_ALLOC_OBJS)
+	@mkdir -p $(OUT_DIR)
+	$(CXX) $(CXXFLAGS) $(INCLUDES) $^ -o $@ $(LIBS)
+	@echo "✓ Build successful: $(AUTOMATON_STATES_BIN)"
 
 # Build the visualization executable
 $(VIS_BIN): $(VIS_OBJ) $(GRIDVIS_OBJ) $(COMMON_OBJS) $(TASK_ALLOC_OBJS)
@@ -167,6 +177,11 @@ test-multicap: $(MULTICAP_BIN)
 	@echo "Running multi-capability robot tests..."
 	@$(MULTICAP_BIN)
 
+# Run automaton states scaling tests
+test-automaton-states: $(AUTOMATON_STATES_BIN)
+	@echo "Running automaton states scaling tests..."
+	@cd organizedtests && ../$(AUTOMATON_STATES_BIN)
+
 # Shortcut to run only tree tests
 tree-only: test-tree
 
@@ -188,6 +203,9 @@ intertask-only: test-intertask
 # Shortcut to run only multi-capability robot tests
 multicap-only: test-multicap
 
+# Shortcut to run only automaton states tests
+automaton-states-only: test-automaton-states
+
 # Run visualization
 vis: $(VIS_BIN)
 	@echo "Running visualization..."
@@ -198,7 +216,7 @@ vis-only: $(VIS_BIN)
 	@echo "✓ Visualization built. Run 'make vis' to execute."
 
 # Run all tests
-test-all: run test-tree test-task test-planning-tree test-optimal-path test-dstar test-intertask test-multicap
+test-all: run test-tree test-task test-planning-tree test-optimal-path test-dstar test-intertask test-multicap test-automaton-states
 
 # Run tests and show output
 test: test-all
@@ -227,6 +245,7 @@ help:
 	@echo "  make test-optimal-path   - Build and run optimal path visualization tests"
 	@echo "  make test-dstar          - Build and run D* GridWorld algorithm tests"
 	@echo "  make test-intertask      - Build and run inter-task constraint tests"
+	@echo "  make test-automaton-states - Build and run automaton states scaling tests"
 	@echo "  make vis                 - Build and run visualization app (requires raylib)"
 	@echo "  make vis-only            - Build only visualization executable"
 	@echo "  make tree-only           - Shortcut for 'make test-tree'"
@@ -234,6 +253,7 @@ help:
 	@echo "  make planning-tree-only  - Shortcut for 'make test-planning-tree'"
 	@echo "  make optimal-path-only   - Shortcut for 'make test-optimal-path'"
 	@echo "  make intertask-only      - Shortcut for 'make test-intertask'"
+	@echo "  make automaton-states-only - Shortcut for 'make test-automaton-states'"
 	@echo "  make dstar-only          - Shortcut for 'make test-dstar'"
 	@echo "  make test                - Run all tests"
 	@echo "  make test-all            - Run all tests (explicit)"

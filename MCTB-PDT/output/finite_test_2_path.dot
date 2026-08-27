@@ -76,16 +76,16 @@ digraph ComprehensiveOptimalPath {
     color=darkred;
     penwidth=2;
 
-    path_summary [shape=note, label="Optimal Path Summary\nTotal Steps: 4\nFinal Cost: 18\nTotal Execution Time: 102s\n", fillcolor="#FFFFCC", penwidth=2];
+    path_summary [shape=note, label="Optimal Path Summary\nTotal Steps: 4\nFinal Cost: 17\nTotal Execution Time: 59s\n", fillcolor="#FFFFCC", penwidth=2];
 
     opt_0 [shape=box, label="Step 0\nNBA: 3 | TS: 0\nCost: 0s | Total: 0s\n-----\nAllocated Robots:\n", fillcolor="#B3E5FC", penwidth=1.5];
-    opt_1 [shape=box, label="Step 1\nNBA: 8 | TS: 5\nCost: 13s | Total: 37s\n-----\nAllocated Robots:\n  R1: 13s\n  R2: 12s\n  R6: 12s\n", fillcolor="#B3E5FC", penwidth=1.5];
-    opt_2 [shape=box, label="Step 2\nNBA: 10 | TS: 3\nCost: 17s | Total: 87s\n-----\nAllocated Robots:\n  R3: 17s\n  R4: 16s\n  R5: 17s\n", fillcolor="#B3E5FC", penwidth=1.5];
-    opt_3 [shape=box, label="Step 3\nNBA: 0 | TS: 4\nCost: 18s | Total: 102s\n-----\nAllocated Robots:\n  R1: 17s\n  R2: 17s\n  R6: 18s\n", fillcolor="#FF6B6B", penwidth=3, color=darkred, fontweight=bold, fontsize=11];
+    opt_1 [shape=box, label="Step 1\nNBA: 7 | TS: 4\nCost: 12s | Total: 19s\n-----\nAllocated Robots:\n  R1: 1s\n  R2: 12s\n  R6: 6s\n", fillcolor="#B3E5FC", penwidth=1.5];
+    opt_2 [shape=box, label="Step 2\nNBA: 12 | TS: 3\nCost: 17s | Total: 43s\n-----\nAllocated Robots:\n  R1: 7s\n  R3: 1s\n  R5: 17s\n", fillcolor="#B3E5FC", penwidth=1.5];
+    opt_3 [shape=box, label="Step 3\nNBA: 0 | TS: 5\nCost: 17s | Total: 59s\n-----\nAllocated Robots:\n  R2: 17s\n  R4: 7s\n  R6: 10s\n", fillcolor="#FF6B6B", penwidth=3, color=darkred, fontweight=bold, fontsize=11];
 
-    opt_0 -> opt_1 [label="Δ=13s", penwidth=2, color=darkred];
-    opt_1 -> opt_2 [label="Δ=4s", penwidth=2, color=darkred];
-    opt_2 -> opt_3 [label="Δ=1s", penwidth=2, color=darkred];
+    opt_0 -> opt_1 [label="Δ=12s", penwidth=2, color=darkred];
+    opt_1 -> opt_2 [label="Δ=5s", penwidth=2, color=darkred];
+    opt_2 -> opt_3 [label="Δ=0s", penwidth=2, color=darkred];
   }
 
   // Connections between clusters

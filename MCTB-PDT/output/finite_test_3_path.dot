@@ -75,16 +75,16 @@ digraph ComprehensiveOptimalPath {
     color=darkred;
     penwidth=2;
 
-    path_summary [shape=note, label="Optimal Path Summary\nTotal Steps: 5\nFinal Cost: 12\nTotal Execution Time: 60s\n", fillcolor="#FFFFCC", penwidth=2];
+    path_summary [shape=note, label="Optimal Path Summary\nTotal Steps: 5\nFinal Cost: 13\nTotal Execution Time: 47s\n", fillcolor="#FFFFCC", penwidth=2];
 
     opt_0 [shape=box, label="Step 0\nNBA: 1 | TS: 0\nCost: 0s | Total: 0s\n-----\nAllocated Robots:\n", fillcolor="#B3E5FC", penwidth=1.5];
-    opt_1 [shape=box, label="Step 1\nNBA: 6 | TS: 4\nCost: 12s | Total: 12s\n-----\nAllocated Robots:\n  R2: 12s\n", fillcolor="#B3E5FC", penwidth=1.5];
-    opt_2 [shape=box, label="Step 2\nNBA: 5 | TS: 1\nCost: 12s | Total: 32s\n-----\nAllocated Robots:\n  R4: 9s\n  R5: 11s\n", fillcolor="#B3E5FC", penwidth=1.5];
-    opt_3 [shape=box, label="Step 3\nNBA: 2 | TS: 2\nCost: 12s | Total: 48s\n-----\nAllocated Robots:\n  R1: 8s\n  R6: 8s\n", fillcolor="#B3E5FC", penwidth=1.5];
-    opt_4 [shape=box, label="Step 4\nNBA: 0 | TS: 1\nCost: 12s | Total: 60s\n-----\nAllocated Robots:\n  R3: 10s\n  R4: 10s\n  R5: 12s\n", fillcolor="#FF6B6B", penwidth=3, color=darkred, fontweight=bold, fontsize=11];
+    opt_1 [shape=box, label="Step 1\nNBA: 3 | TS: 2\nCost: 7s | Total: 8s\n-----\nAllocated Robots:\n  R1: 1s\n  R6: 7s\n", fillcolor="#B3E5FC", penwidth=1.5];
+    opt_2 [shape=box, label="Step 2\nNBA: 7 | TS: 1\nCost: 13s | Total: 39s\n-----\nAllocated Robots:\n  R1: 10s\n  R2: 9s\n  R3: 13s\n", fillcolor="#B3E5FC", penwidth=1.5];
+    opt_3 [shape=box, label="Step 3\nNBA: 8 | TS: 4\nCost: 13s | Total: 45s\n-----\nAllocated Robots:\n  R5: 6s\n", fillcolor="#B3E5FC", penwidth=1.5];
+    opt_4 [shape=box, label="Step 4\nNBA: 0 | TS: 1\nCost: 13s | Total: 47s\n-----\nAllocated Robots:\n  R1: 11s\n  R2: 10s\n", fillcolor="#FF6B6B", penwidth=3, color=darkred, fontweight=bold, fontsize=11];
 
-    opt_0 -> opt_1 [label="Δ=12s", penwidth=2, color=darkred];
-    opt_1 -> opt_2 [label="Δ=0s", penwidth=2, color=darkred];
+    opt_0 -> opt_1 [label="Δ=7s", penwidth=2, color=darkred];
+    opt_1 -> opt_2 [label="Δ=6s", penwidth=2, color=darkred];
     opt_2 -> opt_3 [label="Δ=0s", penwidth=2, color=darkred];
     opt_3 -> opt_4 [label="Δ=0s", penwidth=2, color=darkred];
   }

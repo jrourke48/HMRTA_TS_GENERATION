@@ -69,12 +69,12 @@ public:
         long long nodes_satisfying_ltl = 0;              // OTH or TRA nodes
         
         // Memory usage: currently do not know how to get this. 
-        long long traversed_tree_memory_bytes = 0;
-        long long planning_tree_memory_bytes = 0;
-        long long product_automaton_memory_bytes = 0;
-        
+        long long task_allocation_algorithm_memory_bytes = 0;
+    
         // Product automaton comparison (for small instances)
         long long full_product_automaton_nodes = 0;
+        long long full_product_automaton_edges = 0;
+        long long full_product_automaton_memory_bytes = 0;
         
         // Derived efficiency metrics
         double pruning_ratio = 0.0;                      // pruned / total_generated
@@ -115,7 +115,10 @@ public:
     virtual ~AlgorithmMetrics() = default;
     
     // Initialization
+    void clearMetrics();  // Safely reset all metrics without calling default constructor
     void setIndependentVariables(const IndependentVariables& vars);
+    void setTaskMemoryUsage(long long bytes);
+    void setFullProductAutomatonMetrics(long long nodes, long long edges, long long memory_bytes);
     void startTimer();
     void stopTimer();
     

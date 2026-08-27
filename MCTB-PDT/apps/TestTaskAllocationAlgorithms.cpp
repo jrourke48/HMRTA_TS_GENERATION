@@ -646,13 +646,9 @@ void testFullAlgorithmIntensiveInterTaskRelationshipSearch() {
     TS* ts = nullptr; GridWorld* grid = nullptr; Environment* env = nullptr;
     createTestSystemComponents2(ts, grid, env);
     
-    cout << "[DEBUG] Creating Büchi automaton..." << endl;
     BuchiAutomaton* nba = createTestBuchiAutomaton2();
-    cout << "[DEBUG] Büchi automaton created" << endl;
     
-    cout << "[DEBUG] Creating multi-robot system..." << endl;
     MultiRobotSystem* mrs = createTestMultiRobotSystem2();
-    cout << "[DEBUG] Multi-robot system created" << endl;
     
     cout << "\n=== Algorithm Configuration ===" << endl;
     cout << "  TS States: " << ts->getNumStates() << endl;
@@ -660,15 +656,11 @@ void testFullAlgorithmIntensiveInterTaskRelationshipSearch() {
     cout << "  Büchi States: " << nba->getNumStates() << endl;
     cout << "  LTL Formula: F\"p0\" && F\"p1\"" << endl;
     
-    cout << "[DEBUG] Creating TaskAllocationAlgorithms..." << endl;
     TaskAllocationAlgorithms algo(nba, env, mrs);
-    cout << "[DEBUG] TaskAllocationAlgorithms created" << endl;
     
     cout << "\n=== Starting Tree Search ===" << endl;
     try {
-        cout << "[DEBUG] Calling intensiveInterTaskRelationshipTreeSearch..." << endl;
         PlanningDecisionTree* resultTree = algo.intensiveInterTaskRelationshipTreeSearch(nba, env, mrs);
-        cout << "[DEBUG] Tree search returned, checking result..." << endl;
         
         if (resultTree) {
             cout << "\n✓ Tree search completed successfully" << endl;
