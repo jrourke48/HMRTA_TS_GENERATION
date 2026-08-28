@@ -2,7 +2,7 @@
 # Compiler and flags
 CXX = g++
 CXXFLAGS = -std=c++20 -Wall -Wextra -g3
-INCLUDES = -I. -I./include -I..
+INCLUDES = -I. -I./include -I./src -I..
 LIBS = -lspot -lbddx
 RAYLIB_FLAGS = $(shell pkg-config --cflags --libs raylib 2>/dev/null || echo "-lraylib -lGL -lm -lpthread -ldl -lrt -lX11")
 

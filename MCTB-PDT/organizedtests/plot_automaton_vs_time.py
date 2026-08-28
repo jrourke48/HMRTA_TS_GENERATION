@@ -8,8 +8,11 @@ import matplotlib.pyplot as plt
 import os
 import glob
 
-# Get all CSV files from output folder
-output_dir = "output"
+# Create Plots directory if it doesn't exist
+os.makedirs('Plots', exist_ok=True)
+
+# Get all CSV files from raw_csv folder
+output_dir = "raw_csv"
 csv_files = glob.glob(os.path.join(output_dir, "automaton_test_*.csv"))
 
 if not csv_files:
@@ -77,8 +80,8 @@ for i, (s, t) in enumerate(zip(states_3robots, times_3robots)):
     ax1.text(s, t, f'{t:.2f}ms', ha='center', va='bottom', fontweight='bold')
 
 plt.tight_layout()
-plt.savefig('automaton_computation_time_3robots.png', dpi=300, bbox_inches='tight')
-print("✓ Plot saved as automaton_computation_time_3robots.png")
+plt.savefig('Plots/automaton_computation_time_3robots.png', dpi=300, bbox_inches='tight')
+print("✓ Plot saved as Plots/automaton_computation_time_3robots.png")
 plt.close(fig1)
 
 # ============================================================================
@@ -98,8 +101,8 @@ for i, (s, t) in enumerate(zip(states_6robots, times_6robots)):
     ax2.text(s, t, f'{t:.2f}ms', ha='center', va='bottom', fontweight='bold')
 
 plt.tight_layout()
-plt.savefig('automaton_computation_time_6robots.png', dpi=300, bbox_inches='tight')
-print("✓ Plot saved as automaton_computation_time_6robots.png")
+plt.savefig('Plots/automaton_computation_time_6robots.png', dpi=300, bbox_inches='tight')
+print("✓ Plot saved as Plots/automaton_computation_time_6robots.png")
 plt.close(fig2)
 plt.close()
 

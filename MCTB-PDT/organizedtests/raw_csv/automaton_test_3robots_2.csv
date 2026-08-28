@@ -1,0 +1,21 @@
+Metric,Value,Unit
+Automaton States,6,count
+Automaton Edges,14,count
+Atomic Propositions,4,count
+Number of Robots,3,count
+Total Robot Capabilities,3,count
+Transition System Regions,6,count
+Avg Capabilities/Robot,1.0000,ratio
+Capability Homogeneity,1.0000,ratio
+Total Computation Time,0.23,ms
+Total Nodes Generated,12,count
+Total Nodes Pruned,12,count
+Pruning Ratio,1.0000,ratio
+Memory Reduction Ratio,0.0000,ratio
+State-Space Reduction,-12,count
+Tree Makespan,85.00,seconds
+Sum of Travel Times,134.00,seconds
+Total Travel Distance,0.00,units
+Max Individual Distance,0.00,units
+Robots Utilized,3,count
+Robot Utilization Ratio,1.0000,ratio

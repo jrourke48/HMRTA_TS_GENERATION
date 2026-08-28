@@ -29,6 +29,7 @@ BuchiAutomaton* createTestInfiniteBuchiAutomaton3(int estimatedStates);
 BuchiAutomaton* createTestInfiniteBuchiAutomaton4(int estimatedStates);
 BuchiAutomaton* createTestInfiniteBuchiAutomaton5(int estimatedStates);
 BuchiAutomaton* createTestInfiniteBuchiAutomaton6(int estimatedStates);
+BuchiAutomaton* createTestInfiniteBuchiAutomaton7(int estimatedStates);
 
 // Get memory usage in MB
 double getMemoryUsageMB() {
@@ -52,7 +53,8 @@ int main() {
         createTestInfiniteBuchiAutomaton3,
         createTestInfiniteBuchiAutomaton4,
         createTestInfiniteBuchiAutomaton5,
-        createTestInfiniteBuchiAutomaton6
+        createTestInfiniteBuchiAutomaton6,
+        createTestInfiniteBuchiAutomaton7,  // Reuse for 7th automaton
     };
     
     vector<int> robotCounts = {3, 6};
@@ -81,7 +83,7 @@ int main() {
         cout << string(80, '-') << "\n" << endl;
         
         // For each of the 4 automata
-        for (int automatonId = 1; automatonId <= 6; ++automatonId) {
+        for (int automatonId = 1; automatonId <= 7; ++automatonId) {
             cout << "\n  Test " << testNum << " (Automaton " << automatonId << ")... ";
             cout.flush();
             
@@ -102,7 +104,7 @@ int main() {
                 double memBefore = getMemoryUsageMB();
                 //build the planning decision tree
                 allocAlg->intensiveInterTaskRelationshipTreeSearch(buchi, env, mrs);
-                if (robotCount == 6 && (automatonId == 5 || automatonId == 6)) {
+                if (robotCount == 6 && automatonId >= 4) {
                     allocAlg->visualizeTree("output/automaton_test_" + to_string(robotCount) + "robots_" + to_string(automatonId) + "_tree.dot");
                     allocAlg->visualizeOptimalPath("output/automaton_test_" + to_string(robotCount) + "robots_" + to_string(automatonId) + "_path.dot");
                 }
@@ -110,8 +112,8 @@ int main() {
                 cout << "✓ Complete\n";
                 allocAlg->getMetrics().printSummary();
                 
-                // Export metrics to CSV in output folder
-                string csvFilename = "output/automaton_test_" + to_string(robotCount) + "robots_" + 
+                // Export metrics to CSV in raw_csv folder
+                string csvFilename = "raw_csv/automaton_test_" + to_string(robotCount) + "robots_" + 
                                     to_string(automatonId) + ".csv";
                 allocAlg->getMetrics().exportToCSV(csvFilename);
                 
@@ -140,9 +142,9 @@ int main() {
     cout << "✓ All 10 tests completed!" << endl;
     cout << "   - 5 automata tested with 3-robot environment" << endl;
     cout << "   - 5 automata tested with 6-robot environment" << endl;
-    cout << "\n✓ CSV Results stored in organizedtests/output/ folder:" << endl;
-    cout << "   - output/automaton_test_3robots_1.csv through automaton_test_3robots_4.csv" << endl;
-    cout << "   - output/automaton_test_6robots_1.csv through automaton_test_6robots_4.csv" << endl;
+    cout << "\n✓ CSV Results stored in organizedtests/raw_csv/ folder:" << endl;
+    cout << "   - raw_csv/automaton_test_3robots_1.csv through automaton_test_3robots_6.csv" << endl;
+    cout << "   - raw_csv/automaton_test_6robots_1.csv through automaton_test_6robots_6.csv" << endl;
     cout << string(80, '=') << "\n" << endl;
     
     return 0;
@@ -338,22 +340,22 @@ BuchiAutomaton* createTestInfiniteBuchiAutomaton1(int estimatedStates) {
     
     LTLFormula* ltlFormula = new LTLFormula(ltl_str, batchAPs);
     BuchiAutomaton* buchi = new BuchiAutomaton(ltlFormula);
+    buchi->visualize("output/automaton_test_infinite_1.dot");
     return buchi;
 }
 
 /**
- * ADVANCED INFINITE Test 4: Complex nested temporal operators with sequencing
+ * ADVANCED INFINITE Test 2: Complex nested temporal operators with sequencing
  * G(F(p0 & X(p1 & X p2))) & G(F(p3 & (F p4)))
  */
-BuchiAutomaton* createTestInfiniteBuchiAutomaton4(int estimatedStates) {
-    string ltl_str = "G(F(\"p0\" & X(\"p1\" & X\"p2\"))) & G(F(\"p3\" & (F\"p4\")))";
+BuchiAutomaton* createTestInfiniteBuchiAutomaton2(int estimatedStates) {
+    string ltl_str = "G(F(\"p0\" & X(\"p1\" & X\"p2\"))) & G(F(\"p3\"))";
     
     vector<BatchAtomicProposition> batchAPs;
     batchAPs.push_back(BatchAtomicProposition(0, 0, {true, false, false, false, false, true, false, false, false, false, false, false, false}, 0));
     batchAPs.push_back(BatchAtomicProposition(1, 1, {true, false, false, false, false, true, false, false, false, false, false, false, false}, 0));
     batchAPs.push_back(BatchAtomicProposition(2, 2, {true, false, false, false, false, true, false, false, false, false, false, false, false}, 0));
     batchAPs.push_back(BatchAtomicProposition(3, 3, {false, false, false, true, false, true, false, false, false, false, false, false, false}, 0));
-    batchAPs.push_back(BatchAtomicProposition(4, 4, {false, false, false, true, false, true, false, false, false, false, false, false, false}, 0));
 
     LTLFormula* ltlFormula = new LTLFormula(ltl_str, batchAPs);
     BuchiAutomaton* buchi = new BuchiAutomaton(ltlFormula);
@@ -380,6 +382,24 @@ BuchiAutomaton* createTestInfiniteBuchiAutomaton3(int estimatedStates) {
 }
 
 /**
+ * ADVANCED INFINITE Test 4: Complex nesting with conditional sequencing
+ * G((F("p0" & X("p1" U "p2"))) & (G!"p3" | F("p4" & X"p0"))) 
+ */
+BuchiAutomaton* createTestInfiniteBuchiAutomaton4(int estimatedStates) {
+    string ltl_str = "G((F(\"p0\" & X(\"p1\" U \"p2\")))) & (G(F(\"p3\")) | G(F(\"p4\" & X(\"p0\"))))";
+    
+    vector<BatchAtomicProposition> batchAPs;
+    batchAPs.push_back(BatchAtomicProposition(0, 0, {true, false, false, false, false, true, false, false, false, false, false, false, false}, 0));
+    batchAPs.push_back(BatchAtomicProposition(1, 1, {true, false, false, false, false, true, false, false, false, false, false, false, false}, 0));
+    batchAPs.push_back(BatchAtomicProposition(2, 2, {true, false, false, false, false, true, false, false, false, false, false, false, false}, 0));
+    batchAPs.push_back(BatchAtomicProposition(3, 3, {false, false, false, true, false, true, false, false, false, false, false, false, false}, 0));
+    batchAPs.push_back(BatchAtomicProposition(4, 4, {false, false, false, true, false, true, false, false, false, false, false, false, false}, 0));
+
+    LTLFormula* ltlFormula = new LTLFormula(ltl_str, batchAPs);
+    BuchiAutomaton* buchi = new BuchiAutomaton(ltlFormula);
+    return buchi;
+}
+/**
  * ADVANCED INFINITE Test 5: Complex nesting with conditional sequencing
  * G((F("p0" & X("p1" U "p2"))) & (G!"p3" | F("p4" & X"p0"))) 
  */
@@ -398,6 +418,10 @@ BuchiAutomaton* createTestInfiniteBuchiAutomaton5(int estimatedStates) {
     BuchiAutomaton* buchi = new BuchiAutomaton(ltlFormula);
     return buchi;
 }
+/**
+ * ADVANCED INFINITE Test 6: Complex nesting with conditional sequencing
+ * "G((F(\"p0\" & X(\"p1\" U \"p2\")))) & (G(F(\"p3\")) & G(F(\"p5\")) | G(F(\"p4\" & X(\"p0\")) & G(F(\"p101\" & X(\"p202\") & G(F(\"p31\") & X(\"p41\")))))))" 
+ */
 BuchiAutomaton* createTestInfiniteBuchiAutomaton6(int estimatedStates) {
     string ltl_str = "G((F(\"p0\" & X(\"p1\" U \"p2\")))) & (G(F(\"p3\")) & G(F(\"p5\")) | G(F(\"p4\" & X(\"p0\")) & G(F(\"p101\" & X(\"p202\") & G(F(\"p31\") & X(\"p41\")))))))";
     
@@ -415,40 +439,25 @@ BuchiAutomaton* createTestInfiniteBuchiAutomaton6(int estimatedStates) {
 
     LTLFormula* ltlFormula = new LTLFormula(ltl_str, batchAPs);
     BuchiAutomaton* buchi = new BuchiAutomaton(ltlFormula);
-    buchi->visualize("output/automaton_test_buchi_5.dot");
-    return buchi;
-}
-
-BuchiAutomaton* createTestInfiniteBuchiAutomaton2(int estimatedStates) {
-    string ltl_str = "G(F(\"p0\")) & G(F(\"p1\")) & G(F(\"p2\")) & G(F(\"p3\")) & G(F(\"p4\")) & G(F(\"p5\"))";
-
-    vector<BatchAtomicProposition> batchAPs;
-    batchAPs.push_back(BatchAtomicProposition(0, 0, {true, false, false, false, false, true, false, false, false, false, false, false, false}, 0));
-    batchAPs.push_back(BatchAtomicProposition(1, 1, {true, false, false, false, false, true, false, false, false, false, false, false, false}, 0));
-    batchAPs.push_back(BatchAtomicProposition(2, 2, {true, false, false, false, false, true, false, false, false, false, false, false, false}, 0));
-    batchAPs.push_back(BatchAtomicProposition(3, 3, {false, false, false, true, false, true, false, false, false, false, false, false, false}, 0));
-    batchAPs.push_back(BatchAtomicProposition(4, 4, {false, false, false, true, false, true, false, false, false, false, false, false, false}, 0));
-    batchAPs.push_back(BatchAtomicProposition(5, 5, {false, false, false, true, false, true, false, false, false, false, false, false, false}, 0));
-
-    LTLFormula* ltlFormula = new LTLFormula(ltl_str, batchAPs);
-    BuchiAutomaton* buchi = new BuchiAutomaton(ltlFormula);
-    buchi->visualize("output/automaton_test_buchi_2.dot");
+    buchi->visualize("output/automaton_test_buchi_6.dot");
     return buchi;
 }
 
 BuchiAutomaton* createTestInfiniteBuchiAutomaton7(int estimatedStates) {
-    string ltl_str = "G((F(\"p0\" & X(\"p1\" U \"p2\")))) & (G(F(\"p3\")) & G(F(\"p5\")) | G(F(\"p4\" & X(\"p0\"))))";
-    
+    string ltl_str = "((F(\"p1\")) & (F(\"p2\")) & (F(\"p3\")) & (F(\"p4\")) & (F(\"p5\")) & (F(\"p6\")) & (F(\"p7\")) & (!(\"p1\") U (\"p2\")))";
+
     vector<BatchAtomicProposition> batchAPs;
-    batchAPs.push_back(BatchAtomicProposition(0, 0, {true, false, false, false, false, true, false, false, false, false, false, false, false}, 0));
     batchAPs.push_back(BatchAtomicProposition(1, 1, {true, false, false, false, false, true, false, false, false, false, false, false, false}, 0));
     batchAPs.push_back(BatchAtomicProposition(2, 2, {true, false, false, false, false, true, false, false, false, false, false, false, false}, 0));
     batchAPs.push_back(BatchAtomicProposition(3, 3, {false, false, false, true, false, true, false, false, false, false, false, false, false}, 0));
     batchAPs.push_back(BatchAtomicProposition(4, 4, {false, false, false, true, false, true, false, false, false, false, false, false, false}, 0));
-    batchAPs.push_back(BatchAtomicProposition(5, 5, {true, false, false, false, false, true, false, false, false, false, false, false, false}, 0));
+    batchAPs.push_back(BatchAtomicProposition(5, 5, {true, false, false, true, false, true, false, false, false, false, false, false, false}, 0));
+    batchAPs.push_back(BatchAtomicProposition(6, 3, {false, false, false, true, false, true, false, false, false, false, false, false, false}, 0));
+    batchAPs.push_back(BatchAtomicProposition(7, 4, {true, false, false, true, false, true, false, false, false, false, false, false, false}, 0));
 
     LTLFormula* ltlFormula = new LTLFormula(ltl_str, batchAPs);
     BuchiAutomaton* buchi = new BuchiAutomaton(ltlFormula);
+    buchi->visualize("output/automaton_test_buchi_7.dot");
     return buchi;
 }
 
@@ -469,6 +478,22 @@ BuchiAutomaton* createTestInfiniteBuchiAutomaton8(int estimatedStates) {
 }
 
 BuchiAutomaton* createTestInfiniteBuchiAutomaton9(int estimatedStates) {
+    string ltl_str = "G((F(\"p0\" & X(\"p1\" U \"p2\")))) & (G(F(\"p3\")) & G(F(\"p5\")) | G(F(\"p4\" & X(\"p0\"))))";
+    
+    vector<BatchAtomicProposition> batchAPs;
+    batchAPs.push_back(BatchAtomicProposition(0, 0, {true, false, false, false, false, true, false, false, false, false, false, false, false}, 0));
+    batchAPs.push_back(BatchAtomicProposition(1, 1, {true, false, false, false, false, true, false, false, false, false, false, false, false}, 0));
+    batchAPs.push_back(BatchAtomicProposition(2, 2, {true, false, false, false, false, true, false, false, false, false, false, false, false}, 0));
+    batchAPs.push_back(BatchAtomicProposition(3, 3, {false, false, false, true, false, true, false, false, false, false, false, false, false}, 0));
+    batchAPs.push_back(BatchAtomicProposition(4, 4, {false, false, false, true, false, true, false, false, false, false, false, false, false}, 0));
+    batchAPs.push_back(BatchAtomicProposition(5, 5, {true, false, false, false, false, true, false, false, false, false, false, false, false}, 0));
+
+    LTLFormula* ltlFormula = new LTLFormula(ltl_str, batchAPs);
+    BuchiAutomaton* buchi = new BuchiAutomaton(ltlFormula);
+    return buchi;
+}
+
+BuchiAutomaton* createTestInfiniteBuchiAutomaton10(int estimatedStates) {
     string ltl_str = "G((F(\"p0\" & X(\"p1\" U \"p2\")))) & (G(F(\"p3\")) & G(F(\"p5\")) | G(F(\"p4\" & X(\"p0\") & G(F(\"p6\")))))";
     
     vector<BatchAtomicProposition> batchAPs;

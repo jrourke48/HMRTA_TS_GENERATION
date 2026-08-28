@@ -54,18 +54,18 @@ digraph ComprehensiveOptimalPath {
     fillcolor="#F8F0F0";
     color=black;
 
-    ltl_info [shape=box, label="LTL Formula Details:\nAutomaton States: 17\nAccepting States: 4\n", fillcolor="#F8E8E8"];
+    ltl_info [shape=box, label="LTL Formula Details:\nAutomaton States: 17\nAccepting States: 4\n\n--- LTL FORMULA ---\nGF(p0 & X(p1 U p2)) & (GF(p4 & Xp0) | (GFp3 & GFp5))", fillcolor="#F8E8E8"];
 
     ltl_tasks [shape=plaintext, label=<
       <TABLE BORDER="1" CELLBORDER="1" CELLSPACING="0">
-        <TR><TD COLSPAN="3"><B>Task Requirements (LTL APs)</B></TD></TR>
-        <TR><TD><B>AP ID</B></TD><TD><B>Batch Value</B></TD><TD><B>Required Capabilities</B></TD></TR>
-        <TR><TD>AP0</TD><TD>0 (Unrelated)</TD><TD>Movement_Ground, Sensor_GPS</TD></TR>
-        <TR><TD>AP1</TD><TD>0 (Unrelated)</TD><TD>Movement_Ground, Sensor_GPS</TD></TR>
-        <TR><TD>AP2</TD><TD>0 (Unrelated)</TD><TD>Movement_Ground, Sensor_GPS</TD></TR>
-        <TR><TD>AP3</TD><TD>0 (Unrelated)</TD><TD>Sensor_Camera, Sensor_GPS</TD></TR>
-        <TR><TD>AP4</TD><TD>0 (Unrelated)</TD><TD>Sensor_Camera, Sensor_GPS</TD></TR>
-        <TR><TD>AP5</TD><TD>0 (Unrelated)</TD><TD>Movement_Ground, Sensor_GPS</TD></TR>
+        <TR><TD COLSPAN="5"><B>Task Requirements (LTL APs)</B></TD></TR>
+        <TR><TD><B>AP ID</B></TD><TD><B>TS Region</B></TD><TD><B>Batch Value</B></TD><TD><B>Type</B></TD><TD><B>Required Capabilities</B></TD></TR>
+        <TR><TD>AP0</TD><TD>TS0</TD><TD>0</TD><TD>Unrelated</TD><TD>Movement_Ground, Sensor_GPS</TD></TR>
+        <TR><TD>AP1</TD><TD>TS1</TD><TD>0</TD><TD>Unrelated</TD><TD>Movement_Ground, Sensor_GPS</TD></TR>
+        <TR><TD>AP2</TD><TD>TS2</TD><TD>0</TD><TD>Unrelated</TD><TD>Movement_Ground, Sensor_GPS</TD></TR>
+        <TR><TD>AP3</TD><TD>TS3</TD><TD>0</TD><TD>Unrelated</TD><TD>Sensor_Camera, Sensor_GPS</TD></TR>
+        <TR><TD>AP4</TD><TD>TS4</TD><TD>0</TD><TD>Unrelated</TD><TD>Sensor_Camera, Sensor_GPS</TD></TR>
+        <TR><TD>AP5</TD><TD>TS5</TD><TD>0</TD><TD>Unrelated</TD><TD>Movement_Ground, Sensor_GPS</TD></TR>
       </TABLE>
     >];
   }
@@ -77,29 +77,29 @@ digraph ComprehensiveOptimalPath {
     color=darkred;
     penwidth=2;
 
-    path_summary [shape=note, label="Optimal Path Summary\nTotal Steps: 8\nFinal Cost: 24\nTotal Execution Time: 60s\n", fillcolor="#FFFFCC", penwidth=2];
+    path_summary [shape=note, label="Optimal Path Summary\nTotal Steps: 8\nFinal Cost: 25\nTotal Execution Time: 63s\n", fillcolor="#FFFFCC", penwidth=2];
 
     opt_0 [shape=box, label="Step 0\nNBA: 0 | TS: 0\nCost: 0s | Total: 0s\n-----\nAllocated Robots:\n", fillcolor="#B3E5FC", penwidth=1.5];
-    opt_1 [shape=box, label="Step 1\nNBA: 2 | TS: 0\nCost: 1s | Total: 2s\n-----\nAllocated Robots:\n  R1: 1s\n  R2: 1s\n", fillcolor="#B3E5FC", penwidth=1.5];
-    opt_2 [shape=box, label="Step 2\nNBA: 7 | TS: 2\nCost: 10s | Total: 19s\n-----\nAllocated Robots:\n  R1: 9s\n  R2: 10s\n", fillcolor="#B3E5FC", penwidth=1.5];
-    opt_3 [shape=box, label="Step 3\nNBA: 9 | TS: 4\nCost: 14s | Total: 25s\n-----\nAllocated Robots:\n  R1: 14s\n  R6: 1s\n", fillcolor="#B3E5FC", penwidth=1.5];
-    opt_4 [shape=box, label="Step 4\nNBA: 2 | TS: 0\nCost: 14s | Total: 46s\n-----\nAllocated Robots:\n  R4: 11s\n  R5: 10s\n", fillcolor="#B3E5FC", penwidth=1.5];
-    opt_5 [shape=box, label="Step 5\nNBA: 7 | TS: 2\nCost: 19s | Total: 52s\n-----\nAllocated Robots:\n  R1: 19s\n  R2: 11s\n", fillcolor="#B3E5FC", penwidth=1.5];
-    opt_6 [shape=box, label="Step 6\nNBA: 9 | TS: 4\nCost: 24s | Total: 58s\n-----\nAllocated Robots:\n  R1: 24s\n  R6: 2s\n", fillcolor="#B3E5FC", penwidth=1.5];
-    opt_7 [shape=box, label="Step 7\nNBA: 2 | TS: 0\nCost: 24s | Total: 60s\n-----\nAllocated Robots:\n  R4: 12s\n  R5: 11s\n", fillcolor="#FF6B6B", penwidth=3, color=darkred, fontweight=bold, fontsize=11];
+    opt_1 [shape=box, label="Step 1\nNBA: 2 | TS: 0\nCost: 13s | Total: 21s\n-----\nAllocated Robots:\n  R1: 13s\n  R5: 8s\n", fillcolor="#B3E5FC", penwidth=1.5];
+    opt_2 [shape=box, label="Step 2\nNBA: 7 | TS: 2\nCost: 13s | Total: 40s\n-----\nAllocated Robots:\n  R2: 10s\n  R4: 9s\n", fillcolor="#B3E5FC", penwidth=1.5];
+    opt_3 [shape=box, label="Step 3\nNBA: 9 | TS: 4\nCost: 15s | Total: 47s\n-----\nAllocated Robots:\n  R3: 1s\n  R4: 15s\n", fillcolor="#B3E5FC", penwidth=1.5];
+    opt_4 [shape=box, label="Step 4\nNBA: 2 | TS: 0\nCost: 15s | Total: 49s\n-----\nAllocated Robots:\n  R1: 14s\n  R5: 9s\n", fillcolor="#B3E5FC", penwidth=1.5];
+    opt_5 [shape=box, label="Step 5\nNBA: 7 | TS: 2\nCost: 19s | Total: 54s\n-----\nAllocated Robots:\n  R2: 11s\n  R4: 19s\n", fillcolor="#B3E5FC", penwidth=1.5];
+    opt_6 [shape=box, label="Step 6\nNBA: 9 | TS: 4\nCost: 25s | Total: 61s\n-----\nAllocated Robots:\n  R3: 2s\n  R4: 25s\n", fillcolor="#B3E5FC", penwidth=1.5];
+    opt_7 [shape=box, label="Step 7\nNBA: 2 | TS: 0\nCost: 25s | Total: 63s\n-----\nAllocated Robots:\n  R1: 15s\n  R5: 10s\n", fillcolor="#FF6B6B", penwidth=3, color=darkred, fontweight=bold, fontsize=11];
 
-    opt_0 -> opt_1 [label="Δ=1s", penwidth=2, color=darkred];
-    opt_1 -> opt_2 [label="Δ=9s", penwidth=2, color=darkred];
-    opt_2 -> opt_3 [label="Δ=4s", penwidth=2, color=darkred];
+    opt_0 -> opt_1 [label="Δ=13s", penwidth=2, color=darkred];
+    opt_1 -> opt_2 [label="Δ=0s", penwidth=2, color=darkred];
+    opt_2 -> opt_3 [label="Δ=2s", penwidth=2, color=darkred];
     opt_3 -> opt_4 [label="Δ=0s", penwidth=2, color=darkred];
-    opt_4 -> opt_5 [label="Δ=5s", penwidth=2, color=darkred];
-    opt_5 -> opt_6 [label="Δ=5s", penwidth=2, color=darkred];
+    opt_4 -> opt_5 [label="Δ=4s", penwidth=2, color=darkred];
+    opt_5 -> opt_6 [label="Δ=6s", penwidth=2, color=darkred];
     opt_6 -> opt_7 [label="Δ=0s", penwidth=2, color=darkred];
   }
 
   // Connections between clusters
   env_info -> path_summary [style=dashed, color=gray, label="tasks"];
   team_info -> path_summary [style=dashed, color=gray, label="robots"];
-  ltl_info -> path_summary [style=dashed, color=gray, label="constraints"];
+  ltl_combined -> path_summary [style=dashed, color=gray, label="constraints"];
 
 }

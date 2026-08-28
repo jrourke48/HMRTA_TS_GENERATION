@@ -120,7 +120,7 @@ class TaskAllocationAlgorithms {
             Node* TSState,
             Tree_Node* currentNode,
             uint16_t apId);
-        PlanningDecisionTree* pruneSubtree(PlanningDecisionTree* subtree);
+        std::vector<Tree_Node*> pruneSubtree(PlanningDecisionTree* subtree);
         
         /**
          * getTaskAllocation

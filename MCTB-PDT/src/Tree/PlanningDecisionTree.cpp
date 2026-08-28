@@ -1,6 +1,7 @@
 #include "Tree/PlanningDecisionTree.h"
 #include <algorithm>
 #include <iostream>
+#include <functional>
 
 /**
  * PlanningDecisionTree - Constructor
@@ -60,6 +61,9 @@ Tree_Node* PlanningDecisionTree::insertNode(Tree_Node* parent, Node* automatonSt
     Tree_Node* newNode = new Tree_Node(nodeId, parent, automatonState, tsState, taskAllocation, times, positions, batch, prog);
     nodeCount++;
     
+    // Add new node to parent's children
+    parent->addChild(newNode);
+    
     // Frontier management: parent is no longer a leaf
     removeFrontierNode(parent);
     // New node becomes the new frontier node
@@ -88,6 +92,9 @@ Tree_Node* PlanningDecisionTree::insertNode(Tree_Node* newNode) {
     // If tree is empty and node has no parent, this node becomes the root
     if (root == nullptr && newNode->getParent() == nullptr) {
         root = newNode;
+    } else if (newNode->getParent() != nullptr) {
+        // Add node to parent's children
+        newNode->getParent()->addChild(newNode);
     }
     
     // Frontier management: if node has a parent, remove parent from frontier
@@ -101,7 +108,63 @@ Tree_Node* PlanningDecisionTree::insertNode(Tree_Node* newNode) {
     
     return newNode;
 }
-
+/**
+ * insertNodes - Insert multiple nodes into the tree
+ * This method takes a vector of pre-constructed Tree_Node pointers and adds them to the tree
+ * Each node is assigned a new ID based on the current node count
+ * Manages frontier: removes parent from frontier and adds new nodes to frontier
+ * Returns a vector of pointers to the inserted nodes
+ */
+std::vector<Tree_Node*> PlanningDecisionTree::insertNodes(Tree_Node* parentNode, const std::vector<Tree_Node*>& childrenNodes) {
+    std::vector<Tree_Node*> insertedNodes;
+    
+    if (parentNode == nullptr) {
+        std::cerr << "[ERROR] insertNodes called with null parentNode" << std::endl;
+        return insertedNodes;  // Can't insert without a valid parent
+    }
+    
+    if (childrenNodes.empty()) {
+        return insertedNodes;  // Nothing to insert
+    }
+    
+    // Validate all children before proceeding
+    for (const auto* node : childrenNodes) {
+        if (node == nullptr) {
+            std::cerr << "[ERROR] insertNodes received null child node" << std::endl;
+            return insertedNodes;  // Fail if any child is null
+        }
+    }
+    
+    // Remove parent from frontier once (optimization - we'll add it back later if needed)
+    removeFrontierNode(parentNode);
+    
+    for (Tree_Node* newNode : childrenNodes) {
+        if (newNode != nullptr) {
+            // Set parent relationship
+            newNode->setParent(parentNode);
+            
+            // Add to parent's children
+            parentNode->addChild(newNode);
+            
+            // Auto-assign ID
+            uint32_t nodeId = static_cast<uint32_t>(nodeCount);
+            newNode->setId(nodeId);
+            nodeCount++;
+            
+            // Add to frontier
+            addFrontierNode(newNode);
+            
+            insertedNodes.push_back(newNode);
+        }
+    }
+    
+    // Only add parent to frontier if it still has no children (shouldn't happen)
+    if (parentNode->getChildren().empty()) {
+        addFrontierNode(parentNode);
+    }
+    
+    return insertedNodes;
+}
 /**
  * insertSubtree - Attach an entire subtree as a child of an existing node
  * This method attaches subtreeRoot as a child of parentNode
@@ -124,6 +187,7 @@ Tree_Node* PlanningDecisionTree::insertSubtree(Tree_Node* parentNode, PlanningDe
     if (subtreeRoot != parentNode) {
         // Normal case: attach a separate subtree
         subtreeRoot->setParent(parentNode);
+        parentNode->addChild(subtreeRoot);  // Add to parent's children vector for traversal
         nodeCount += subtree->getNodeCount();
     } else {
         // Special case: parentNode is the root of the subtree being attached
@@ -152,51 +216,61 @@ Tree_Node* PlanningDecisionTree::insertSubtree(Tree_Node* parentNode, PlanningDe
 
 /**
  * deleteSubtree - Delete a subtree rooted at the given node
- * Removes the node from frontier and deletes it and all descendants from memory
+ * Recursively deletes the node and all its descendants using children pointers
+ * Removes all affected nodes from frontier
+ * Updates nodeCount based on deleted nodes
  */
 void PlanningDecisionTree::deleteSubtree(Tree_Node* node) {
     if (node == nullptr) {
         return;
     }
     
-    // Remove from frontier if present
-    removeFrontierNode(node);
+    Tree_Node* nodeToDelete = node;  // Mark which node is being deleted
     
-    // Collect all descendants by backward traversal from frontier
-    std::vector<Tree_Node*> toDelete;
-    std::set<Tree_Node*> visited;
-    
-    // Start from frontier nodes that are descendants of 'node'
-    for (Tree_Node* frontierNode : frontierNodes) {
-        Tree_Node* current = frontierNode;
-        while (current != nullptr) {
-            if (current == node) {
-                // This frontier node is a descendant of 'node', collect path
-                Tree_Node* temp = frontierNode;
-                while (temp != node && temp != nullptr) {
-                    if (visited.find(temp) == visited.end()) {
-                        toDelete.push_back(temp);
-                        visited.insert(temp);
-                    }
-                    temp = temp->getParent();
-                }
-                break;
+    // Helper function to count and delete nodes recursively
+    std::function<void(Tree_Node*)> deleteRecursive = [&](Tree_Node* current) {
+        if (current == nullptr) return;
+        
+        // Remove from frontier FIRST
+        removeFrontierNode(current);
+        
+        // Recursively delete all children BEFORE anything else
+        // Make a copy of children list since deleteRecursive modifies things
+        std::vector<Tree_Node*> childrenToDelete;
+        const auto& children = current->getChildren();
+        for (Tree_Node* child : children) {
+            if (child != nullptr) {
+                childrenToDelete.push_back(child);
             }
-            current = current->getParent();
         }
-    }
-    
-    // Add the node itself
-    if (visited.find(node) == visited.end()) {
-        toDelete.push_back(node);
-        visited.insert(node);
-    }
-    
-    // Delete all collected nodes
-    for (Tree_Node* deleteNode : toDelete) {
-        removeFrontierNode(deleteNode);
-        delete deleteNode;
+        
+        // Delete all children first
+        for (Tree_Node* child : childrenToDelete) {
+            deleteRecursive(child);
+        }
+        
+        // AFTER deleting all children, remove this node from its parent's children vector
+        Tree_Node* parent = current->getParent();
+        if (parent != nullptr) {
+            parent->removeChild(current);
+            // Only re-add parent to frontier if parent is NOT being deleted
+            if (parent != nodeToDelete && parent->getChildren().empty()) {
+                // If parent now has no more children, it becomes a frontier node
+                addFrontierNode(parent);
+            }
+        }
+        
+        // Finally delete this node
         nodeCount--;
+        delete current;
+    };
+    
+    // Start deletion from the target node
+    deleteRecursive(node);
+    
+    // If root was deleted, clear the tree
+    if (root == node) {
+        root = nullptr;
     }
 }
 
@@ -211,7 +285,7 @@ Tree_Node* PlanningDecisionTree::getRoot() const {
  * getNodeCount - Get the total number of nodes in the tree
  */
 size_t PlanningDecisionTree::getNodeCount() const {
-    return nodeCount;
+    return static_cast<size_t>(nodeCount);
 }
 
 /**
@@ -241,55 +315,31 @@ bool PlanningDecisionTree::isEmpty() const {
 }
 
 /**
- * Remove a node from the tree (but NOT its descendants)
- * This method removes the specified node from the frontier
- * Does NOT delete the node from memory - just removes it from tree traversals
- * Children nodes are not affected - their parent pointers remain intact
-*/
-void PlanningDecisionTree::removeNode(Tree_Node* node) {
-    if (node == nullptr) {
-        return;
-    }
-    
-    // Remove from frontier if present
-    // This prevents the node from being traversed during getAllNodes()
-    removeFrontierNode(node);
-}
-
-/**
- * getAllNodes - Get all nodes in the tree by traversing backward from frontier nodes
- * Traverses from each frontier node back to root, collecting all unique nodes
- * Defensive: also uses frontier nodes if root is somehow still null
+ * getAllNodes - Get all nodes in the tree by DFS traversal from root
+ * Uses children pointers for proper tree traversal, independent of frontier status
+ * Returns all nodes reachable from root following parent-child relationships
  */
-std::vector<Tree_Node*> PlanningDecisionTree::getAllNodes() {
+std::vector<Tree_Node*> PlanningDecisionTree::getAllNodes() const {
     std::vector<Tree_Node*> allNodes;
-    std::set<Tree_Node*> visited;
     
-    // If tree is empty (no root and no frontier), return empty vector
-    if (root == nullptr && frontierNodes.empty()) {
-        return allNodes;
+    if (root == nullptr) {
+        return allNodes;  // Empty tree
     }
     
-    // Determine starting nodes: use frontier if available, otherwise use root
-    // This handles edge cases and ensures we get all nodes even if root somehow isn't set
-    std::vector<Tree_Node*> startNodes;
-    if (!frontierNodes.empty()) {
-        startNodes = frontierNodes;
-    } else if (root != nullptr) {
-        startNodes = {root};
-    } else {
-        return allNodes;  // Truly empty
-    }
+    // DFS from root using children pointers
+    std::vector<Tree_Node*> stack;
+    stack.push_back(root);
     
-    // Traverse backward from each frontier node to root
-    for (Tree_Node* leaf : startNodes) {
-        Tree_Node* current = leaf;
-        while (current != nullptr && visited.find(current) == visited.end()) {
-            allNodes.push_back(current);
-            visited.insert(current);
-            // Stop at this tree's root - don't traverse past it even if root has a parent
-            if (current == root) break;
-            current = current->getParent();
+    while (!stack.empty()) {
+        Tree_Node* current = stack.back();
+        stack.pop_back();
+        
+        allNodes.push_back(current);
+        
+        // Add all children to stack (in reverse order for consistent traversal)
+        const auto& children = current->getChildren();
+        for (auto it = children.rbegin(); it != children.rend(); ++it) {
+            stack.push_back(*it);
         }
     }
     

@@ -54,7 +54,7 @@ digraph ComprehensiveOptimalPath {
     fillcolor="#F8F0F0";
     color=black;
 
-    ltl_info [shape=box, label="LTL Formula Details:\nAutomaton States: 14\nAccepting States: 4\n", fillcolor="#F8E8E8"];
+    ltl_info [shape=box, label="LTL Formula Details:\nAutomaton States: 14\nAccepting States: 4\n\n--- LTL FORMULA ---\nG(F(p0 W p1) & F(p2 U p3)) & GF(p4 & Xp0)", fillcolor="#F8E8E8"];
 
     ltl_tasks [shape=plaintext, label=<
       <TABLE BORDER="1" CELLBORDER="1" CELLSPACING="0">
@@ -76,28 +76,26 @@ digraph ComprehensiveOptimalPath {
     color=darkred;
     penwidth=2;
 
-    path_summary [shape=note, label="Optimal Path Summary\nTotal Steps: 10\nFinal Cost: 50\nTotal Execution Time: 167s\n", fillcolor="#FFFFCC", penwidth=2];
+    path_summary [shape=note, label="Optimal Path Summary\nTotal Steps: 9\nFinal Cost: 31\nTotal Execution Time: 95s\n", fillcolor="#FFFFCC", penwidth=2];
 
     opt_0 [shape=box, label="Step 0\nNBA: 0 | TS: 0\nCost: 0s | Total: 0s\n-----\nAllocated Robots:\n", fillcolor="#B3E5FC", penwidth=1.5];
-    opt_1 [shape=box, label="Step 1\nNBA: 5 | TS: 1\nCost: 1s | Total: 2s\n-----\nAllocated Robots:\n  R1: 1s\n  R2: 1s\n", fillcolor="#B3E5FC", penwidth=1.5];
-    opt_2 [shape=box, label="Step 2\nNBA: 6 | TS: 3\nCost: 7s | Total: 10s\n-----\nAllocated Robots:\n  R4: 7s\n  R6: 1s\n", fillcolor="#B3E5FC", penwidth=1.5];
-    opt_3 [shape=box, label="Step 3\nNBA: 3 | TS: 4\nCost: 15s | Total: 39s\n-----\nAllocated Robots:\n  R1: 15s\n  R3: 1s\n  R5: 14s\n", fillcolor="#B3E5FC", penwidth=1.5];
-    opt_4 [shape=box, label="Step 4\nNBA: 7 | TS: 0\nCost: 24s | Total: 66s\n-----\nAllocated Robots:\n  R2: 11s\n  R4: 24s\n", fillcolor="#B3E5FC", penwidth=1.5];
-    opt_5 [shape=box, label="Step 5\nNBA: 5 | TS: 1\nCost: 28s | Total: 88s\n-----\nAllocated Robots:\n  R1: 28s\n  R2: 20s\n", fillcolor="#B3E5FC", penwidth=1.5];
-    opt_6 [shape=box, label="Step 6\nNBA: 6 | TS: 3\nCost: 41s | Total: 102s\n-----\nAllocated Robots:\n  R1: 41s\n  R6: 2s\n", fillcolor="#B3E5FC", penwidth=1.5];
-    opt_7 [shape=box, label="Step 7\nNBA: 3 | TS: 4\nCost: 41s | Total: 118s\n-----\nAllocated Robots:\n  R3: 2s\n  R4: 38s\n  R5: 15s\n", fillcolor="#B3E5FC", penwidth=1.5];
-    opt_8 [shape=box, label="Step 8\nNBA: 7 | TS: 0\nCost: 50s | Total: 143s\n-----\nAllocated Robots:\n  R4: 50s\n  R5: 28s\n", fillcolor="#B3E5FC", penwidth=1.5];
-    opt_9 [shape=box, label="Step 9\nNBA: 1 | TS: 4\nCost: 50s | Total: 167s\n-----\nAllocated Robots:\n  R1: 49s\n  R2: 35s\n  R3: 3s\n", fillcolor="#FF6B6B", penwidth=3, color=darkred, fontweight=bold, fontsize=11];
+    opt_1 [shape=box, label="Step 1\nNBA: 5 | TS: 3\nCost: 1s | Total: 2s\n-----\nAllocated Robots:\n  R1: 1s\n  R6: 1s\n", fillcolor="#B3E5FC", penwidth=1.5];
+    opt_2 [shape=box, label="Step 2\nNBA: 2 | TS: 4\nCost: 14s | Total: 25s\n-----\nAllocated Robots:\n  R1: 9s\n  R2: 14s\n  R3: 1s\n", fillcolor="#B3E5FC", penwidth=1.5];
+    opt_3 [shape=box, label="Step 3\nNBA: 9 | TS: 0\nCost: 14s | Total: 36s\n-----\nAllocated Robots:\n  R4: 10s\n  R5: 1s\n", fillcolor="#B3E5FC", penwidth=1.5];
+    opt_4 [shape=box, label="Step 4\nNBA: 4 | TS: 1\nCost: 19s | Total: 55s\n-----\nAllocated Robots:\n  R4: 19s\n  R5: 11s\n", fillcolor="#B3E5FC", penwidth=1.5];
+    opt_5 [shape=box, label="Step 5\nNBA: 5 | TS: 3\nCost: 19s | Total: 62s\n-----\nAllocated Robots:\n  R1: 15s\n  R6: 2s\n", fillcolor="#B3E5FC", penwidth=1.5];
+    opt_6 [shape=box, label="Step 6\nNBA: 2 | TS: 4\nCost: 23s | Total: 72s\n-----\nAllocated Robots:\n  R1: 23s\n  R2: 15s\n  R3: 2s\n", fillcolor="#B3E5FC", penwidth=1.5];
+    opt_7 [shape=box, label="Step 7\nNBA: 9 | TS: 0\nCost: 30s | Total: 93s\n-----\nAllocated Robots:\n  R4: 30s\n  R5: 21s\n", fillcolor="#B3E5FC", penwidth=1.5];
+    opt_8 [shape=box, label="Step 8\nNBA: 8 | TS: 0\nCost: 31s | Total: 95s\n-----\nAllocated Robots:\n  R4: 31s\n  R5: 22s\n", fillcolor="#FF6B6B", penwidth=3, color=darkred, fontweight=bold, fontsize=11];
 
     opt_0 -> opt_1 [label="Δ=1s", penwidth=2, color=darkred];
-    opt_1 -> opt_2 [label="Δ=6s", penwidth=2, color=darkred];
-    opt_2 -> opt_3 [label="Δ=8s", penwidth=2, color=darkred];
-    opt_3 -> opt_4 [label="Δ=9s", penwidth=2, color=darkred];
-    opt_4 -> opt_5 [label="Δ=4s", penwidth=2, color=darkred];
-    opt_5 -> opt_6 [label="Δ=13s", penwidth=2, color=darkred];
-    opt_6 -> opt_7 [label="Δ=0s", penwidth=2, color=darkred];
-    opt_7 -> opt_8 [label="Δ=9s", penwidth=2, color=darkred];
-    opt_8 -> opt_9 [label="Δ=0s", penwidth=2, color=darkred];
+    opt_1 -> opt_2 [label="Δ=13s", penwidth=2, color=darkred];
+    opt_2 -> opt_3 [label="Δ=0s", penwidth=2, color=darkred];
+    opt_3 -> opt_4 [label="Δ=5s", penwidth=2, color=darkred];
+    opt_4 -> opt_5 [label="Δ=0s", penwidth=2, color=darkred];
+    opt_5 -> opt_6 [label="Δ=4s", penwidth=2, color=darkred];
+    opt_6 -> opt_7 [label="Δ=7s", penwidth=2, color=darkred];
+    opt_7 -> opt_8 [label="Δ=1s", penwidth=2, color=darkred];
   }
 
   // Connections between clusters

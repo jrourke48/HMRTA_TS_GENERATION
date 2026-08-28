@@ -18,6 +18,7 @@ class Tree_Node {
     private:
         uint32_t id; // Unique identifier for the node (encodes NBA, TS, and robot allocation info)
         Tree_Node* ParentNode; // Pointer to the parent node
+        std::vector<Tree_Node*> children; // Child nodes in the tree
         Node* automaton_state; // Associated NBA state
         Node* ts_state; // Associated transition system state
         std::vector<bool> robo_task_allocation; // Vector indicating which robot is allocated to which task
@@ -39,6 +40,9 @@ class Tree_Node {
         // Tree structure methods
         Tree_Node* getParent() const;
         void setParent(Tree_Node* newParent);
+        const std::vector<Tree_Node*>& getChildren() const;
+        void addChild(Tree_Node* child);
+        void removeChild(Tree_Node* child);
         
         // Getter methods
         uint32_t getId() const;

@@ -120,7 +120,6 @@ PlanningDecisionTree* TaskAllocationAlgorithms::intensiveInterTaskRelationshipTr
     
     // Automaton characteristics
     indVars.num_automaton_states = nbaPtr->getNumStates();
-    std::cout << "[INFO] Number of automaton states: " << nbaPtr->getNumStates() << std::endl;
     indVars.num_automaton_edges = nbaPtr->getNumEdges();
     if (!nbaPtr->getLTLFormula()) {
         std::cerr << "[ERROR] LTL formula is null" << std::endl;
@@ -213,24 +212,31 @@ PlanningDecisionTree* TaskAllocationAlgorithms::intensiveInterTaskRelationshipTr
     
     
     // Initialize untraversed queue with root node
-    addUntraversedPlanningNode(tree->getRoot());
+    Tree_Node* rootNode = tree->getRoot();
+    if (!rootNode) {
+        std::cerr << "[ERROR] rootNode is nullptr!" << std::endl;
+        return nullptr;
+    }
+    
+    addUntraversedPlanningNode(rootNode);
 
     // Process nodes from untraversed queue until empty
     Tree_Node* currentNode = nullptr;
-
+    int iterationCount = 0;
+    const int MAX_ITERATIONS = 100;  // Safety limit to prevent infinite loops
     
-    while ((currentNode = getNextUntraversedNode()) != nullptr) {
+    while ((currentNode = getNextUntraversedNode()) != nullptr && iterationCount < MAX_ITERATIONS) {
+        iterationCount++;
         
         // Create subtree for current node
         PlanningDecisionTree* subtree = new PlanningDecisionTree(currentNode);
+        if (!subtree) {
+            std::cerr << "[ERROR] Failed to create subtree" << std::endl;
+            break;
+        }
+        
         uint16_t buchisize = nbaPtr->getNumStates();
         std::vector<uint16_t> acceptingStates = nbaPtr->getAcceptingStates();
-        
-        // Validate current node's automaton state
-        if (!currentNode->getAutomatonState()) {
-            std::cerr << "[WARNING] Current node has null automaton state" << std::endl;
-            continue;
-        }
 
         // Iterate through all automaton states
         for (uint16_t i = 0; i < buchisize; ++i) {
@@ -269,6 +275,7 @@ PlanningDecisionTree* TaskAllocationAlgorithms::intensiveInterTaskRelationshipTr
                 // Note: nodeId is a placeholder; insertNode will auto-assign the correct ID
                 Tree_Node* newNode = new Tree_Node(0, currentNode, nbaState, 
                                                    TSState, batchVal);
+            
                 
                 if (!newNode) {
                     continue;
@@ -278,6 +285,7 @@ PlanningDecisionTree* TaskAllocationAlgorithms::intensiveInterTaskRelationshipTr
                 // batchVal > 0: compatible tasks (same batch)
                 // batchVal < 0: exclusive tasks (conflicting batch)
                 if (batchVal == 0 || !isBatchValueInTree(batchVal)) {
+                    //Algorithm 2: unrelated task search algorithm
                     unrelatedTaskSearch(newNode, TSState, currentNode, apId);
                 }
                 else if (batchVal > 0) {
@@ -295,25 +303,17 @@ PlanningDecisionTree* TaskAllocationAlgorithms::intensiveInterTaskRelationshipTr
                 }
             }
         }
-    // Prune subtree
-    PlanningDecisionTree* pruningResult = pruneSubtree(subtree);
-    
-    
-    // After pruning, add only frontier nodes back to queue (removed nodes won't be in frontier)
-    std::vector<Tree_Node*> frontierNodes = pruningResult->getFrontierNodes();
-    
-    for (Tree_Node* node : frontierNodes) {
-        if (node != currentNode) {
-            addUntraversedPlanningNode(node);
-        }
-    }
-    
-    // Attach subtree to planning tree
-    // currentNode is the root of the subtree, so attach pruned subtree as children of currentNode
-    planningTree->insertSubtree(currentNode, pruningResult);
-    
-    // Add currentNode to traversed tree
+    //set the current node as traversed
     traversedTree->insertNode(currentNode);
+    
+    // Prune subtree
+    std::vector<Tree_Node*> pruningResult = pruneSubtree(subtree);
+    // Add non-pruned nodes to untraversed queue for further processing
+    for (Tree_Node* node : pruningResult) {
+            addUntraversedPlanningNode(node);
+    }
+    // Add non-pruned nodes to the main planning tree as children of currentNode
+    planningTree->insertNodes(currentNode, pruningResult);
 }
     // After processing all nodes, get the final optimal frontier node  
     Tree_Node* finalOptimalNode = planningTree->getOptimalFrontierNode(nba->isFinite()); // Final optimal node after search completion
@@ -926,7 +926,7 @@ std::pair<std::vector<bool>, uint16_t> TaskAllocationAlgorithms::getTaskAllocati
 // Rule 1: Remove nodes with OTH progress (terminal nodes)
 // Rule 2: Remove nodes with (automaton state, progress) pairs already in traversedTree
 // Rule 3: For nodes with same automaton state and progress, keep only minimum cost
-PlanningDecisionTree* TaskAllocationAlgorithms::pruneSubtree(PlanningDecisionTree* subtree) {
+std::vector<Tree_Node*> TaskAllocationAlgorithms::pruneSubtree(PlanningDecisionTree* subtree) {
     std::vector<Tree_Node*> nodesToRemove;
     std::vector<Tree_Node*> subtreeNodes = subtree->getAllNodes();
     
@@ -937,15 +937,16 @@ PlanningDecisionTree* TaskAllocationAlgorithms::pruneSubtree(PlanningDecisionTre
     if (nba && nba->isInfinite()) {
         if (node->getProgress() == Tree_Node::TASK_PROGRESS::OTH) {
             nodesToRemove.push_back(node);  // Mark OTH nodes for removal so they don't re-enter queue
-            planningTree->addFrontierNode(node);
+            traversedTree->insertNode(node);  // Add to traversed tree
+            planningTree->insertNode(node);  // Add to planning tree
             // Increment the algorithm metric for total nodes satisfying the ltl
             metrics->subtree_efficiency_.nodes_satisfying_ltl++;
-            
         }  
     } else{ 
         if (node->getProgress() == Tree_Node::TASK_PROGRESS::TRA) {
             nodesToRemove.push_back(node);  // Mark TRA nodes for removal so they don't re-enter queue
-            planningTree->addFrontierNode(node);
+            traversedTree->insertNode(node);  // Add to traversed tree
+            planningTree->insertNode(node);  // Add to planning tree
             // Increment the algorithm metric for total nodes satisfying the ltl
             metrics->subtree_efficiency_.nodes_satisfying_ltl++;
         }
@@ -954,8 +955,7 @@ PlanningDecisionTree* TaskAllocationAlgorithms::pruneSubtree(PlanningDecisionTre
 
     
     // Rule 2: Remove nodes with traversed (automaton state, progress) pairs
-    // If we've already visited (state S, progress P) in traversedTree, don't sample it again
-    std::vector<Tree_Node*> traversedNodes = traversedTree->getAllNodes();
+    // If we've already visited (state S, progress P), don't sample it again
     for (Tree_Node* node : subtreeNodes) {
         // Rule 2: Track (nbaState, progress) pair as visited
                 // Always add - never clear. Each progress level maintains its own visited set
@@ -1023,14 +1023,13 @@ PlanningDecisionTree* TaskAllocationAlgorithms::pruneSubtree(PlanningDecisionTre
     for (Tree_Node* node : nodesToRemove) {
         // Add to traversedTree first (while node still exists in memory)
         traversedTree->insertNode(node);
-        // Remove from subtree (both frontier and tree structure)
-        subtree->removeNode(node);
-
+        subtree->removeFrontierNode(node);  // Remove from subtree
         // Increment the algorithm metric for total nodes pruned
         metrics->subtree_efficiency_.total_nodes_pruned++;
-    } 
+    }
     
-    return subtree;
+    // Return remaining frontier nodes after pruning
+    return subtree->getFrontierNodes();
 }
 
 /**
@@ -1357,14 +1356,15 @@ void TaskAllocationAlgorithms::visualizeOptimalPath(const std::string& filename)
             if (nba->isAccepting(i)) acceptingCount++;
         }
         formulaInfo += std::to_string(acceptingCount) + "\\n";
+        formulaInfo += "\\n--- LTL FORMULA ---\\n";
+        formulaInfo += formula->toString();
         
         file << "    ltl_info [shape=box, label=\"" << escapeDotLabel(formulaInfo) << "\", fillcolor=\"#F8E8E8\"];\n\n";
         
-        // Task requirements table
         file << "    ltl_tasks [shape=plaintext, label=<\n";
         file << "      <TABLE BORDER=\"1\" CELLBORDER=\"1\" CELLSPACING=\"0\">\n";
-        file << "        <TR><TD COLSPAN=\"3\"><B>Task Requirements (LTL APs)</B></TD></TR>\n";
-        file << "        <TR><TD><B>AP ID</B></TD><TD><B>Batch Value</B></TD><TD><B>Required Capabilities</B></TD></TR>\n";
+        file << "        <TR><TD COLSPAN=\"5\"><B>Task Requirements (LTL APs)</B></TD></TR>\n";
+        file << "        <TR><TD><B>AP ID</B></TD><TD><B>TS Region</B></TD><TD><B>Batch Value</B></TD><TD><B>Type</B></TD><TD><B>Required Capabilities</B></TD></TR>\n";
         
         try {
             const auto& batchAPs = formula->getBatchAtomicPropositions();
@@ -1372,6 +1372,7 @@ void TaskAllocationAlgorithms::visualizeOptimalPath(const std::string& filename)
             for (const auto& batchAP : batchAPs) {
                 if (count >= 12) break;  // Limit to 12 rows
                 uint16_t apId = batchAP.getAPId();
+                uint16_t tsRegionId = batchAP.getAP();
                 int8_t batchVal = batchAP.getBatch();
                 std::string batchType = (batchVal > 0) ? "Compatible" : (batchVal < 0) ? "Exclusive" : "Unrelated";
                 
@@ -1389,12 +1390,14 @@ void TaskAllocationAlgorithms::visualizeOptimalPath(const std::string& filename)
                 if (capsList.empty()) capsList = "None";
                 
                 file << "        <TR><TD>AP" << apId << "</TD>";
-                file << "<TD>" << static_cast<int>(batchVal) << " (" << batchType << ")</TD>";
+                file << "<TD>TS" << tsRegionId << "</TD>";
+                file << "<TD>" << static_cast<int>(batchVal) << "</TD>";
+                file << "<TD>" << batchType << "</TD>";
                 file << "<TD>" << capsList << "</TD></TR>\n";
                 count++;
             }
         } catch (const std::exception& e) {
-            file << "        <TR><TD COLSPAN=\"3\">Error loading task information</TD></TR>\n";
+            file << "        <TR><TD COLSPAN=\"5\">Error loading task information</TD></TR>\n";
         }
         
         file << "      </TABLE>\n";

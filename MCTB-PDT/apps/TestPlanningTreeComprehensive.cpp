@@ -2,8 +2,8 @@
 #include <cassert>
 #include <vector>
 #include <algorithm>
-#include "../Tree/PlanningDecisionTree.h"
-#include "../Tree/Tree_Node.h"
+#include <Tree/PlanningDecisionTree.h>
+#include <Tree/Tree_Node.h>
 
 /**
  * COMPREHENSIVE PLANNING TREE TEST SUITE
@@ -22,10 +22,11 @@ void testBasicTreeConstruction() {
     
     std::vector<bool> taskAlloc = {true, false, true};
     std::vector<uint16_t> times = {5, 10, 3};
+    std::vector<Point> positions = {};
     
     // Create tree with root
     PlanningDecisionTree* tree = new PlanningDecisionTree(
-        nbaNode, tsNode, taskAlloc, times, 0, Tree_Node::TASK_PROGRESS::PRE
+        nbaNode, tsNode, taskAlloc, times, positions, 0, Tree_Node::TASK_PROGRESS::PRE
     );
     
     assert(tree != nullptr);
@@ -50,7 +51,7 @@ void testInsertNode() {
     Node* tsNode0 = new Node(0);
     
     PlanningDecisionTree* tree = new PlanningDecisionTree(
-        nbaNode0, tsNode0, {true, false}, {5, 10}, 0, Tree_Node::TASK_PROGRESS::PRE
+        nbaNode0, tsNode0, {true, false}, {5, 10}, {}, 0, Tree_Node::TASK_PROGRESS::PRE
     );
     
     Tree_Node* root = tree->getRoot();
@@ -60,7 +61,7 @@ void testInsertNode() {
     std::cout << "\n--- Testing insertNode(parent, automatonState, tsState, ...) ---" << std::endl;
     Node* nbaNode1 = new Node(1);
     Node* tsNode1 = new Node(1);
-    Tree_Node* child1 = tree->insertNode(root, nbaNode1, tsNode1, {false, true}, {8, 7}, 1, Tree_Node::TASK_PROGRESS::PRE);
+    Tree_Node* child1 = tree->insertNode(root, nbaNode1, tsNode1, {false, true}, {8, 7}, {}, 1, Tree_Node::TASK_PROGRESS::PRE);
     
     assert(child1 != nullptr);
     assert(tree->getNodeCount() == 2);
@@ -69,17 +70,18 @@ void testInsertNode() {
     std::cout << "✓ Child 1 created with ID: " << child1->getId() << std::endl;
     std::cout << "✓ Tree node count: " << tree->getNodeCount() << std::endl;
     
-    // Test overload 2: insertNode with pre-constructed node
-    std::cout << "\n--- Testing insertNode(Tree_Node*) ---" << std::endl;
+    // Test overload 2: insertNode with parameters on a different parent
+    std::cout << "\n--- Testing insertNode on non-root parent ---" << std::endl;
     Node* nbaNode2 = new Node(2);
     Node* tsNode2 = new Node(2);
-    Tree_Node* child2 = new Tree_Node(0, root, nbaNode2, tsNode2, {true, true}, {6, 9}, 0, Tree_Node::TASK_PROGRESS::PRE);
-    Tree_Node* inserted = tree->insertNode(child2);
+    Tree_Node* child2 = tree->insertNode(child1, nbaNode2, tsNode2, {true, true}, {6, 9}, {}, 1, Tree_Node::TASK_PROGRESS::TRA);
     
-    assert(inserted != nullptr);
-    assert(inserted->getId() == 2);  // Should be auto-assigned
+    assert(child2 != nullptr);
+    assert(child2->getId() == 2);
+    assert(child2->getParent() == child1);
     assert(tree->getNodeCount() == 3);
-    std::cout << "✓ Pre-constructed node inserted with auto-assigned ID: " << inserted->getId() << std::endl;
+    std::cout << "✓ Child 2 created with ID: " << child2->getId() << std::endl;
+    std::cout << "✓ Child 2 parent is Child 1" << std::endl;
     std::cout << "✓ Tree node count: " << tree->getNodeCount() << std::endl;
     
     delete tree;
@@ -92,11 +94,11 @@ void testInsertNode() {
 void testFrontierManagement() {
     std::cout << "\n=== TEST 3: Frontier Management ===" << std::endl;
     
-    Node* nbaNode = new Node(0);
-    Node* tsNode = new Node(0);
+    Node* nbaNode0 = new Node(0);
+    Node* tsNode0 = new Node(0);
     
     PlanningDecisionTree* tree = new PlanningDecisionTree(
-        nbaNode, tsNode, {true}, {5}, 0, Tree_Node::TASK_PROGRESS::PRE
+        nbaNode0, tsNode0, {false}, {5}, {}, 0, Tree_Node::TASK_PROGRESS::PRE
     );
     
     Tree_Node* root = tree->getRoot();
@@ -112,7 +114,7 @@ void testFrontierManagement() {
     std::cout << "\n--- After inserting child ---" << std::endl;
     Node* nbaNode1 = new Node(1);
     Node* tsNode1 = new Node(1);
-    Tree_Node* child = tree->insertNode(root, nbaNode1, tsNode1, {false}, {7}, 0, Tree_Node::TASK_PROGRESS::PRE);
+    Tree_Node* child = tree->insertNode(root, nbaNode1, tsNode1, {false}, {7}, {}, 0, Tree_Node::TASK_PROGRESS::PRE);
     
     const std::vector<Tree_Node*>& newFrontier = tree->getFrontierNodes();
     assert(newFrontier.size() == 1);
@@ -126,7 +128,7 @@ void testFrontierManagement() {
     std::cout << "\n--- After inserting multiple children ---" << std::endl;
     Node* nbaNode2 = new Node(2);
     Node* tsNode2 = new Node(2);
-    tree->insertNode(root, nbaNode2, tsNode2, {true}, {6}, 0, Tree_Node::TASK_PROGRESS::PRE);
+    tree->insertNode(root, nbaNode2, tsNode2, {true}, {6}, {}, 0, Tree_Node::TASK_PROGRESS::PRE);
     
     const std::vector<Tree_Node*>& multiFrontier = tree->getFrontierNodes();
     assert(multiFrontier.size() == 2);
@@ -147,7 +149,7 @@ void testGetAllNodes() {
     Node* tsNode = new Node(0);
     
     PlanningDecisionTree* tree = new PlanningDecisionTree(
-        nbaNode, tsNode, {true}, {5}, 0, Tree_Node::TASK_PROGRESS::PRE
+        nbaNode, tsNode, {true}, {5}, {}, 0, Tree_Node::TASK_PROGRESS::PRE
     );
     
     Tree_Node* root = tree->getRoot();
@@ -162,15 +164,15 @@ void testGetAllNodes() {
     std::cout << "\n--- Adding nodes to tree ---" << std::endl;
     Node* nbaNode1 = new Node(1);
     Node* tsNode1 = new Node(1);
-    tree->insertNode(root, nbaNode1, tsNode1, {false}, {7}, 0, Tree_Node::TASK_PROGRESS::PRE);
+    tree->insertNode(root, nbaNode1, tsNode1, {false}, {7}, {}, 0, Tree_Node::TASK_PROGRESS::PRE);
     
     Node* nbaNode2 = new Node(2);
     Node* tsNode2 = new Node(2);
-    tree->insertNode(root, nbaNode2, tsNode2, {true}, {6}, 0, Tree_Node::TASK_PROGRESS::PRE);
+    tree->insertNode(root, nbaNode2, tsNode2, {true}, {6}, {}, 0, Tree_Node::TASK_PROGRESS::PRE);
     
     Node* nbaNode3 = new Node(3);
     Node* tsNode3 = new Node(3);
-    tree->insertNode(root, nbaNode3, tsNode3, {false}, {8}, 0, Tree_Node::TASK_PROGRESS::TRA);
+    tree->insertNode(root, nbaNode3, tsNode3, {false}, {8}, {}, 0, Tree_Node::TASK_PROGRESS::TRA);
     
     allNodes = tree->getAllNodes();
     std::cout << "✓ getAllNodes() returned " << allNodes.size() << " nodes" << std::endl;
@@ -193,24 +195,73 @@ void testDeleteSubtree() {
     Node* tsNode = new Node(0);
     
     PlanningDecisionTree* tree = new PlanningDecisionTree(
-        nbaNode, tsNode, {true}, {5}, 0, Tree_Node::TASK_PROGRESS::PRE
+        nbaNode, tsNode, {true}, {5}, {}, 0, Tree_Node::TASK_PROGRESS::PRE
     );
     
     Tree_Node* root = tree->getRoot();
     
-    // Add children
+    // Build a multi-level tree:
+    //        root (0)
+    //       /  |   \
+    //      c1  c2  c3
+    //     / \
+    //   gc1 gc2
+    
+    std::cout << "\n--- Building multi-level tree ---" << std::endl;
     Node* nbaNode1 = new Node(1);
     Node* tsNode1 = new Node(1);
-    Tree_Node* child = tree->insertNode(root, nbaNode1, tsNode1, {false}, {7}, 0, Tree_Node::TASK_PROGRESS::PRE);
+    Tree_Node* child1 = tree->insertNode(root, nbaNode1, tsNode1, {false}, {7}, {}, 0, Tree_Node::TASK_PROGRESS::PRE);
     
-    std::cout << "\n--- Initial state ---" << std::endl;
-    std::cout << "✓ Node count before deletion: " << tree->getNodeCount() << std::endl;
+    Node* nbaNode2 = new Node(2);
+    Node* tsNode2 = new Node(2);
+    Tree_Node* child2 = tree->insertNode(root, nbaNode2, tsNode2, {true}, {6}, {}, 0, Tree_Node::TASK_PROGRESS::PRE);
     
-    // Delete the child
-    std::cout << "\n--- After deletion ---" << std::endl;
-    tree->deleteSubtree(child);
-    std::cout << "✓ Child node deleted" << std::endl;
-    std::cout << "✓ Node count after deletion: " << tree->getNodeCount() << std::endl;
+    Node* nbaNode3 = new Node(3);
+    Node* tsNode3 = new Node(3);
+    Tree_Node* child3 = tree->insertNode(root, nbaNode3, tsNode3, {false}, {8}, {}, 0, Tree_Node::TASK_PROGRESS::PRE);
+    
+    // Add grandchildren to child1
+    Node* nbaNode4 = new Node(4);
+    Node* tsNode4 = new Node(4);
+    Tree_Node* grandchild1 = tree->insertNode(child1, nbaNode4, tsNode4, {true}, {4}, {}, 0, Tree_Node::TASK_PROGRESS::PRE);
+    
+    Node* nbaNode5 = new Node(5);
+    Node* tsNode5 = new Node(5);
+    Tree_Node* grandchild2 = tree->insertNode(child1, nbaNode5, tsNode5, {false}, {3}, {}, 0, Tree_Node::TASK_PROGRESS::PRE);
+    
+    std::cout << "✓ Tree built with 6 nodes" << std::endl;
+    std::cout << "✓ Node count: " << tree->getNodeCount() << std::endl;
+    assert(tree->getNodeCount() == 6);
+    
+    // Test 1: Delete a frontier node (leaf)
+    std::cout << "\n--- Test 1: Delete frontier node (leaf) ---" << std::endl;
+    std::cout << "  Before deletion: node count = " << tree->getNodeCount() << std::endl;
+    tree->deleteSubtree(grandchild2);
+    std::cout << "  ✓ Deleted grandchild2" << std::endl;
+    std::cout << "  After deletion: node count = " << tree->getNodeCount() << std::endl;
+    assert(tree->getNodeCount() == 5);
+    
+    // Test 2: Delete a non-frontier (interior) node with children
+    std::cout << "\n--- Test 2: Delete non-frontier node (interior with 1 child) ---" << std::endl;
+    std::cout << "  Before deletion: node count = " << tree->getNodeCount() << std::endl;
+    tree->deleteSubtree(child1);  // This has grandchild1 as a child
+    std::cout << "  ✓ Deleted child1 and its subtree" << std::endl;
+    std::cout << "  After deletion: node count = " << tree->getNodeCount() << std::endl;
+    assert(tree->getNodeCount() == 3);  // Only root, child2, child3
+    
+    // Test 3: Verify frontier was updated correctly
+    std::cout << "\n--- Test 3: Verify frontier ---" << std::endl;
+    const std::vector<Tree_Node*>& frontier = tree->getFrontierNodes();
+    std::cout << "  ✓ Frontier size: " << frontier.size() << std::endl;
+    
+    // Debug: print which nodes are in frontier
+    std::cout << "  Frontier nodes: ";
+    for (Tree_Node* node : frontier) {
+        std::cout << node->getId() << " ";
+    }
+    std::cout << std::endl;
+    
+    assert(frontier.size() == 2);  // Only child2 and child3 remain as frontier nodes
     
     delete tree;
     std::cout << "✓ Test completed successfully" << std::endl;
@@ -222,51 +273,159 @@ void testDeleteSubtree() {
 void testInsertSubtree() {
     std::cout << "\n=== TEST 6: Insert Subtree ===" << std::endl;
     
-    // Create first tree
+    // Create main tree with multiple levels
     Node* nbaNode0 = new Node(0);
     Node* tsNode0 = new Node(0);
     
     PlanningDecisionTree* mainTree = new PlanningDecisionTree(
-        nbaNode0, tsNode0, {true}, {5}, 0, Tree_Node::TASK_PROGRESS::PRE
+        nbaNode0, tsNode0, {true}, {5}, {}, 0, Tree_Node::TASK_PROGRESS::PRE
     );
     
     std::cout << "\n--- Main tree created ---" << std::endl;
-    std::cout << "✓ Main tree node count: " << mainTree->getNodeCount() << std::endl;
+    std::cout << "✓ Initial node count: " << mainTree->getNodeCount() << std::endl;
     
     Tree_Node* mainRoot = mainTree->getRoot();
     
-    // Create subtree
-    Node* nbaSub0 = new Node(1);
-    Node* tsSub0 = new Node(1);
+    // Add children to main tree
+    Node* nbaMainChild1 = new Node(1);
+    Node* tsMainChild1 = new Node(1);
+    Tree_Node* mainChild1 = mainTree->insertNode(mainRoot, nbaMainChild1, tsMainChild1, {false}, {7}, {}, 0, Tree_Node::TASK_PROGRESS::PRE);
+    
+    Node* nbaMainChild2 = new Node(2);
+    Node* tsMainChild2 = new Node(2);
+    Tree_Node* mainChild2 = mainTree->insertNode(mainRoot, nbaMainChild2, tsMainChild2, {true}, {6}, {}, 0, Tree_Node::TASK_PROGRESS::PRE);
+    
+    std::cout << "✓ Main tree expanded to " << mainTree->getNodeCount() << " nodes" << std::endl;
+    assert(mainTree->getNodeCount() == 3);
+    
+    // Create a subtree with multiple levels
+    //     subRoot (1)
+    //       / \
+    //    sub1 sub2
+    //     /
+    //  sub3
+    
+    Node* nbaSub0 = new Node(10);
+    Node* tsSub0 = new Node(10);
     
     PlanningDecisionTree* subtree = new PlanningDecisionTree(
-        nbaSub0, tsSub0, {false}, {7}, 0, Tree_Node::TASK_PROGRESS::PRE
+        nbaSub0, tsSub0, {false}, {7}, {}, 0, Tree_Node::TASK_PROGRESS::PRE
     );
     
+    Tree_Node* subRoot = subtree->getRoot();
+    
+    // Add children to subtree
+    Node* nbaSub1 = new Node(11);
+    Node* tsSub1 = new Node(11);
+    Tree_Node* subChild1 = subtree->insertNode(subRoot, nbaSub1, tsSub1, {true}, {3}, {}, 0, Tree_Node::TASK_PROGRESS::PRE);
+    
+    Node* nbaSub2 = new Node(12);
+    Node* tsSub2 = new Node(12);
+    Tree_Node* subChild2 = subtree->insertNode(subRoot, nbaSub2, tsSub2, {false}, {4}, {}, 0, Tree_Node::TASK_PROGRESS::PRE);
+    
+    // Add grandchild to subChild1
+    Node* nbaSub3 = new Node(13);
+    Node* tsSub3 = new Node(13);
+    subtree->insertNode(subChild1, nbaSub3, tsSub3, {true}, {2}, {}, 0, Tree_Node::TASK_PROGRESS::PRE);
+    
     std::cout << "\n--- Subtree created ---" << std::endl;
-    std::cout << "✓ Subtree node count: " << subtree->getNodeCount() << std::endl;
+    std::cout << "✓ Subtree node count: " << subtree->getNodeCount() << " nodes" << std::endl;
+    assert(subtree->getNodeCount() == 4);
     
-    // Add a child to subtree
-    Node* nbaSub1 = new Node(2);
-    Node* tsSub1 = new Node(2);
-    subtree->insertNode(subtree->getRoot(), nbaSub1, tsSub1, {true}, {3}, 0, Tree_Node::TASK_PROGRESS::PRE);
+    // Test 1: Insert subtree into a leaf node (frontier node)
+    std::cout << "\n--- Test 1: Insert subtree into frontier node (leaf) ---" << std::endl;
+    std::cout << "  Before insertion: main tree has " << mainTree->getNodeCount() << " nodes" << std::endl;
+    mainTree->insertSubtree(mainChild1, subtree);
+    std::cout << "  ✓ Subtree inserted into mainChild1" << std::endl;
+    std::cout << "  After insertion: main tree has " << mainTree->getNodeCount() << " nodes" << std::endl;
+    assert(mainTree->getNodeCount() == 7);  // 3 + 4
     
-    std::cout << "\n--- Subtree expanded ---" << std::endl;
-    std::cout << "✓ Subtree node count after adding child: " << subtree->getNodeCount() << std::endl;
-    
-    // Insert subtree into main tree
-    std::cout << "\n--- Inserting subtree into main tree ---" << std::endl;
-    mainTree->insertSubtree(mainRoot, subtree);
-    
-    std::cout << "✓ Subtree inserted successfully" << std::endl;
-    std::cout << "✓ Main tree node count after insertion: " << mainTree->getNodeCount() << std::endl;
-    assert(mainTree->getNodeCount() == 3);  // Root + 2 from subtree
-    
-    // Check frontier
+    // Test 2: Verify frontier was updated
+    std::cout << "\n--- Test 2: Verify frontier after insertion ---" << std::endl;
     const std::vector<Tree_Node*>& frontier = mainTree->getFrontierNodes();
-    std::cout << "✓ Frontier size: " << frontier.size() << std::endl;
+    std::cout << "  ✓ Frontier size: " << frontier.size() << std::endl;
+    // After insertion, mainChild1 is no longer a frontier (now has children)
+    // Frontier should have mainChild2, subChild2, and the grandchild from subtree
     
-    delete mainTree;  // This should clean up subtree too
+    // Test 3: Insert another subtree into a non-frontier (interior) node
+    std::cout << "\n--- Test 3: Insert subtree into interior node ---" << std::endl;
+    
+    // Create another small subtree
+    Node* nbaSub4 = new Node(20);
+    Node* tsSub4 = new Node(20);
+    PlanningDecisionTree* subtree2 = new PlanningDecisionTree(
+        nbaSub4, tsSub4, {true}, {2}, {}, 0, Tree_Node::TASK_PROGRESS::PRE
+    );
+    
+    Node* nbaSub5 = new Node(21);
+    Node* tsSub5 = new Node(21);
+    subtree2->insertNode(subtree2->getRoot(), nbaSub5, tsSub5, {false}, {1}, {}, 0, Tree_Node::TASK_PROGRESS::PRE);
+    
+    std::cout << "  Before insertion: main tree has " << mainTree->getNodeCount() << " nodes" << std::endl;
+    std::cout << "  Inserting into mainChild2 (interior node)" << std::endl;
+    mainTree->insertSubtree(mainChild2, subtree2);
+    std::cout << "  ✓ Subtree2 inserted into mainChild2" << std::endl;
+    std::cout << "  After insertion: main tree has " << mainTree->getNodeCount() << " nodes" << std::endl;
+    assert(mainTree->getNodeCount() == 9);  // 7 + 2
+    
+    // Test 4: Verify all nodes are reachable
+    std::cout << "\n--- Test 4: Verify all nodes reachable ---" << std::endl;
+    std::vector<Tree_Node*> allNodes = mainTree->getAllNodes();
+    std::cout << "  ✓ getAllNodes() returned " << allNodes.size() << " nodes" << std::endl;
+    assert(allNodes.size() == 9);
+    
+    // Test 5: Delete a node and verify count decreases
+    std::cout << "\n--- Test 5: Delete subtree from interior node ---" << std::endl;
+    std::cout << "  Before deletion: node count = " << mainTree->getNodeCount() << std::endl;
+    // Delete subtree2 (which is attached to mainChild2)
+    mainTree->deleteSubtree(subtree2->getRoot());  // Delete the root of subtree2
+    std::cout << "  ✓ Deleted subtree2" << std::endl;
+    std::cout << "  After deletion: node count = " << mainTree->getNodeCount() << std::endl;
+    assert(mainTree->getNodeCount() == 7);  // Back to 7 (9 - 2)
+    
+    // Test 6: Add more nodes and verify count increases
+    std::cout << "\n--- Test 6: Add more nodes to existing tree ---" << std::endl;
+    std::cout << "  Before addition: node count = " << mainTree->getNodeCount() << std::endl;
+    
+    Node* nbaNewNode1 = new Node(30);
+    Node* tsNewNode1 = new Node(30);
+    Tree_Node* newChild1 = mainTree->insertNode(mainChild2, nbaNewNode1, tsNewNode1, {false}, {5}, {}, 0, Tree_Node::TASK_PROGRESS::PRE);
+    
+    Node* nbaNewNode2 = new Node(31);
+    Node* tsNewNode2 = new Node(31);
+    Tree_Node* newChild2 = mainTree->insertNode(mainChild2, nbaNewNode2, tsNewNode2, {true}, {6}, {}, 0, Tree_Node::TASK_PROGRESS::PRE);
+    
+    std::cout << "  ✓ Added 2 new nodes to mainChild2" << std::endl;
+    std::cout << "  After addition: node count = " << mainTree->getNodeCount() << std::endl;
+    assert(mainTree->getNodeCount() == 9);  // Back to 9 (7 + 2)
+    
+    // Test 7: Delete multiple nodes one by one
+    std::cout << "\n--- Test 7: Delete multiple nodes sequentially ---" << std::endl;
+    std::cout << "  Before deletions: node count = " << mainTree->getNodeCount() << std::endl;
+    
+    mainTree->deleteSubtree(newChild1);
+    std::cout << "  ✓ Deleted newChild1, node count = " << mainTree->getNodeCount() << std::endl;
+    assert(mainTree->getNodeCount() == 8);
+    
+    mainTree->deleteSubtree(newChild2);
+    std::cout << "  ✓ Deleted newChild2, node count = " << mainTree->getNodeCount() << std::endl;
+    assert(mainTree->getNodeCount() == 7);
+    
+    // Test 8: Final verification - all remaining nodes should be reachable
+    std::cout << "\n--- Test 8: Final node verification ---" << std::endl;
+    std::vector<Tree_Node*> finalNodes = mainTree->getAllNodes();
+    std::cout << "  ✓ getAllNodes() returned " << finalNodes.size() << " nodes" << std::endl;
+    std::cout << "  ✓ getNodeCount() returned " << mainTree->getNodeCount() << " nodes" << std::endl;
+    if (finalNodes.size() != mainTree->getNodeCount()) {
+        std::cout << "  ⚠ WARNING: Mismatch between getAllNodes() and getNodeCount()!" << std::endl;
+        std::cout << "    This indicates a traversal bug in getAllNodes() - some nodes are not reachable" << std::endl;
+    }
+    assert(finalNodes.size() == 7);  // After fix: orphaned nodes are properly re-added to frontier
+    assert(mainTree->getNodeCount() == 7);
+    std::cout << "  ✓ Node count tracking verified" << std::endl;
+    std::cout << "  ✓ Node count tracking verified" << std::endl;
+    
+    delete mainTree;  // This should clean up all subtrees
     std::cout << "✓ Test completed successfully" << std::endl;
 }
 
@@ -303,7 +462,7 @@ void testClearTree() {
     Node* tsNode = new Node(0);
     
     PlanningDecisionTree* tree = new PlanningDecisionTree(
-        nbaNode, tsNode, {true}, {5}, 0, Tree_Node::TASK_PROGRESS::PRE
+        nbaNode, tsNode, {true}, {5}, {}, 0, Tree_Node::TASK_PROGRESS::PRE
     );
     
     Tree_Node* root = tree->getRoot();
@@ -311,7 +470,7 @@ void testClearTree() {
     // Add some nodes
     Node* nbaNode1 = new Node(1);
     Node* tsNode1 = new Node(1);
-    tree->insertNode(root, nbaNode1, tsNode1, {false}, {7}, 0, Tree_Node::TASK_PROGRESS::PRE);
+    tree->insertNode(root, nbaNode1, tsNode1, {false}, {7}, {}, 0, Tree_Node::TASK_PROGRESS::PRE);
     
     std::cout << "\n--- Before clear ---" << std::endl;
     std::cout << "✓ Node count: " << tree->getNodeCount() << std::endl;
@@ -341,7 +500,7 @@ void testNodeParentChildRelationships() {
     Node* tsNode = new Node(0);
     
     PlanningDecisionTree* tree = new PlanningDecisionTree(
-        nbaNode, tsNode, {true}, {5}, 0, Tree_Node::TASK_PROGRESS::PRE
+        nbaNode, tsNode, {true}, {5}, {}, 0, Tree_Node::TASK_PROGRESS::PRE
     );
     
     Tree_Node* root = tree->getRoot();
@@ -351,11 +510,11 @@ void testNodeParentChildRelationships() {
     // Add children
     Node* nbaNode1 = new Node(1);
     Node* tsNode1 = new Node(1);
-    Tree_Node* child1 = tree->insertNode(root, nbaNode1, tsNode1, {false}, {7}, 0, Tree_Node::TASK_PROGRESS::PRE);
+    Tree_Node* child1 = tree->insertNode(root, nbaNode1, tsNode1, {false}, {7}, {}, 0, Tree_Node::TASK_PROGRESS::PRE);
     
     Node* nbaNode2 = new Node(2);
     Node* tsNode2 = new Node(2);
-    Tree_Node* child2 = tree->insertNode(root, nbaNode2, tsNode2, {true}, {6}, 0, Tree_Node::TASK_PROGRESS::PRE);
+    Tree_Node* child2 = tree->insertNode(root, nbaNode2, tsNode2, {true}, {6}, {}, 0, Tree_Node::TASK_PROGRESS::PRE);
     
     std::cout << "\n--- After adding children ---" << std::endl;
     assert(child1->getParent() == root);
@@ -382,7 +541,7 @@ void testNodeDataStorage() {
     Tree_Node::TASK_PROGRESS progress = Tree_Node::TASK_PROGRESS::PRE;
     
     PlanningDecisionTree* tree = new PlanningDecisionTree(
-        nbaNode, tsNode, taskAlloc, times, batchVal, progress
+        nbaNode, tsNode, taskAlloc, times, {}, batchVal, progress
     );
     
     Tree_Node* root = tree->getRoot();

@@ -36,10 +36,13 @@ class PlanningDecisionTree {
         Tree_Node* insertSubtree(Tree_Node* parentNode, PlanningDecisionTree* subtree);
         
         // Tree traversal
-        std::vector<Tree_Node*> getAllNodes();
+        std::vector<Tree_Node*> getAllNodes() const;
         std::vector<Tree_Node*> getLeafNodes();
         // num nodes getter
         long long getNumNodes() const;
+
+        // insert multiple nodes at once (children of a parent)
+        std::vector<Tree_Node*> insertNodes(Tree_Node* parentNode, const std::vector<Tree_Node*>& childrenNodes);
         
         // Frontier management
         void addFrontierNode(Tree_Node* node);
@@ -50,7 +53,6 @@ class PlanningDecisionTree {
         std::vector<Tree_Node*> getPathtoFrontierNode(Tree_Node* frontierNode);
         // Get task allocation from batch value
         std::vector<bool> getAllocationfromBatchValue(uint16_t batchValue) const;
-        void removeNode(Tree_Node* node); // Remove a node from the tree
         
 
         // Tree manipulation

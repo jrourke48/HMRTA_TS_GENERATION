@@ -46,6 +46,38 @@ void Tree_Node::setParent(Tree_Node* newParent) {
 }
 
 /**
+ * getChildren - Get the children nodes
+ */
+const std::vector<Tree_Node*>& Tree_Node::getChildren() const {
+    return children;
+}
+
+/**
+ * addChild - Add a child node
+ */
+void Tree_Node::addChild(Tree_Node* child) {
+    if (child == nullptr) return;
+    
+    // Check if child is already in the list
+    if (std::find(children.begin(), children.end(), child) != children.end()) {
+        return;  // Already a child, don't add again
+    }
+    
+    children.push_back(child);
+    child->setParent(this);
+}
+
+/**
+ * removeChild - Remove a child node
+ */
+void Tree_Node::removeChild(Tree_Node* child) {
+    auto it = std::find(children.begin(), children.end(), child);
+    if (it != children.end()) {
+        children.erase(it);
+    }
+}
+
+/**
  * getId - Get the unique identifier
  */
 uint32_t Tree_Node::getId() const {
