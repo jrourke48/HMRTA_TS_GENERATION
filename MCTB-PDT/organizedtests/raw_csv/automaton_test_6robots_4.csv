@@ -7,12 +7,11 @@ Total Robot Capabilities,6,count
 Transition System Regions,6,count
 Avg Capabilities/Robot,1.0000,ratio
 Capability Homogeneity,1.0000,ratio
-Total Computation Time,1.87,ms
-Total Nodes Generated,111,count
+Total Computation Time,1.99,ms
 Total Nodes Pruned,111,count
-Pruning Ratio,1.0000,ratio
+Pruning Ratio,0.7817,ratio
 Memory Reduction Ratio,0.0000,ratio
-State-Space Reduction,-111,count
+State-Space Reduction,-31,count
 Tree Makespan,14.00,seconds
 Sum of Travel Times,54.00,seconds
 Total Travel Distance,0.00,units

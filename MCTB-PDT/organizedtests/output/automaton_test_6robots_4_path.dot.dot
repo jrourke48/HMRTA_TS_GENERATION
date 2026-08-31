@@ -10,7 +10,7 @@ digraph ComprehensiveOptimalPath {
     fillcolor="#F0F0F0";
     color=black;
 
-    env_info [shape=box, label="GridWorld: 21x21\nTotal States: 6\nInitial State: 0\n", fillcolor="#E8F4F8"];
+    env_info [shape=box, label="GridWorld: 210x210\nTotal States: 6\nInitial State: 0\n", fillcolor="#E8F4F8"];
 
     env_tasks [shape=plaintext, label=<
       <TABLE BORDER="1" CELLBORDER="1" CELLSPACING="0">
@@ -95,6 +95,6 @@ digraph ComprehensiveOptimalPath {
   // Connections between clusters
   env_info -> path_summary [style=dashed, color=gray, label="tasks"];
   team_info -> path_summary [style=dashed, color=gray, label="robots"];
-  ltl_combined -> path_summary [style=dashed, color=gray, label="constraints"];
+  ltl_info -> path_summary [style=dashed, color=gray, label="constraints"];
 
 }

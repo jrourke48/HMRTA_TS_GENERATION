@@ -106,6 +106,12 @@ BuchiAutomaton* createTestInfiniteBuchiAutomaton2();
 BuchiAutomaton* createTestInfiniteBuchiAutomaton3();
 BuchiAutomaton* createTestInfiniteBuchiAutomaton4();
 BuchiAutomaton* createTestInfiniteBuchiAutomaton5();
+BuchiAutomaton* createTestInfiniteBuchiAutomaton6();
+BuchiAutomaton* createTestInfiniteBuchiAutomaton7();
+BuchiAutomaton* createTestInfiniteBuchiAutomaton8();
+BuchiAutomaton* createTestInfiniteBuchiAutomaton9();  // ~20 states
+BuchiAutomaton* createTestInfiniteBuchiAutomaton10(); // ~40+ states
+BuchiAutomaton* createTestInfiniteBuchiAutomaton11(); // ~40+ states (AND version)
 
 // Global result vectors (populated by test functions)
 vector<PlanningDecisionTree*> finiteSearchResults;
@@ -150,8 +156,8 @@ int main() {
     }
 
     cout << "✓ Finite Automata Tests: " << finiteSuccess << "/4 successful" << endl;
-    cout << "✓ Infinite Automata Tests: " << infiniteSuccess << "/4 successful" << endl;
-    cout << "\nTotal Tests Run: 8" << endl;
+    cout << "✓ Infinite Automata Tests: " << infiniteSuccess << "/7 successful" << endl;
+    cout << "\nTotal Tests Run: 11" << endl;
     cout << "All tests completed!\n" << endl;
 
     // Cleanup - remove pointers created during setup
@@ -240,9 +246,10 @@ cout << "\n" << string(80, '-') << endl;
 void infiniteAutomataTests(Environment* env, MultiRobotSystem* mrs) {
     cout << "\n" << string(80, '-') << endl;
     cout << "   INFINITE AUTOMATA TESTS (Expected: isFinite() = NO)" << endl;
+    cout << "   Testing automaton complexity scaling" << endl;
     cout << string(80, '-') << "\n" << endl;
 
-    // Run 4 Infinite Tests with intensiveInterTaskRelationshipTreeSearch
+    // Run 6 Infinite Tests with intensiveInterTaskRelationshipTreeSearch
     vector<BuchiAutomaton*> infiniteAutomata;
     vector<TaskAllocationAlgorithms*> infiniteAlgorithms;
     
@@ -298,17 +305,43 @@ void infiniteAutomataTests(Environment* env, MultiRobotSystem* mrs) {
         taa8->visualizeOptimalPath("output/infinite_test_4_path");
     }
 
-    BuchiAutomaton* infinite5 = createTestInfiniteBuchiAutomaton5();
-    infiniteAutomata.push_back(infinite5);
-    TaskAllocationAlgorithms* taa9 = new TaskAllocationAlgorithms(infinite5, env, mrs);
-    infiniteAlgorithms.push_back(taa9);
-    infiniteSearchResults.push_back(taa9->intensiveInterTaskRelationshipTreeSearch(infinite5, env, mrs));
+    BuchiAutomaton* infinite9 = createTestInfiniteBuchiAutomaton9();
+    infiniteAutomata.push_back(infinite9);
+    TaskAllocationAlgorithms* taa13 = new TaskAllocationAlgorithms(infinite9, env, mrs);
+    infiniteAlgorithms.push_back(taa13);
+    infiniteSearchResults.push_back(taa13->intensiveInterTaskRelationshipTreeSearch(infinite9, env, mrs));
     cout << "  → Search Result: " << (infiniteSearchResults.back() ? "SUCCESS" : "FAILED") << endl;
     if (infiniteSearchResults.back()) {
         cout << "\n  Metrics Summary:" << endl;
-        taa9->getMetrics().printSummary();
-        taa9->visualizeTree("output/infinite_test_5_tree");
-        taa9->visualizeOptimalPath("output/infinite_test_5_path");
+        taa13->getMetrics().printSummary();
+        taa13->visualizeTree("output/infinite_test_9_tree");
+        taa13->visualizeOptimalPath("output/infinite_test_9_path");
+    }
+
+    BuchiAutomaton* infinite10 = createTestInfiniteBuchiAutomaton10();
+    infiniteAutomata.push_back(infinite10);
+    TaskAllocationAlgorithms* taa14 = new TaskAllocationAlgorithms(infinite10, env, mrs);
+    infiniteAlgorithms.push_back(taa14);
+    infiniteSearchResults.push_back(taa14->intensiveInterTaskRelationshipTreeSearch(infinite10, env, mrs));
+    cout << "  → Search Result: " << (infiniteSearchResults.back() ? "SUCCESS" : "FAILED") << endl;
+    if (infiniteSearchResults.back()) {
+        cout << "\n  Metrics Summary:" << endl;
+        taa14->getMetrics().printSummary();
+        taa14->visualizeTree("output/infinite_test_10_tree");
+        taa14->visualizeOptimalPath("output/infinite_test_10_path");
+    }
+
+    BuchiAutomaton* infinite11 = createTestInfiniteBuchiAutomaton11();
+    infiniteAutomata.push_back(infinite11);
+    TaskAllocationAlgorithms* taa15 = new TaskAllocationAlgorithms(infinite11, env, mrs);
+    infiniteAlgorithms.push_back(taa15);
+    infiniteSearchResults.push_back(taa15->intensiveInterTaskRelationshipTreeSearch(infinite11, env, mrs));
+    cout << "  → Search Result: " << (infiniteSearchResults.back() ? "SUCCESS" : "FAILED") << endl;
+    if (infiniteSearchResults.back()) {
+        cout << "\n  Metrics Summary:" << endl;
+        taa15->getMetrics().printSummary();
+        taa15->visualizeTree("output/infinite_test_11_tree");
+        taa15->visualizeOptimalPath("output/infinite_test_11_path");
     }
 
     cout << "\n" << string(80, '=') << endl;
@@ -583,24 +616,6 @@ BuchiAutomaton* createTestInfiniteBuchiAutomaton1() {
     cout << "  - Is Finite: " << (buchi->isFinite() ? "YES" : "NO") << endl;
     return buchi;
 }
-BuchiAutomaton* createTestInfiniteBuchiAutomaton5() {
-    string ltl_str = "G(F(\"p0\")) & G(F(\"p1\")) & G(F(\"p2\")) & G(F(\"p3\")) & G(F(\"p4\")) & G(F(\"p5\"))";
-
-    vector<BatchAtomicProposition> batchAPs;
-    batchAPs.push_back(BatchAtomicProposition(0, 0, {true, false, false, false, false, true, false, false, false, false, false, false, false}, 0));
-    batchAPs.push_back(BatchAtomicProposition(1, 1, {true, false, false, false, false, true, false, false, false, false, false, false, false}, 0));
-    batchAPs.push_back(BatchAtomicProposition(2, 2, {true, false, false, false, false, true, false, false, false, false, false, false, false}, 0));
-    batchAPs.push_back(BatchAtomicProposition(3, 3, {false, false, false, true, false, true, false, false, false, false, false, false, false}, 0));
-    batchAPs.push_back(BatchAtomicProposition(4, 4, {false, false, false, true, false, true, false, false, false, false, false, false, false}, 0));
-    batchAPs.push_back(BatchAtomicProposition(5, 5, {false, false, false, true, false, true, false, false, false, false, false, false, false}, 0));
-
-    LTLFormula* ltlFormula = new LTLFormula(ltl_str, batchAPs);
-    BuchiAutomaton* buchi = new BuchiAutomaton(ltlFormula);
-    buchi->visualize("output/automaton_test_buchi_5.dot");
-    cout << "✓ ADVANCED Infinite Test 5 created (multiple liveness constraints): " << ltl_str << endl;
-    cout << "  - Is Finite: " << (buchi->isFinite() ? "YES" : "NO") << endl;
-    return buchi;
-}
 
 /**
  * ADVANCED INFINITE Test 2: Weak until with globally constrained liveness
@@ -678,5 +693,189 @@ BuchiAutomaton* createTestInfiniteBuchiAutomaton4() {
     buchi->visualize("output/infinite_test_4");
     cout << "✓ ADVANCED Infinite Test 4 created (complex nesting with conditional sequencing): " << ltl_str << endl;
     cout << "  - Is Finite: " << (buchi->isFinite() ? "YES" : "NO") << endl;
+    return buchi;
+}
+
+BuchiAutomaton* createTestInfiniteBuchiAutomaton5() {
+    // Complex infinite formula with 7 propositions - nested liveness
+    string ltl_str = "(G(F(\"p1\")) & G(F(\"p2\")) & G(F(\"p3\")) & G(F(\"p4\")) & G(F(\"p5\")) & G(F(\"p6\")) & G(F(\"p7\")))";
+    
+    vector<BatchAtomicProposition> batchAPs;
+    batchAPs.push_back(BatchAtomicProposition(1, 1, {true, false, false, false, false, true, false, false, false, false, false, false, false}, 0));
+    batchAPs.push_back(BatchAtomicProposition(2, 2, {true, false, false, false, false, true, false, false, false, false, false, false, false}, 0));
+    batchAPs.push_back(BatchAtomicProposition(3, 3, {false, false, false, true, false, true, false, false, false, false, false, false, false}, 0));
+    batchAPs.push_back(BatchAtomicProposition(4, 4, {false, false, false, true, false, true, false, false, false, false, false, false, false}, 0));
+    batchAPs.push_back(BatchAtomicProposition(5, 5, {true, false, false, false, false, true, false, false, false, false, false, false, false}, 0));
+    batchAPs.push_back(BatchAtomicProposition(6, 3, {false, false, false, true, false, true, false, false, false, false, false, false, false}, 0));
+    batchAPs.push_back(BatchAtomicProposition(7, 4, {true, false, false, true, false, true, false, false, false, false, false, false, false}, 0));
+
+    LTLFormula* ltlFormula = new LTLFormula(ltl_str, batchAPs);
+    BuchiAutomaton* buchi = new BuchiAutomaton(ltlFormula);
+    buchi->visualize("output/infinite_test_5");
+    cout << "✓ ADVANCED Infinite Test 5 created (7-location infinite patrol): " << ltl_str << endl;
+    cout << "  - Is Finite: " << (buchi->isFinite() ? "YES" : "NO") << endl;
+    cout << "  - Automaton States: " << buchi->getNumStates() << endl;
+    return buchi;
+}
+
+/**
+ * ADVANCED INFINITE Test 6: High complexity with nested Until chains
+ * G(F(p1 U p2)) & G(F(p3 U p4)) & G(F(p5 U p6)) - complex nested patterns
+ * Creates larger automaton due to Until semantics requiring multiple states
+ */
+BuchiAutomaton* createTestInfiniteBuchiAutomaton6() {
+    string ltl_str = "(G(F(\"p1\" U \"p2\")) & G(F(\"p3\" U \"p4\")) & G(F(\"p5\" U \"p6\")))";
+    
+    vector<BatchAtomicProposition> batchAPs;
+    for (int i = 1; i <= 6; i++) {
+        uint16_t tsState = (i % 2 == 0) ? (i / 2) : ((i / 2) + 1);
+        batchAPs.push_back(BatchAtomicProposition(i, tsState, 
+            {true, false, false, false, false, true, false, false, false, false, false, false, false}, 0));
+    }
+
+    LTLFormula* ltlFormula = new LTLFormula(ltl_str, batchAPs);
+    BuchiAutomaton* buchi = new BuchiAutomaton(ltlFormula);
+    buchi->visualize("output/infinite_test_6");
+    cout << "✓ ADVANCED Infinite Test 6 created (nested Until chains): " << ltl_str << endl;
+    cout << "  - Is Finite: " << (buchi->isFinite() ? "YES" : "NO") << endl;
+    cout << "  - Automaton States: " << buchi->getNumStates() << endl;
+    return buchi;
+}
+
+/**
+ * ADVANCED INFINITE Test 7: Very complex with sequential constraints
+ * G((p1 -> F p2) & (p2 -> F p3) & (p3 -> F p4) & (p4 -> F p5) & (p5 -> F p1))
+ * Creates circular dependencies - forces large state space for cycle detection
+ */
+BuchiAutomaton* createTestInfiniteBuchiAutomaton7() {
+    string ltl_str = "(G((\"p1\" i F(\"p2\")) & (\"p2\" i F(\"p3\")) & (\"p3\" i F(\"p4\")) & (\"p4\" i F(\"p5\")) & (\"p5\" i F(\"p1\"))))";
+    
+    vector<BatchAtomicProposition> batchAPs;
+    for (int i = 1; i <= 5; i++) {
+        batchAPs.push_back(BatchAtomicProposition(i, i, 
+            {(i%2==0), false, false, (i%2==1), false, true, false, false, false, false, false, false, false}, 0));
+    }
+
+    LTLFormula* ltlFormula = new LTLFormula(ltl_str, batchAPs);
+    BuchiAutomaton* buchi = new BuchiAutomaton(ltlFormula);
+    buchi->visualize("output/infinite_test_7");
+    cout << "✓ ADVANCED Infinite Test 7 created (circular sequential constraints): " << ltl_str << endl;
+    cout << "  - Is Finite: " << (buchi->isFinite() ? "YES" : "NO") << endl;
+    cout << "  - Automaton States: " << buchi->getNumStates() << endl;
+    return buchi;
+}
+
+/**
+ * ADVANCED INFINITE Test 8: Extremely complex with disjunctive paths
+ * G((F p0 & F p1) | (F p2 & F p3 & F p4)) & G(F(p5 & (X p6 | X p0)))
+ * Multiple branching paths combined with next operators - exponential state growth
+ */
+BuchiAutomaton* createTestInfiniteBuchiAutomaton8() {
+    string ltl_str = "(G(((F(\"p0\") & F(\"p1\")) | (F(\"p2\") & F(\"p3\") & F(\"p4\"))) & F(\"p5\" & (X(\"p6\") | X(\"p0\")))))";
+    
+    vector<BatchAtomicProposition> batchAPs;
+    batchAPs.push_back(BatchAtomicProposition(0, 0, {true, false, false, false, false, true, false, false, false, false, false, false, false}, 0));
+    batchAPs.push_back(BatchAtomicProposition(1, 1, {true, false, false, false, false, true, false, false, false, false, false, false, false}, 0));
+    batchAPs.push_back(BatchAtomicProposition(2, 2, {false, false, false, true, false, true, false, false, false, false, false, false, false}, 0));
+    batchAPs.push_back(BatchAtomicProposition(3, 3, {false, false, false, true, false, true, false, false, false, false, false, false, false}, 0));
+    batchAPs.push_back(BatchAtomicProposition(4, 4, {true, false, false, true, false, true, false, false, false, false, false, false, false}, 0));
+    batchAPs.push_back(BatchAtomicProposition(5, 5, {true, false, false, false, false, true, false, false, false, false, false, false, false}, 0));
+    batchAPs.push_back(BatchAtomicProposition(6, 1, {false, false, false, true, false, true, false, false, false, false, false, false, false}, 0));
+
+    LTLFormula* ltlFormula = new LTLFormula(ltl_str, batchAPs);
+    BuchiAutomaton* buchi = new BuchiAutomaton(ltlFormula);
+    buchi->visualize("output/infinite_test_8");
+    cout << "✓ ADVANCED Infinite Test 8 created (disjunctive paths with next): " << ltl_str << endl;
+    cout << "  - Is Finite: " << (buchi->isFinite() ? "YES" : "NO") << endl;
+    cout << "  - Automaton States: " << buchi->getNumStates() << endl;
+    return buchi;
+}
+
+/**
+ * ADVANCED INFINITE Test 9: Very high complexity targeting ~20 states
+ * G((F(p0 U (p1 & F p2))) & (F(p3 U (p4 & F p5))) & (F(p6 U p7)))
+ * Multiple complex Until chains with nested requirements - creates many intermediate states
+ */
+BuchiAutomaton* createTestInfiniteBuchiAutomaton9() {
+    string ltl_str = "(G((F(!\"p0\" U (\"p1\" & F(\"p2\"))) & G(F(\"p0\")) & G(F(\"p3\")) & F(!\"p3\" U (\"p4\" & F(\"p5\"))) & F(\"p6\" & X(\"p7\")) & G(F(\"p8\")) & (F(!\"p8\" U \"p9\"))))";
+    
+    vector<BatchAtomicProposition> batchAPs;
+    for (int i = 0; i < 10; i++) {
+        uint16_t tsState = i % 6;
+        bool hasGPS = (i % 2 == 0);
+        vector<bool> caps(13, false);
+        if (hasGPS) caps[5] = true;
+        if (i % 3 == 1) caps[0] = true;
+        caps[5] = true;  // All have GPS
+        
+        batchAPs.push_back(BatchAtomicProposition(i, tsState, caps, 0));
+    }
+
+    LTLFormula* ltlFormula = new LTLFormula(ltl_str, batchAPs);
+    BuchiAutomaton* buchi = new BuchiAutomaton(ltlFormula);
+    buchi->visualize("output/infinite_test_9");
+    cout << "✓ ADVANCED Infinite Test 9 created (targeting ~20 states): " << ltl_str << endl;
+    cout << "  - Is Finite: " << (buchi->isFinite() ? "YES" : "NO") << endl;
+    cout << "  - Automaton States: " << buchi->getNumStates() << endl;
+    return buchi;
+}
+
+/**
+ * ADVANCED INFINITE Test 10: Extreme complexity targeting ~40+ states
+ * G(F(p0 U p1)) & G(F(p2 U p3)) & G(F(p4 U p5)) & G(F(p6 U p7)) & G(F(p8 U p9))
+ * & G((p10 U p11) | (p12 U p13)) & G(F(p14 & X(p15 & X(p16 & X p17))))
+ * Five nested Until chains combined with disjunctions and deep Next - exponential growth
+ */
+BuchiAutomaton* createTestInfiniteBuchiAutomaton10() {
+    string ltl_str = "(G(F(!\"p0\" U \"p1\")) & G(F(\"p0\")) & G(F(\"p2\")) & G(F(!\"p2\" U \"p3\")) & G(F(!\"p4\" U \"p5\")) & G(F(!\"p6\" U \"p7\")) & G(F(!\"p8\" U \"p9\")) & G(F(!\"p10\" U \"p11\") | F(!\"p12\" U \"p13\")) & G(F(\"p14\" & X(\"p15\" & X(\"p16\" & X(\"p17\"))))))";
+    
+    vector<BatchAtomicProposition> batchAPs;
+    for (int i = 0; i < 18; i++) {
+        uint16_t tsState = i % 6;
+        vector<bool> caps(13, false);2
+        caps[5] = true;  // All have GPS
+        if (i % 3 == 0) caps[0] = true;  // Some have movement
+        if (i % 4 == 0) caps[3] = true;  // Some have camera
+        
+        batchAPs.push_back(BatchAtomicProposition(i, tsState, caps, 0));
+    }
+
+    LTLFormula* ltlFormula = new LTLFormula(ltl_str, batchAPs);
+    BuchiAutomaton* buchi = new BuchiAutomaton(ltlFormula);
+    buchi->visualize("output/infinite_test_10");
+    cout << "✓ ADVANCED Infinite Test 10 created (targeting ~40+ states): " << ltl_str << endl;
+    cout << "  - Is Finite: " << (buchi->isFinite() ? "YES" : "NO") << endl;
+    cout << "  - Automaton States: " << buchi->getNumStates() << endl;
+    return buchi;
+}
+
+/**
+ * ADVANCED INFINITE Test 11: Extreme complexity targeting ~40+ states (AND version)
+ * Same as Test 10 but with AND instead of OR for p10/p11 and p12/p13
+ * G(F(!p0 U p1)) & G(F(p0)) & G(F(p2)) & G(F(!p2 U p3)) & G(F(!p4 U p5)) 
+ * & G(F(!p6 U p7)) & G(F(!p8 U p9)) & G(F(!p10 U p11) & F(!p12 U p13)) [AND instead of OR]
+ * & G(F(p14 & X(p15 & X(p16 & X p17))))
+ * Requires BOTH Until chains to occur infinitely often, increasing constraint tightness
+ */
+BuchiAutomaton* createTestInfiniteBuchiAutomaton11() {
+    string ltl_str = "(G(F(!\"p0\" U \"p1\")) & G(F(\"p0\")) & G(F(\"p2\")) & G(F(!\"p2\" U \"p3\")) & G(F(!\"p4\" U \"p5\")) & G(F(!\"p6\" U \"p7\")) & G(F(!\"p8\" U \"p9\")) & G(F(!\"p10\" U \"p11\") & F(!\"p12\" U \"p13\")) & G(F(\"p14\" & X(\"p15\" & X(\"p16\" & X(\"p17\"))))))";
+    
+    vector<BatchAtomicProposition> batchAPs;
+    for (int i = 0; i < 18; i++) {
+        uint16_t tsState = i % 6;
+        vector<bool> caps(13, false);
+        caps[5] = true;  // All have GPS
+        if (i % 3 == 0) caps[0] = true;  // Some have movement
+        if (i % 4 == 0) caps[3] = true;  // Some have camera
+        
+        batchAPs.push_back(BatchAtomicProposition(i, tsState, caps, 0));
+    }
+
+    LTLFormula* ltlFormula = new LTLFormula(ltl_str, batchAPs);
+    BuchiAutomaton* buchi = new BuchiAutomaton(ltlFormula);
+    buchi->visualize("output/infinite_test_11");
+    cout << "✓ ADVANCED Infinite Test 11 created (targeting ~40+ states - AND version): " << ltl_str << endl;
+    cout << "  - Is Finite: " << (buchi->isFinite() ? "YES" : "NO") << endl;
+    cout << "  - Automaton States: " << buchi->getNumStates() << endl;
     return buchi;
 }

@@ -50,7 +50,8 @@ COMMON_SRCS = \
 	../Automatons/ProductAutomaton.cpp \
 	../Automatons/TS.cpp \
 	../Transition_Systems/GeneralTransitionSystem.cpp \
-	src/AlgorithmMetrics.cpp
+	src/AlgorithmMetrics.cpp \
+	src/TestRunManager.cpp
 
 # Object files
 TEST_OBJ = $(TEST_SRC:.cpp=.o)

@@ -22,19 +22,10 @@ void AlgorithmMetrics::clearMetrics() {
     iv_.capability_homogeneity = 0.0;
     iv_.num_inter_task_constraints = 0;
     
-    // Clear runtime metrics
-    runtime_.total_computation_time_ms = 0.0;
-    runtime_.runtime_vs_num_robots.clear();
-    runtime_.runtime_vs_automaton_states.clear();
-    runtime_.runtime_vs_automaton_edges.clear();
-    runtime_.runtime_vs_capability_density.clear();
-    runtime_.runtime_vs_capability_homogeneity.clear();
-    runtime_.runtime_vs_atomic_propositions.clear();
-    runtime_.runtime_vs_environment_size.clear();
-    runtime_.runtime_vs_ts_regions.clear();
+    // Clear runtime 
+    total_computation_time_ms = 0.0;
     
     // Clear subtree efficiency metrics
-    subtree_efficiency_.total_nodes_generated = 0;
     subtree_efficiency_.total_nodes_planning = 0;
     subtree_efficiency_.total_nodes_traversed = 0;
     subtree_efficiency_.total_nodes_pruned = 0;
@@ -88,7 +79,7 @@ void AlgorithmMetrics::stopTimer() {
     auto end_time = std::chrono::high_resolution_clock::now();
     auto duration = std::chrono::duration_cast<std::chrono::microseconds>(
         end_time - overall_start_time_);
-    runtime_.total_computation_time_ms = duration.count() / 1000.0;  // Convert microseconds to milliseconds
+    total_computation_time_ms = duration.count() / 1000.0;  // Convert microseconds to milliseconds
 }
 
 // ==================== SOLUTION QUALITY METRICS UPDATES ====================
@@ -140,14 +131,14 @@ void AlgorithmMetrics::setTasksPerRobot(int robot_id, int task_count) {
 // ==================== DERIVED METRICS COMPUTATION ====================
 
 double AlgorithmMetrics::computePruningRatio() const {
-    if (subtree_efficiency_.total_nodes_generated == 0) return 0.0;
+    if (subtree_efficiency_.total_nodes_planning == 0) return 0.0;
     return static_cast<double>(subtree_efficiency_.total_nodes_pruned) / 
-           subtree_efficiency_.total_nodes_generated;
+           subtree_efficiency_.total_nodes_traversed;
 }
 
 double AlgorithmMetrics::computePercentNodesInTree() const {
     if (subtree_efficiency_.total_nodes_traversed == 0) return 0.0;
-    return (static_cast<double>(subtree_efficiency_.total_nodes_generated) / 
+    return (static_cast<double>(subtree_efficiency_.total_nodes_planning) / 
            subtree_efficiency_.total_nodes_traversed)*100.0;
 }
 
@@ -159,7 +150,7 @@ double AlgorithmMetrics::computeExploredProductRatio() const {
 
 double AlgorithmMetrics::computeTreeProductRatio() const {
     if (subtree_efficiency_.full_product_automaton_nodes == 0) return 0.0;
-    return static_cast<double>(subtree_efficiency_.total_nodes_generated) / 
+    return static_cast<double>(subtree_efficiency_.total_nodes_planning) / 
            subtree_efficiency_.full_product_automaton_nodes;
 }
 
@@ -197,45 +188,11 @@ void AlgorithmMetrics::computeDerivedMetrics() {
     subtree_efficiency_.percent_nodes_in_tree = computePercentNodesInTree();
     subtree_efficiency_.state_space_reduction = 
         subtree_efficiency_.full_product_automaton_nodes - 
-        subtree_efficiency_.total_nodes_generated;
+        subtree_efficiency_.total_nodes_planning;
     
     // Solution quality derived metrics
     solution_quality_.robot_utilization_ratio = computeRobotUtilizationRatio();
     solution_quality_.load_balance_variance = computeLoadBalanceVariance();
-}
-
-// ==================== BATCH RUNTIME PARAMETER UPDATES ====================
-
-void AlgorithmMetrics::addRuntimeVsRobots(int num_robots, double time_ms) {
-    runtime_.runtime_vs_num_robots.push_back({num_robots, time_ms});
-}
-
-void AlgorithmMetrics::addRuntimeVsAutomatonStates(int states, double time_ms) {
-    runtime_.runtime_vs_automaton_states.push_back({states, time_ms});
-}
-
-void AlgorithmMetrics::addRuntimeVsAutomatonEdges(int edges, double time_ms) {
-    runtime_.runtime_vs_automaton_edges.push_back({edges, time_ms});
-}
-
-void AlgorithmMetrics::addRuntimeVsCapabilityDensity(double density, double time_ms) {
-    runtime_.runtime_vs_capability_density.push_back({density, time_ms});
-}
-
-void AlgorithmMetrics::addRuntimeVsCapabilityHomogeneity(double homogeneity, double time_ms) {
-    runtime_.runtime_vs_capability_homogeneity.push_back({homogeneity, time_ms});
-}
-
-void AlgorithmMetrics::addRuntimeVsAtomicPropositions(int ap, double time_ms) {
-    runtime_.runtime_vs_atomic_propositions.push_back({ap, time_ms});
-}
-
-void AlgorithmMetrics::addRuntimeVsEnvironmentSize(int env_size, double time_ms) {
-    runtime_.runtime_vs_environment_size.push_back({env_size, time_ms});
-}
-
-void AlgorithmMetrics::addRuntimeVsRegions(int regions, double time_ms) {
-    runtime_.runtime_vs_ts_regions.push_back({regions, time_ms});
 }
 
 // ==================== REPORTING ====================
@@ -261,11 +218,10 @@ void AlgorithmMetrics::printSummary() const {
     // Runtime Metrics
     std::cout << "RUNTIME METRICS:" << std::endl;
     std::cout << "  Total Computation Time: " << std::fixed << std::setprecision(2) 
-              << runtime_.total_computation_time_ms << " ms" << "\n" << std::endl;
+              << total_computation_time_ms << " ms" << "\n" << std::endl;
     
     // Subtree Efficiency
     std::cout << "SUBTREE EFFICIENCY METRICS:" << std::endl;
-    std::cout << "  Total Nodes Generated: " << subtree_efficiency_.total_nodes_generated << std::endl;
     std::cout << "  Total Nodes Planning: " << subtree_efficiency_.total_nodes_planning << std::endl;
     std::cout << "  Total Nodes Traversed: " << subtree_efficiency_.total_nodes_traversed << std::endl;
     std::cout << "  Total Nodes Pruned: " << subtree_efficiency_.total_nodes_pruned << std::endl;
@@ -301,54 +257,6 @@ void AlgorithmMetrics::printSummary() const {
     std::cout << "\n" << std::string(80, '=') << std::endl;
 }
 
-void AlgorithmMetrics::printDetailedReport() const {
-    printSummary();
-    
-    std::cout << "\nDETAILED RUNTIME ANALYSIS:" << std::endl;
-    std::string separator(80, '-');
-    std::cout << separator << std::endl;
-    
-    // Runtime vs robots
-    if (!runtime_.runtime_vs_num_robots.empty()) {
-        std::cout << "Runtime vs Number of Robots:" << std::endl;
-        for (const auto& entry : runtime_.runtime_vs_num_robots) {
-            std::cout << "  N=" << entry.first << ": " << std::fixed << std::setprecision(2) 
-                      << entry.second << " ms" << std::endl;
-        }
-        std::cout << std::endl;
-    }
-    
-    // Runtime vs automaton states
-    if (!runtime_.runtime_vs_automaton_states.empty()) {
-        std::cout << "Runtime vs Automaton States:" << std::endl;
-        for (const auto& entry : runtime_.runtime_vs_automaton_states) {
-            std::cout << "  |S_B|=" << entry.first << ": " << std::fixed << std::setprecision(2) 
-                      << entry.second << " ms" << std::endl;
-        }
-        std::cout << std::endl;
-    }
-    
-    // Runtime vs automaton edges
-    if (!runtime_.runtime_vs_automaton_edges.empty()) {
-        std::cout << "Runtime vs Automaton Edges:" << std::endl;
-        for (const auto& entry : runtime_.runtime_vs_automaton_edges) {
-            std::cout << "  Edges=" << entry.first << ": " << std::fixed << std::setprecision(2) 
-                      << entry.second << " ms" << std::endl;
-        }
-        std::cout << std::endl;
-    }
-    
-    // Runtime vs capability density
-    if (!runtime_.runtime_vs_capability_density.empty()) {
-        std::cout << "Runtime vs Capability Density:" << std::endl;
-        for (const auto& entry : runtime_.runtime_vs_capability_density) {
-            std::cout << "  Density=" << std::fixed << std::setprecision(2) << entry.first 
-                      << ": " << entry.second << " ms" << std::endl;
-        }
-        std::cout << std::endl;
-    }
-}
-
 void AlgorithmMetrics::exportToCSV(const std::string& filename) const {
     std::ofstream outfile(filename);
     if (!outfile.is_open()) {
@@ -372,10 +280,9 @@ void AlgorithmMetrics::exportToCSV(const std::string& filename) const {
     
     // Runtime Metrics
     outfile << "Total Computation Time," << std::fixed << std::setprecision(2) 
-            << runtime_.total_computation_time_ms << ",ms\n";
+            << total_computation_time_ms << ",ms\n";
     
     // Subtree Efficiency
-    outfile << "Total Nodes Generated," << subtree_efficiency_.total_nodes_generated << ",count\n";
     outfile << "Total Nodes Pruned," << subtree_efficiency_.total_nodes_pruned << ",count\n";
     outfile << "Pruning Ratio," << std::fixed << std::setprecision(4) 
             << subtree_efficiency_.pruning_ratio << ",ratio\n";
@@ -418,11 +325,10 @@ void AlgorithmMetrics::exportToJSON(const std::string& filename) const {
     
     outfile << "  \"runtime_metrics\": {\n";
     outfile << "    \"total_computation_time_ms\": " << std::fixed << std::setprecision(2) 
-            << runtime_.total_computation_time_ms << "\n";
+            << total_computation_time_ms << "\n";
     outfile << "  },\n";
     
     outfile << "  \"subtree_efficiency_metrics\": {\n";
-    outfile << "    \"total_nodes_generated\": " << subtree_efficiency_.total_nodes_generated << ",\n";
     outfile << "    \"total_nodes_traversed\": " << subtree_efficiency_.total_nodes_traversed << ",\n";
     outfile << "    \"total_nodes_pruned\": " << subtree_efficiency_.total_nodes_pruned << ",\n";
     outfile << "    \"pruning_ratio\": " << std::fixed << std::setprecision(4) 

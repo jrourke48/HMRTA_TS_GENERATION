@@ -14,7 +14,7 @@
 Want to try to get as comprehensive of an idea of the algorithms behavior without running an astronomical amount of tests
 
 ## variable ranges and number of tests
-We are going to keep our 3 and a 6 robot configuration 6 regions and maybe 3 different buchis for every scenario where those variables are not involved
+We are going to run tests for 3, 6, 15 and 45 robot configuration 6 regions and maybe 3 different buchis for every scenario where those variables are not involved
 ### Number of automaton states
 try 15 different state numbers: 5-150 states
 ### Number of robots

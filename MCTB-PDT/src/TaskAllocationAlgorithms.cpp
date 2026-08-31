@@ -222,11 +222,9 @@ PlanningDecisionTree* TaskAllocationAlgorithms::intensiveInterTaskRelationshipTr
 
     // Process nodes from untraversed queue until empty
     Tree_Node* currentNode = nullptr;
-    int iterationCount = 0;
-    const int MAX_ITERATIONS = 100;  // Safety limit to prevent infinite loops
     
-    while ((currentNode = getNextUntraversedNode()) != nullptr && iterationCount < MAX_ITERATIONS) {
-        iterationCount++;
+    //Algorithm 1:: main tree construction/search
+    while ((currentNode = getNextUntraversedNode()) != nullptr) {
         
         // Create subtree for current node
         PlanningDecisionTree* subtree = new PlanningDecisionTree(currentNode);
@@ -249,11 +247,11 @@ PlanningDecisionTree* TaskAllocationAlgorithms::intensiveInterTaskRelationshipTr
             uint16_t currentStateId = currentNode->getAutomatonState()->getId();
             
             // Get edge labels from current automaton state to this state
+            //toggle this if you want to check for multiple true aps on the same edge
             std::vector<std::vector<uint16_t>> apIds = nbaPtr->getTrueAPs(currentStateId, nbaId);
-            
+        
             for (const auto& apIdVec : apIds) {
-                //should only have one apId per vector, but we iterate in case of multiple
-                for (uint16_t apId : apIdVec) {
+                    for (const auto& apId : apIdVec) {
                     // Validate LTL formula access
                     if (!nbaPtr->getLTLFormula()) {
                         std::cerr << "[ERROR] LTL formula is null during AP processing" << std::endl;
@@ -275,6 +273,7 @@ PlanningDecisionTree* TaskAllocationAlgorithms::intensiveInterTaskRelationshipTr
                 // Note: nodeId is a placeholder; insertNode will auto-assign the correct ID
                 Tree_Node* newNode = new Tree_Node(0, currentNode, nbaState, 
                                                    TSState, batchVal);
+                //std::cout << "Current Node: NBA: " <<  nbaState->getId() << ", TS: " << currentNode->getTSState()->getId() << std::endl;
             
                 
                 if (!newNode) {
@@ -299,8 +298,7 @@ PlanningDecisionTree* TaskAllocationAlgorithms::intensiveInterTaskRelationshipTr
 
                 // Add to subtree (insertNode will auto-assign the correct nodeId)
                 subtree->insertNode(newNode);
-                metrics->subtree_efficiency_.total_nodes_generated++;
-                }
+            }
             }
         }
     //set the current node as traversed
@@ -314,7 +312,7 @@ PlanningDecisionTree* TaskAllocationAlgorithms::intensiveInterTaskRelationshipTr
     }
     // Add non-pruned nodes to the main planning tree as children of currentNode
     planningTree->insertNodes(currentNode, pruningResult);
-}
+    }
     // After processing all nodes, get the final optimal frontier node  
     Tree_Node* finalOptimalNode = planningTree->getOptimalFrontierNode(nba->isFinite()); // Final optimal node after search completion
     //get the total number of nodes traversed and in expanded in the planning tree

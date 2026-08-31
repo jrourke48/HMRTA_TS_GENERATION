@@ -8,16 +8,15 @@
 
 /**
  * @class AlgorithmMetrics
- * @brief Comprehensive metrics tracking for thesis evaluation
+ * @brief Single run of comprehensive metrics tracking for thesis evaluation
  * 
- * Tracks independent variables, correctness metrics, runtime metrics,
+ * Tracks independent variables, correctness metrics,
  * subtree efficiency metrics, and solution quality metrics across all
  * experimental evaluations.
  */
 class AlgorithmMetrics {
 public:
     // ==================== INDEPENDENT VARIABLES ====================
-    
     struct IndependentVariables {
         // Automaton characteristics
         int num_automaton_states = 0;
@@ -37,29 +36,10 @@ public:
         int num_inter_task_constraints = 0;
     };
     
-    // ==================== RUNTIME AND SCALABILITY METRICS ====================
-    
-    struct RuntimeMetrics {
-        // Primary timing measurements
-        double total_computation_time_ms = 0.0;          // milliseconds  
-        
-        // Parameterized runtime analysis (collected across runs)
-        std::vector<std::pair<int, double>> runtime_vs_num_robots;           // (N, time_ms)
-        std::vector<std::pair<int, double>> runtime_vs_automaton_states;     // (|S_B|, time_ms)
-        std::vector<std::pair<int, double>> runtime_vs_automaton_edges;      // (edges, time_ms)
-        std::vector<std::pair<double, double>> runtime_vs_capability_density; // (density, time_ms)
-        std::vector<std::pair<double, double>> runtime_vs_capability_homogeneity; // (homogeneity, time_ms)
-        std::vector<std::pair<int, double>> runtime_vs_atomic_propositions;   // (AP, time_ms)
-        std::vector<std::pair<int, double>> runtime_vs_environment_size;      // (env_size, time_ms)
-        std::vector<std::pair<int, double>> runtime_vs_ts_regions;            // (regions, time_ms)
-    };
-    
     // ==================== SUBTREE EFFICIENCY METRICS ====================
     
     struct SubtreeEfficiencyMetrics {
         // Node counts
-        //nodes in the search tree
-        long long total_nodes_generated = 0;
         //total nodes planning
         long long total_nodes_planning = 0;
         // nodes pruned difference between the two above
@@ -127,13 +107,11 @@ public:
     
     // Data access
     const IndependentVariables& getIndependentVariables() const { return iv_; }
-    const RuntimeMetrics& getRuntime() const { return runtime_; }
     const SubtreeEfficiencyMetrics& getSubtreeEfficiency() const { return subtree_efficiency_; }
     const SolutionQualityMetrics& getSolutionQuality() const { return solution_quality_; }
     
     // Reporting
     void printSummary() const;
-    void printDetailedReport() const;
     void exportToCSV(const std::string& filename) const;
     void exportToJSON(const std::string& filename) const;
     
@@ -158,8 +136,9 @@ public:
     
 public:
     // Direct access to metric structures for algorithm tracking
+     // Primary timing measurements
+    double total_computation_time_ms = 0.0;          // milliseconds
     IndependentVariables iv_;
-    RuntimeMetrics runtime_;
     SubtreeEfficiencyMetrics subtree_efficiency_;
     SolutionQualityMetrics solution_quality_;
     
