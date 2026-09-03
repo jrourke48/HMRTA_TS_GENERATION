@@ -18,6 +18,7 @@ VIS_BIN = $(OUT_DIR)/Visualization
 INTERTASK_BIN = $(OUT_DIR)/InterTaskConstraintTests
 MULTICAP_BIN = $(OUT_DIR)/MultiCapabilityRobotTest
 AUTOMATON_STATES_BIN = $(OUT_DIR)/AutomatonStatesTest
+AUTOMATON_STATES_BATCH_BIN = $(OUT_DIR)/AutomatonStatesBatchTest
 
 # Source files
 TEST_SRC = apps/TestIntegration.cpp
@@ -29,7 +30,8 @@ DSTAR_SRC = apps/Test_DStarGridWorld.cpp
 VIS_SRC = apps/VisualizationApp.cpp
 INTERTASK_SRC = apps/Inter_task_constraint_tests.cpp
 MULTICAP_SRC = apps/Multi_Capability_Robot_Test.cpp
-AUTOMATON_STATES_SRC = organizedtests/test_automaton_states.cpp
+AUTOMATON_STATES_SRC = organizedtests/automaton_states/test_automaton_states.cpp
+AUTOMATON_STATES_BATCH_SRC = organizedtests/automaton_states_batch/test_automaton_states_batch.cpp
 # GridVis - only included in visualization targets
 GRIDVIS_SRC = src/Environment/gridvis.cpp
 # TaskAllocationAlgorithms - algorithms for task allocation
@@ -64,15 +66,16 @@ VIS_OBJ = $(VIS_SRC:.cpp=.o)
 INTERTASK_OBJ = $(INTERTASK_SRC:.cpp=.o)
 MULTICAP_OBJ = $(MULTICAP_SRC:.cpp=.o)
 AUTOMATON_STATES_OBJ = $(AUTOMATON_STATES_SRC:.cpp=.o)
+AUTOMATON_STATES_BATCH_OBJ = $(AUTOMATON_STATES_BATCH_SRC:.cpp=.o)
 GRIDVIS_OBJ = $(GRIDVIS_SRC:.cpp=.o)
 COMMON_OBJS = $(COMMON_SRCS:.cpp=.o)
 TASK_ALLOC_OBJS = $(TASK_ALLOC_SRCS:.cpp=.o)
-ALL_OBJS = $(TEST_OBJ) $(TREE_TEST_OBJ) $(TASK_ALLOC_OBJ) $(PLANNING_TREE_TEST_OBJ) $(OPTIMAL_PATH_OBJ) $(DSTAR_OBJ) $(VIS_OBJ) $(INTERTASK_OBJ) $(MULTICAP_OBJ) $(AUTOMATON_STATES_OBJ) $(GRIDVIS_OBJ) $(COMMON_OBJS) $(TASK_ALLOC_OBJS)
+ALL_OBJS = $(TEST_OBJ) $(TREE_TEST_OBJ) $(TASK_ALLOC_OBJ) $(PLANNING_TREE_TEST_OBJ) $(OPTIMAL_PATH_OBJ) $(DSTAR_OBJ) $(VIS_OBJ) $(INTERTASK_OBJ) $(MULTICAP_OBJ) $(AUTOMATON_STATES_OBJ) $(AUTOMATON_STATES_BATCH_OBJ) $(GRIDVIS_OBJ) $(COMMON_OBJS) $(TASK_ALLOC_OBJS)
 
 # Targets
-.PHONY: all clean run rebuild help test test-tree test-task test-planning-tree test-optimal-path test-dstar test-intertask test-multicap test-automaton-states test-all tree-only task-only planning-tree-only optimal-path-only dstar-only intertask-only multicap-only automaton-states-only vis vis-only
+.PHONY: all clean run rebuild help test test-tree test-task test-planning-tree test-optimal-path test-dstar test-intertask test-multicap test-automaton-states test-automaton-states-batch test-all tree-only task-only planning-tree-only optimal-path-only dstar-only intertask-only multicap-only automaton-states-only automaton-states-batch-only vis vis-only
 
-all: $(OUT_BIN) $(TREE_BIN) $(TASK_ALLOC_BIN) $(PLANNING_TREE_BIN) $(OPTIMAL_PATH_BIN) $(DSTAR_BIN) $(INTERTASK_BIN) $(MULTICAP_BIN) $(AUTOMATON_STATES_BIN) $(VIS_BIN)
+all: $(OUT_BIN) $(TREE_BIN) $(TASK_ALLOC_BIN) $(PLANNING_TREE_BIN) $(OPTIMAL_PATH_BIN) $(DSTAR_BIN) $(INTERTASK_BIN) $(MULTICAP_BIN) $(AUTOMATON_STATES_BIN) $(AUTOMATON_STATES_BATCH_BIN) $(VIS_BIN)
 
 # Build the test executable
 $(OUT_BIN): $(TEST_OBJ) $(COMMON_OBJS)
@@ -128,6 +131,12 @@ $(AUTOMATON_STATES_BIN): $(AUTOMATON_STATES_OBJ) $(COMMON_OBJS) $(TASK_ALLOC_OBJ
 	$(CXX) $(CXXFLAGS) $(INCLUDES) $^ -o $@ $(LIBS)
 	@echo "✓ Build successful: $(AUTOMATON_STATES_BIN)"
 
+# Build the automaton states batch scaling tests executable
+$(AUTOMATON_STATES_BATCH_BIN): $(AUTOMATON_STATES_BATCH_OBJ) $(COMMON_OBJS) $(TASK_ALLOC_OBJS)
+	@mkdir -p $(OUT_DIR)
+	$(CXX) $(CXXFLAGS) $(INCLUDES) $^ -o $@ $(LIBS)
+	@echo "✓ Build successful: $(AUTOMATON_STATES_BATCH_BIN)"
+
 # Build the visualization executable
 $(VIS_BIN): $(VIS_OBJ) $(GRIDVIS_OBJ) $(COMMON_OBJS) $(TASK_ALLOC_OBJS)
 	@mkdir -p $(OUT_DIR)
@@ -181,7 +190,12 @@ test-multicap: $(MULTICAP_BIN)
 # Run automaton states scaling tests
 test-automaton-states: $(AUTOMATON_STATES_BIN)
 	@echo "Running automaton states scaling tests..."
-	@cd organizedtests && ../$(AUTOMATON_STATES_BIN)
+	@cd organizedtests/automaton_states && ../../$(AUTOMATON_STATES_BIN)
+
+# Run automaton states batch scaling tests
+test-automaton-states-batch: $(AUTOMATON_STATES_BATCH_BIN)
+	@echo "Running automaton states batch scaling tests..."
+	@cd organizedtests/automaton_states_batch && ../../$(AUTOMATON_STATES_BATCH_BIN)
 
 # Shortcut to run only tree tests
 tree-only: test-tree
@@ -207,6 +221,9 @@ multicap-only: test-multicap
 # Shortcut to run only automaton states tests
 automaton-states-only: test-automaton-states
 
+# Shortcut to run only automaton states batch tests
+automaton-states-batch-only: test-automaton-states-batch
+
 # Run visualization
 vis: $(VIS_BIN)
 	@echo "Running visualization..."
@@ -217,7 +234,7 @@ vis-only: $(VIS_BIN)
 	@echo "✓ Visualization built. Run 'make vis' to execute."
 
 # Run all tests
-test-all: run test-tree test-task test-planning-tree test-optimal-path test-dstar test-intertask test-multicap test-automaton-states
+test-all: run test-tree test-task test-planning-tree test-optimal-path test-dstar test-intertask test-multicap test-automaton-states test-automaton-states-batch
 
 # Run tests and show output
 test: test-all

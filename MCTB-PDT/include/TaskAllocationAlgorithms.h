@@ -16,28 +16,30 @@
 #include <spot/tl/formula.hh>
 
 class TaskAllocationAlgorithms {
-    //TODO implement the prog function and the the unrelated task search
-    // implement the preliminary tests of the algorithms and the overall tree search to see if we can get a working
-    // version of the algorithms before optimizing and adding the batch value tracking and batch-based search routing
     private:
         BuchiAutomaton* nba;
         Environment* environment;
-        MultiRobotSystem* multiRobotSystem;
         PlanningDecisionTree* planningTree;
         PlanningDecisionTree* traversedTree; // To keep track of the tree being traversed during search
-        //dont think we need this anymore, but keeping it for now
-        //std::vector<Tree_Node*> visitedNodes; // To keep track of visited nodes during search
+        MultiRobotSystem* multiRobotSystem;
         std::vector<uint16_t> visitedAutomatonStates_PRE;   // Visited states at PRE progress
         std::vector<uint16_t> visitedAutomatonStates_TRA;   // Visited states at TRA progress
         std::vector<uint16_t> visitedAutomatonStates_SUF;   // Visited states at SUF progress
-        //std::set<std::tuple<uint16_t, uint16_t, uint8_t>> visitedStateProgressTriples; // Track visited (automatonState, tsState, progress) triples
-        std::vector<uint8_t> treebatchvals; // To keep track of batch values in the tree (if needed for cost calculations)
+        std::vector<int8_t> treebatchvals; // To keep track of batch values in the tree (if needed for cost calculations)
         std::queue<Tree_Node*> untraversedPlanningQueue; // Queue of nodes in planning tree not yet traversed
         AlgorithmMetrics* metrics;
         
     public:
         // Constructor
         TaskAllocationAlgorithms(BuchiAutomaton* nbaPtr, Environment* envPtr, MultiRobotSystem* robotSysPtr);
+        
+        // Enum for selecting the search algorithm based on inter-task constraints
+        // US: Unrelated-Task Search, CS: Compatible-Task Search, ES: Exclusive-Task Search
+        enum class SearchAlgorithmSelector {
+            US = 0,
+            CS = 1,
+            ES = 2
+        };
         
         // Destructor
         ~TaskAllocationAlgorithms();
@@ -66,9 +68,9 @@ class TaskAllocationAlgorithms {
         void clearVisitedAutomatonStates();
 
         // Batch values in tree methods
-        void addBatchValue(uint8_t batchValue);
-        bool isBatchValueInTree(int8_t batchValue);
-        std::vector<uint8_t>& getBatchValues();
+        void addBatchValue(int8_t batchValue);
+        SearchAlgorithmSelector GetCorrectSearchAlgorithm(int8_t batchValue);
+        std::vector<int8_t>& getBatchValues();
         void clearBatchValues();
 
         // Untraversed planning queue methods
@@ -108,7 +110,8 @@ class TaskAllocationAlgorithms {
         void compatibleTaskSearch(
             Tree_Node* newNode,
             Node* TSState,
-            Tree_Node* currentNode);
+            Tree_Node* currentNode,
+            uint16_t apId);
         
         /**
          * Algorithm 4: Exclusive-task Search (ES)
@@ -143,5 +146,33 @@ class TaskAllocationAlgorithms {
         void visualizeOptimalPath(const std::string& filename) const;
 
 private:
+        /**
+         * updateAllocatedRobotsToMaxTime - Helper function
+         * Finds max time among allocated robots and sets all allocated robots to that time
+         * Uses taskAllocation vector as a bitmask to filter which robots to consider
+         */
+        void updateAllocatedRobotsToMaxTime(
+            const std::vector<bool>& taskAllocation,
+            const std::vector<uint16_t>& timesToGoal,
+            std::vector<uint16_t>& updatedTimes);
+
+        /**
+         * placeAllocatedRobotsAtAdjacentCells - Helper function
+         * Places allocated robots at adjacent cells around task location (N, E, S, W, NE, NW, SE, SW)
+         * Uses taskAllocation as a bitmask to determine which robots to place
+         */
+        void placeAllocatedRobotsAtAdjacentCells(
+            const std::vector<bool>& taskAllocation,
+            const Point& taskLocation,
+            std::vector<Point>& updatedPositions);
+
+        /**
+         * updateNodeProgress - Helper function
+         * Updates node progress based on whether it enters an accepting automaton state
+         * Increments progress when entering accepting state, or handles SUF->OTH transition
+         */
+        void updateNodeProgress(
+            Tree_Node* newNode,
+            Tree_Node* currentNode);
 };
 #endif // TASK_ALLOCATION_ALGORITHMS_H

@@ -1,0 +1,145 @@
+digraph ComprehensiveOptimalPath {
+  rankdir=TB;
+  concentrate=true;
+  node [fontname=Arial];
+  edge [fontname=Arial, fontsize=9];
+
+  subgraph cluster_environment {
+    label="Environment & Gridworld";
+    style=filled;
+    fillcolor="#F0F0F0";
+    color=black;
+
+    env_info [shape=box, label="GridWorld: 210x210\nTotal States: 6\nInitial State: 0\n", fillcolor="#E8F4F8"];
+
+    env_tasks [shape=plaintext, label=<
+      <TABLE BORDER="1" CELLBORDER="1" CELLSPACING="0">
+        <TR><TD COLSPAN="3"><B>Task Locations</B></TD></TR>
+        <TR><TD><B>State ID</B></TD><TD><B>Position</B></TD><TD><B>Type</B></TD></TR>
+        <TR><TD>0</TD><TD>(180,140)</TD><TD>Task</TD></TR>
+        <TR><TD>1</TD><TD>(180,40)</TD><TD>Task</TD></TR>
+        <TR><TD>2</TD><TD>(100,100)</TD><TD>Task</TD></TR>
+        <TR><TD>3</TD><TD>(50,30)</TD><TD>Task</TD></TR>
+        <TR><TD>4</TD><TD>(50,100)</TD><TD>Task</TD></TR>
+        <TR><TD>5</TD><TD>(50,150)</TD><TD>Task</TD></TR>
+      </TABLE>
+    >];
+  }
+
+  subgraph cluster_robots {
+    label="Robot Team & Capabilities";
+    style=filled;
+    fillcolor="#F0F8F0";
+    color=black;
+
+    team_info [shape=box, label="Team Size: 45 robots\n", fillcolor="#E8F8E8"];
+
+    robot_caps [shape=plaintext, label=<
+      <TABLE BORDER="1" CELLBORDER="1" CELLSPACING="0">
+        <TR><TD COLSPAN="3"><B>Robot Capabilities</B></TD></TR>
+        <TR><TD><B>Robot ID</B></TD><TD><B>Name</B></TD><TD><B>Capabilities</B></TD></TR>
+        <TR><TD>R1</TD><TD>Rover_1</TD><TD>Sensor_GPS</TD></TR>
+        <TR><TD>R2</TD><TD>Rover_2</TD><TD>Movement_Ground</TD></TR>
+        <TR><TD>R3</TD><TD>Rover_3</TD><TD>Sensor_Camera</TD></TR>
+        <TR><TD>R4</TD><TD>Rover_4</TD><TD>Sensor_GPS</TD></TR>
+        <TR><TD>R5</TD><TD>Rover_5</TD><TD>Movement_Ground</TD></TR>
+        <TR><TD>R6</TD><TD>Rover_6</TD><TD>Sensor_Camera</TD></TR>
+        <TR><TD>R7</TD><TD>Rover_7</TD><TD>Sensor_GPS</TD></TR>
+        <TR><TD>R8</TD><TD>Rover_8</TD><TD>Movement_Ground</TD></TR>
+        <TR><TD>R9</TD><TD>Rover_9</TD><TD>Sensor_Camera</TD></TR>
+        <TR><TD>R10</TD><TD>Rover_10</TD><TD>Sensor_GPS</TD></TR>
+        <TR><TD>R11</TD><TD>Rover_11</TD><TD>Movement_Ground</TD></TR>
+        <TR><TD>R12</TD><TD>Rover_12</TD><TD>Sensor_Camera</TD></TR>
+        <TR><TD>R13</TD><TD>Rover_13</TD><TD>Sensor_GPS</TD></TR>
+        <TR><TD>R14</TD><TD>Rover_14</TD><TD>Movement_Ground</TD></TR>
+        <TR><TD>R15</TD><TD>Rover_15</TD><TD>Sensor_Camera</TD></TR>
+        <TR><TD>R16</TD><TD>Rover_16</TD><TD>Sensor_GPS</TD></TR>
+        <TR><TD>R17</TD><TD>Rover_17</TD><TD>Movement_Ground</TD></TR>
+        <TR><TD>R18</TD><TD>Rover_18</TD><TD>Sensor_Camera</TD></TR>
+        <TR><TD>R19</TD><TD>Rover_19</TD><TD>Sensor_GPS</TD></TR>
+        <TR><TD>R20</TD><TD>Rover_20</TD><TD>Movement_Ground</TD></TR>
+        <TR><TD>R21</TD><TD>Rover_21</TD><TD>Sensor_Camera</TD></TR>
+        <TR><TD>R22</TD><TD>Rover_22</TD><TD>Sensor_GPS</TD></TR>
+        <TR><TD>R23</TD><TD>Rover_23</TD><TD>Movement_Ground</TD></TR>
+        <TR><TD>R24</TD><TD>Rover_24</TD><TD>Sensor_Camera</TD></TR>
+        <TR><TD>R25</TD><TD>Rover_25</TD><TD>Sensor_GPS</TD></TR>
+        <TR><TD>R26</TD><TD>Rover_26</TD><TD>Movement_Ground</TD></TR>
+        <TR><TD>R27</TD><TD>Rover_27</TD><TD>Sensor_Camera</TD></TR>
+        <TR><TD>R28</TD><TD>Rover_28</TD><TD>Sensor_GPS</TD></TR>
+        <TR><TD>R29</TD><TD>Rover_29</TD><TD>Movement_Ground</TD></TR>
+        <TR><TD>R30</TD><TD>Rover_30</TD><TD>Sensor_Camera</TD></TR>
+        <TR><TD>R31</TD><TD>Rover_31</TD><TD>Sensor_GPS</TD></TR>
+        <TR><TD>R32</TD><TD>Rover_32</TD><TD>Movement_Ground</TD></TR>
+        <TR><TD>R33</TD><TD>Rover_33</TD><TD>Sensor_Camera</TD></TR>
+        <TR><TD>R34</TD><TD>Rover_34</TD><TD>Sensor_GPS</TD></TR>
+        <TR><TD>R35</TD><TD>Rover_35</TD><TD>Movement_Ground</TD></TR>
+        <TR><TD>R36</TD><TD>Rover_36</TD><TD>Sensor_Camera</TD></TR>
+        <TR><TD>R37</TD><TD>Rover_37</TD><TD>Sensor_GPS</TD></TR>
+        <TR><TD>R38</TD><TD>Rover_38</TD><TD>Movement_Ground</TD></TR>
+        <TR><TD>R39</TD><TD>Rover_39</TD><TD>Sensor_Camera</TD></TR>
+        <TR><TD>R40</TD><TD>Rover_40</TD><TD>Sensor_GPS</TD></TR>
+        <TR><TD>R41</TD><TD>Rover_41</TD><TD>Movement_Ground</TD></TR>
+        <TR><TD>R42</TD><TD>Rover_42</TD><TD>Sensor_Camera</TD></TR>
+        <TR><TD>R43</TD><TD>Rover_43</TD><TD>Sensor_GPS</TD></TR>
+        <TR><TD>R44</TD><TD>Rover_44</TD><TD>Movement_Ground</TD></TR>
+        <TR><TD>R45</TD><TD>Rover_45</TD><TD>Sensor_Camera</TD></TR>
+      </TABLE>
+    >];
+  }
+
+  subgraph cluster_ltl {
+    label="LTL Formula & Task Constraints";
+    style=filled;
+    fillcolor="#F8F0F0";
+    color=black;
+
+    ltl_info [shape=box, label="LTL Formula Details:\nAutomaton States: 96\nAccepting States: 1\n\n--- LTL FORMULA ---\nFp2 & Fp3 & (!p1 U p2) & Fp1 & Fp5 & Fp4 & Fp6 & Fp7", fillcolor="#F8E8E8"];
+
+    ltl_tasks [shape=plaintext, label=<
+      <TABLE BORDER="1" CELLBORDER="1" CELLSPACING="0">
+        <TR><TD COLSPAN="5"><B>Task Requirements (LTL APs)</B></TD></TR>
+        <TR><TD><B>AP ID</B></TD><TD><B>TS Region</B></TD><TD><B>Batch Value</B></TD><TD><B>Type</B></TD><TD><B>Required Capabilities</B></TD></TR>
+        <TR><TD>AP1</TD><TD>TS1</TD><TD>1</TD><TD>Compatible</TD><TD>Movement_Ground, Sensor_Camera, Sensor_GPS</TD></TR>
+        <TR><TD>AP2</TD><TD>TS2</TD><TD>1</TD><TD>Compatible</TD><TD>Movement_Ground, Sensor_Camera, Sensor_GPS</TD></TR>
+        <TR><TD>AP3</TD><TD>TS3</TD><TD>2</TD><TD>Compatible</TD><TD>Movement_Ground, Sensor_Camera, Sensor_GPS</TD></TR>
+        <TR><TD>AP4</TD><TD>TS4</TD><TD>-1</TD><TD>Exclusive</TD><TD>Movement_Ground, Sensor_Camera, Sensor_GPS</TD></TR>
+        <TR><TD>AP5</TD><TD>TS5</TD><TD>-2</TD><TD>Exclusive</TD><TD>Movement_Ground, Sensor_Camera, Sensor_GPS</TD></TR>
+        <TR><TD>AP6</TD><TD>TS0</TD><TD>3</TD><TD>Compatible</TD><TD>Movement_Ground, Sensor_Camera, Sensor_GPS</TD></TR>
+        <TR><TD>AP7</TD><TD>TS1</TD><TD>4</TD><TD>Compatible</TD><TD>Movement_Ground, Sensor_Camera, Sensor_GPS</TD></TR>
+      </TABLE>
+    >];
+  }
+
+  subgraph cluster_path {
+    label="Optimal Execution Path";
+    style=filled;
+    fillcolor="#FFF8F0";
+    color=darkred;
+    penwidth=2;
+
+    path_summary [shape=note, label="Optimal Path Summary\nTotal Steps: 8\nFinal Cost: 666\nTotal Execution Time: 2652s\n", fillcolor="#FFFFCC", penwidth=2];
+
+    opt_0 [shape=box, label="Step 0\nNBA: 6 | TS: 0\nCost: 0s | Total: 0s\n-----\nAllocated Robots:\n", fillcolor="#B3E5FC", penwidth=1.5];
+    opt_1 [shape=box, label="Step 1\nNBA: 5 | TS: 3\nCost: 31s | Total: 93s\n-----\nAllocated Robots:\n  R23: 31s\n  R25: 31s\n  R33: 31s\n", fillcolor="#B3E5FC", penwidth=1.5];
+    opt_2 [shape=box, label="Step 2\nNBA: 12 | TS: 2\nCost: 144s | Total: 432s\n-----\nAllocated Robots:\n  R23: 144s\n  R25: 144s\n  R33: 144s\n", fillcolor="#B3E5FC", penwidth=1.5];
+    opt_3 [shape=box, label="Step 3\nNBA: 4 | TS: 1\nCost: 305s | Total: 915s\n-----\nAllocated Robots:\n  R23: 305s\n  R25: 305s\n  R33: 305s\n", fillcolor="#B3E5FC", penwidth=1.5];
+    opt_4 [shape=box, label="Step 4\nNBA: 3 | TS: 5\nCost: 305s | Total: 1314s\n-----\nAllocated Robots:\n  R1: 133s\n  R21: 133s\n  R32: 133s\n", fillcolor="#B3E5FC", penwidth=1.5];
+    opt_5 [shape=box, label="Step 5\nNBA: 2 | TS: 4\nCost: 305s | Total: 1569s\n-----\nAllocated Robots:\n  R24: 85s\n  R31: 85s\n  R42: 85s\n", fillcolor="#B3E5FC", penwidth=1.5];
+    opt_6 [shape=box, label="Step 6\nNBA: 1 | TS: 0\nCost: 505s | Total: 2169s\n-----\nAllocated Robots:\n  R23: 505s\n  R25: 505s\n  R33: 505s\n", fillcolor="#B3E5FC", penwidth=1.5];
+    opt_7 [shape=box, label="Step 7\nNBA: 0 | TS: 1\nCost: 666s | Total: 2652s\n-----\nAllocated Robots:\n  R23: 666s\n  R25: 666s\n  R33: 666s\n", fillcolor="#FF6B6B", penwidth=3, color=darkred, fontweight=bold, fontsize=11];
+
+    opt_0 -> opt_1 [label="Δ=31s", penwidth=2, color=darkred];
+    opt_1 -> opt_2 [label="Δ=113s", penwidth=2, color=darkred];
+    opt_2 -> opt_3 [label="Δ=161s", penwidth=2, color=darkred];
+    opt_3 -> opt_4 [label="Δ=0s", penwidth=2, color=darkred];
+    opt_4 -> opt_5 [label="Δ=0s", penwidth=2, color=darkred];
+    opt_5 -> opt_6 [label="Δ=200s", penwidth=2, color=darkred];
+    opt_6 -> opt_7 [label="Δ=161s", penwidth=2, color=darkred];
+  }
+
+  // Connections between clusters
+  env_info -> path_summary [style=dashed, color=gray, label="tasks"];
+  team_info -> path_summary [style=dashed, color=gray, label="robots"];
+  ltl_info -> path_summary [style=dashed, color=gray, label="constraints"];
+
+}

@@ -279,23 +279,24 @@ PlanningDecisionTree* TaskAllocationAlgorithms::intensiveInterTaskRelationshipTr
                 if (!newNode) {
                     continue;
                 }
-                // Route based on batch value - don't use isBatchValueInTree() for routing!
-                // batchVal = 0: unrelated tasks
-                // batchVal > 0: compatible tasks (same batch)
-                // batchVal < 0: exclusive tasks (conflicting batch)
-                if (batchVal == 0 || !isBatchValueInTree(batchVal)) {
-                    //Algorithm 2: unrelated task search algorithm
-                    unrelatedTaskSearch(newNode, TSState, currentNode, apId);
+                // Route based on batch value using the correct search algorithm
+                switch (GetCorrectSearchAlgorithm(batchVal)) {
+                    case SearchAlgorithmSelector::US:
+                        // Algorithm 2: Unrelated Task Search
+                        unrelatedTaskSearch(newNode, TSState, currentNode, apId);
+                        break;
+                    case SearchAlgorithmSelector::CS:
+                        // Algorithm 3: Compatible Task Search
+                        compatibleTaskSearch(newNode, TSState, currentNode, apId);
+                        break;
+                    case SearchAlgorithmSelector::ES:
+                        // Algorithm 4: Exclusive Task Search
+                        exclusiveTaskSearch(newNode, TSState, currentNode, apId);
+                        break;
+                    default:
+                        std::cerr << "[ERROR] Invalid batch value for search algorithm selection" << std::endl;
+                        break;
                 }
-                else if (batchVal > 0) {
-                    //Algorithm 3: compatible task search algorithm
-                    compatibleTaskSearch(newNode, TSState, currentNode);
-                }
-                else {
-                    //Algorithm 4: exclusive task search algorithm
-                    exclusiveTaskSearch(newNode, TSState, currentNode, apId);
-                } 
-
                 // Add to subtree (insertNode will auto-assign the correct nodeId)
                 subtree->insertNode(newNode);
             }
@@ -318,7 +319,6 @@ PlanningDecisionTree* TaskAllocationAlgorithms::intensiveInterTaskRelationshipTr
     //get the total number of nodes traversed and in expanded in the planning tree
     metrics->subtree_efficiency_.total_nodes_traversed = traversedTree->getNumNodes();
     metrics->subtree_efficiency_.total_nodes_planning = planningTree->getNumNodes();
-    
     // Final tree state
     // Reassign node IDs to ensure proper hierarchy order (root = 0, then by depth)
     tree->reassignNodeIds();
@@ -339,7 +339,6 @@ PlanningDecisionTree* TaskAllocationAlgorithms::intensiveInterTaskRelationshipTr
     return tree;
 }
 
-
 /**
  * Algorithm 2: Unrelated-Task Search (US)
  * Searches for unrelated tasks that can be executed independently
@@ -353,23 +352,22 @@ void TaskAllocationAlgorithms::unrelatedTaskSearch(
     Node* TSState,
     Tree_Node* currentNode,
     uint16_t apId) {
-    
+
     if (!newNode || !TSState || !multiRobotSystem || !nba || !environment) {
         return;
     }
-    
     // current task state information
     uint16_t tsStateId = TSState->getId();
-    
     // Get task location from environment mapping p_an
     Point taskLocation = environment->TSStateIdToGridCenter(tsStateId);
     
     multiRobotSystem->setRobotPositions(currentNode->getRobotPositions()); // Ensure current node has robot positions stored
     
-    std::vector<uint16_t> updatedtimes = multiRobotSystem->updateRobotTimesToGoal(currentNode->getTimes(), taskLocation);
+    //times to goal for each robot
+    std::vector<uint16_t> timesToGoal = multiRobotSystem->updateRobotTimesToGoal(currentNode->getTimes(), taskLocation);
 
     // Get the sort of the times vector and get the corresponding robot indices to find the best robot assignment
-    std::vector<std::pair<uint16_t, uint16_t>> sortedTimes = Tree_Node::getSortedTimes(updatedtimes);
+    std::vector<std::pair<uint16_t, uint16_t>> sortedTimes = Tree_Node::getSortedTimes(timesToGoal);
     
     // Get required capabilities from the BatchAtomicProposition using apId (not tsStateId)
     // CRITICAL: Different APs can map to same TS state but have different required capabilities
@@ -391,19 +389,13 @@ void TaskAllocationAlgorithms::unrelatedTaskSearch(
     }
     
     if (!hasAllocation) {
+        std::cout << "No valid task allocation found for AP ID " << apId << std::endl;
         return;
     }
     
-    // Start with parent node's times and only update allocated robots with their individual travel times
+    // Start with parent node's times and update all allocated robots to the same max time
     std::vector<uint16_t> updatedTimes = currentNode->getTimes();
-    
-    for (size_t i = 0; i < taskAllocation.size() && i < updatedTimes.size(); ++i) {
-        if (taskAllocation[i]) {
-            // Use individual calculated travel time for each allocated robot
-            updatedTimes[i] = updatedtimes[i];
-        }
-        // Non-allocated robots keep their current time
-    }
+    updateAllocatedRobotsToMaxTime(taskAllocation, timesToGoal, updatedTimes);
     
     // Update newNode with the task allocation and updated times
     newNode->setRoboTaskAllocation(taskAllocation);
@@ -411,43 +403,7 @@ void TaskAllocationAlgorithms::unrelatedTaskSearch(
     
     // Update robot positions to the task location for all allocated robots
     std::vector<Point> updatedPositions = currentNode->getRobotPositions();
-    
-    // Place allocated robots at adjacent cells around goal (closest possible)
-    // Pattern: N, E, S, W, NE, NW, SE, SW
-    std::vector<std::pair<int, int>> adjacentOffsets = {
-        {0, -1},   // North
-        {1, 0},    // East
-        {0, 1},    // South
-        {-1, 0},   // West
-        {1, -1},   // Northeast
-        {-1, -1},  // Northwest
-        {1, 1},    // Southeast
-        {-1, 1}    // Southwest
-    };
-    
-    int robotIndex = 0;
-    
-    for (size_t i = 0; i < taskAllocation.size(); ++i) {
-        if (taskAllocation[i]) {
-            if (robotIndex >= adjacentOffsets.size()) {
-                robotIndex = robotIndex % adjacentOffsets.size();
-            }
-            
-            int offsetIdx = robotIndex % adjacentOffsets.size();
-            
-            int newX = taskLocation.getX() + adjacentOffsets[offsetIdx].first;
-            int newY = taskLocation.getY() + adjacentOffsets[offsetIdx].second;
-            
-            // Clamp to valid grid coordinates [0, 20]
-            newX = std::max(0, std::min(newX, 20));
-            newY = std::max(0, std::min(newY, 20));
-            
-            if (i < updatedPositions.size()) {
-                updatedPositions[i] = Point(newX, newY);
-            }
-            robotIndex++;
-        }
-    }
+    placeAllocatedRobotsAtAdjacentCells(taskAllocation, taskLocation, updatedPositions);
     
     if (!newNode) {
         return;
@@ -455,24 +411,8 @@ void TaskAllocationAlgorithms::unrelatedTaskSearch(
     
     newNode->setRobotPositions(updatedPositions);
     
-    // Check if the new node is an accepting state (increment progress when entering accepting)
-    if (newNode && nba) {
-        bool acceptingState = nba->isAccepting(newNode->getAutomatonState()->getId());
-        
-        if (acceptingState) {
-            // Increment progress when entering accepting state
-            int newProgressInt = static_cast<int>(currentNode->getProgress()) + 1;
-            Tree_Node::TASK_PROGRESS newProgress = static_cast<Tree_Node::TASK_PROGRESS>(newProgressInt);
-            newNode->setProgress(newProgress);
-        } else if (currentNode->getProgress() == Tree_Node::TASK_PROGRESS::SUF) {
-            // If the current node is at SUF progress, increment to OTH
-            newNode->setProgress(Tree_Node::TASK_PROGRESS::OTH);
-        }
-        else {
-            // Not entering accepting: keep progress the same
-            newNode->setProgress(currentNode->getProgress());
-        }
-    }
+    // Update node progress based on automaton state
+    updateNodeProgress(newNode, currentNode);
  }
 
 /**
@@ -484,7 +424,8 @@ void TaskAllocationAlgorithms::unrelatedTaskSearch(
 void TaskAllocationAlgorithms::compatibleTaskSearch(
     Tree_Node* newNode,
     [[maybe_unused]] Node* TSState,
-    [[maybe_unused]] Tree_Node* currentNode) {
+    [[maybe_unused]] Tree_Node* currentNode, 
+    [[maybe_unused]] uint16_t apId) {
     
     if (!newNode || !TSState || !multiRobotSystem || !nba || !environment) {
         return;
@@ -501,11 +442,12 @@ void TaskAllocationAlgorithms::compatibleTaskSearch(
     multiRobotSystem->setRobotPositions(currentPositions);
     
     std::vector<uint16_t> currentTimes = currentNode->getTimes();
-    
-    std::vector<uint16_t> updatedtimes = multiRobotSystem->updateRobotTimesToGoal(currentTimes, taskLocation);
+
+    // Update robot times to goal for the new task location
+    std::vector<uint16_t> timesToGoal = multiRobotSystem->updateRobotTimesToGoal(currentTimes, taskLocation);
 
     // Get the sort of the times vector and get the corresponding robot indices to find the best robot assignment
-    std::vector<std::pair<uint16_t, uint16_t>> sortedTimes = Tree_Node::getSortedTimes(updatedtimes);
+    std::vector<std::pair<uint16_t, uint16_t>> sortedTimes = Tree_Node::getSortedTimes(timesToGoal);
     
     //Get the batch value for the newnode
     uint16_t batchValue = newNode->getBatch();
@@ -515,22 +457,41 @@ void TaskAllocationAlgorithms::compatibleTaskSearch(
         return;
     }
     std::vector<bool> taskAllocation = planningTree->getAllocationfromBatchValue(batchValue);
-    
-    if (taskAllocation.empty()) {
-        return; // No valid task allocation found for the given batch value
-    }
 
     // Start with parent node's times and only update allocated robots with their individual travel times
-    std::vector<uint16_t> updatedTimes = currentNode->getTimes();
+        std::vector<uint16_t> updatedTimes = currentNode->getTimes();
     
-    for (size_t i = 0; i < taskAllocation.size() && i < updatedTimes.size(); ++i) {
-        if (taskAllocation[i]) {
-            // Use individual calculated travel time for each allocated robot
-            updatedTimes[i] = updatedtimes[i];
+    if (taskAllocation.empty()) {
+        BatchAtomicProposition batchAP = nba->getLTLFormula()->getBatchAP(apId);
+        std::vector<bool> requiredCapabilities = batchAP.getCapabilities();
+        
+        // Find all permutations of robots that satisfy all required capabilities
+        const std::vector<Robot*>& allRobots = multiRobotSystem->getRobots();
+        auto [taskAllocation, maxTime] = getTaskAllocation(allRobots, requiredCapabilities, sortedTimes);
+        // Check if we found a valid allocation
+        bool hasAllocation = false;
+        for (bool allocated : taskAllocation) {
+            if (allocated) {
+                hasAllocation = true;
+                break;
+            }
         }
-        // Non-allocated robots keep their current time
+        
+        if (!hasAllocation) {
+            std::cout << "No valid task allocation found for AP ID " << apId << std::endl;
+            return;
+        }
+        
+        for (size_t i = 0; i < taskAllocation.size() && i < updatedTimes.size(); ++i) {
+            if (taskAllocation[i]) {
+                // Use individual calculated travel time for each allocated robot
+                updatedTimes[i] = maxTime;
+            }
+        }
+    } else {
+        // Update all allocated robots to the same max time
+        updateAllocatedRobotsToMaxTime(taskAllocation, timesToGoal, updatedTimes);
     }
-    
     // Update newNode with the task allocation and updated times
     newNode->setRoboTaskAllocation(taskAllocation);
     newNode->setTimes(updatedTimes);
@@ -543,61 +504,12 @@ void TaskAllocationAlgorithms::compatibleTaskSearch(
         updatedPositions.resize(taskAllocation.size(), Point(0, 0));
     }
     
-    // Place allocated robots at adjacent cells around goal (closest possible)
-    // Pattern: N, E, S, W, NE, NW, SE, SW
-    std::vector<std::pair<int, int>> adjacentOffsets = {
-        {0, -1},   // North
-        {1, 0},    // East
-        {0, 1},    // South
-        {-1, 0},   // West
-        {1, -1},   // Northeast
-        {-1, -1},  // Northwest
-        {1, 1},    // Southeast
-        {-1, 1}    // Southwest
-    };
-    
-    int robotIndex = 0;
-    
-    for (size_t i = 0; i < taskAllocation.size(); ++i) {
-        if (taskAllocation[i]) {
-            if (i >= updatedPositions.size()) {
-                continue;
-            }
-            
-            int offsetIdx = robotIndex % adjacentOffsets.size();
-            int newX = taskLocation.getX() + adjacentOffsets[offsetIdx].first;
-            int newY = taskLocation.getY() + adjacentOffsets[offsetIdx].second;
-            
-            // Clamp to valid grid coordinates [0, 20]
-            newX = std::max(0, std::min(newX, 20));
-            newY = std::max(0, std::min(newY, 20));
-            
-            updatedPositions[i] = Point(newX, newY);
-            robotIndex++;
-        }
-    }
+    placeAllocatedRobotsAtAdjacentCells(taskAllocation, taskLocation, updatedPositions);
     
     newNode->setRobotPositions(updatedPositions);
     
-    // Check if the new node is an accepting state (increment progress when entering accepting)
-    if (newNode && nba) {
-        bool acceptingState = nba->isAccepting(newNode->getAutomatonState()->getId());
-        uint8_t currentProgress = static_cast<uint8_t>(currentNode->getProgress());
-        
-        if (acceptingState) {
-            // Increment progress when entering accepting state
-            int newProgressInt = static_cast<int>(currentNode->getProgress()) + 1;
-            Tree_Node::TASK_PROGRESS newProgress = static_cast<Tree_Node::TASK_PROGRESS>(newProgressInt);
-            newNode->setProgress(newProgress);
-        } else if (currentNode->getProgress() == Tree_Node::TASK_PROGRESS::SUF) {
-            // If the current node is at SUF progress, increment to OTH
-            newNode->setProgress(Tree_Node::TASK_PROGRESS::OTH);
-        }
-        else {
-            // Not entering accepting: keep progress the same
-            newNode->setProgress(currentNode->getProgress());
-        }
-    }
+    // Update node progress based on automaton state
+    updateNodeProgress(newNode, currentNode);
 }
 
 /**
@@ -624,10 +536,10 @@ void TaskAllocationAlgorithms::exclusiveTaskSearch(
     Point taskLocation = environment->TSStateIdToGridCenter(tsStateId);
     multiRobotSystem->setRobotPositions(currentNode->getRobotPositions()); // Ensure current node has robot positions stored
     
-    std::vector<uint16_t> updatedtimes = multiRobotSystem->updateRobotTimesToGoal(currentNode->getTimes(), taskLocation);
+    std::vector<uint16_t> timesToGoal = multiRobotSystem->updateRobotTimesToGoal(currentNode->getTimes(), taskLocation);
 
     // Get the sort of the times vector and get the corresponding robot indices to find the best robot assignment
-    std::vector<std::pair<uint16_t, uint16_t>> sortedTimes = Tree_Node::getSortedTimes(updatedtimes);
+    std::vector<std::pair<uint16_t, uint16_t>> sortedTimes = Tree_Node::getSortedTimes(timesToGoal);
     
     // Get required capabilities from the BatchAtomicProposition using apId (not tsStateId)
     BatchAtomicProposition batchAP = nba->getLTLFormula()->getBatchAP(apId);
@@ -662,17 +574,12 @@ void TaskAllocationAlgorithms::exclusiveTaskSearch(
     }
     
     if (!hasAllocation) {
+        std::cout << "NO allocation found for AP ID " << apId << std::endl;
         return;
     }
-    // Start with parent node's times and only update allocated robots with their individual travel times
+    // Start with parent node's times and update all allocated robots to the same max time
     std::vector<uint16_t> updatedTimes = currentNode->getTimes();
-    for (size_t i = 0; i < taskAllocation.size() && i < updatedTimes.size(); ++i) {
-        if (taskAllocation[i]) {
-            // Use individual calculated travel time for each allocated robot
-            updatedTimes[i] = updatedtimes[i];
-        }
-        // Non-allocated robots keep their current time
-    }
+    updateAllocatedRobotsToMaxTime(taskAllocation, timesToGoal, updatedTimes);
     
     // Update newNode with the task allocation and updated times
     newNode->setRoboTaskAllocation(taskAllocation);
@@ -686,7 +593,53 @@ void TaskAllocationAlgorithms::exclusiveTaskSearch(
         updatedPositions.resize(taskAllocation.size(), Point(0, 0));
     }
     
-    // Place allocated robots at adjacent cells around goal (closest possible)
+    placeAllocatedRobotsAtAdjacentCells(taskAllocation, taskLocation, updatedPositions);
+    newNode->setRobotPositions(updatedPositions);
+    
+    // Update node progress based on automaton state
+    updateNodeProgress(newNode, currentNode);
+}
+
+
+
+
+/**
+ * updateAllocatedRobotsToMaxTime - Helper function
+ * Finds max time among allocated robots and sets all allocated robots to that time
+ * Uses taskAllocation vector as a bitmask to filter which robots to consider
+ */
+void TaskAllocationAlgorithms::updateAllocatedRobotsToMaxTime(
+    const std::vector<bool>& taskAllocation,
+    const std::vector<uint16_t>& timesToGoal,
+    std::vector<uint16_t>& updatedTimes) {
+    
+    // Find max time among allocated robots (bitmask operation)
+    uint16_t maxTime = 0;
+    for (size_t i = 0; i < taskAllocation.size() && i < timesToGoal.size(); ++i) {
+        if (taskAllocation[i]) {
+            maxTime = std::max(maxTime, timesToGoal[i]);
+        }
+    }
+    
+    // Set all allocated robots to the same max time
+    for (size_t i = 0; i < taskAllocation.size() && i < updatedTimes.size(); ++i) {
+        if (taskAllocation[i]) {
+            updatedTimes[i] = maxTime;
+        }
+    }
+}
+
+/**
+ * placeAllocatedRobotsAtAdjacentCells - Helper function
+ * Places allocated robots at adjacent cells around task location (N, E, S, W, NE, NW, SE, SW)
+ * Uses taskAllocation as a bitmask to determine which robots to place
+ * Allocates robots in spiral order around the task
+ */
+void TaskAllocationAlgorithms::placeAllocatedRobotsAtAdjacentCells(
+    const std::vector<bool>& taskAllocation,
+    const Point& taskLocation,
+    std::vector<Point>& updatedPositions) {
+    
     // Pattern: N, E, S, W, NE, NW, SE, SW
     std::vector<std::pair<int, int>> adjacentOffsets = {
         {0, -1},   // North
@@ -718,26 +671,35 @@ void TaskAllocationAlgorithms::exclusiveTaskSearch(
             robotIndex++;
         }
     }
-    newNode->setRobotPositions(updatedPositions);
+}
+
+/**
+ * updateNodeProgress - Helper function
+ * Updates node progress based on whether it enters an accepting automaton state
+ * Increments progress when entering accepting state, or handles SUF->OTH transition
+ */
+void TaskAllocationAlgorithms::updateNodeProgress(
+    Tree_Node* newNode,
+    Tree_Node* currentNode) {
     
-    // Check if the new node is an accepting state (increment progress when entering accepting)
-    if (newNode && nba) {
-        bool acceptingState = nba->isAccepting(newNode->getAutomatonState()->getId());
-        uint8_t currentProgress = static_cast<uint8_t>(currentNode->getProgress());
-        
-        if (acceptingState) {
-            // Increment progress when entering accepting state
-            int newProgressInt = static_cast<int>(currentNode->getProgress()) + 1;
-            Tree_Node::TASK_PROGRESS newProgress = static_cast<Tree_Node::TASK_PROGRESS>(newProgressInt);
-            newNode->setProgress(newProgress);
-        } else if (currentNode->getProgress() == Tree_Node::TASK_PROGRESS::SUF) {
-            // If the current node is at SUF progress, increment to OTH
-            newNode->setProgress(Tree_Node::TASK_PROGRESS::OTH);
-        }
-        else {
-            // Not entering accepting: keep progress the same
-            newNode->setProgress(currentNode->getProgress());
-        }
+    if (!newNode || !nba) {
+        return;
+    }
+    
+    bool acceptingState = nba->isAccepting(newNode->getAutomatonState()->getId());
+    
+    if (acceptingState) {
+        // Increment progress when entering accepting state
+        int newProgressInt = static_cast<int>(currentNode->getProgress()) + 1;
+        Tree_Node::TASK_PROGRESS newProgress = static_cast<Tree_Node::TASK_PROGRESS>(newProgressInt);
+        newNode->setProgress(newProgress);
+    } else if (currentNode->getProgress() == Tree_Node::TASK_PROGRESS::SUF) {
+        // If the current node is at SUF progress, increment to OTH
+        newNode->setProgress(Tree_Node::TASK_PROGRESS::OTH);
+    }
+    else {
+        // Not entering accepting: keep progress the same
+        newNode->setProgress(currentNode->getProgress());
     }
 }
 
@@ -792,30 +754,38 @@ void TaskAllocationAlgorithms::clearVisitedAutomatonStates() {
 /**
  * addBatchValue - Add a batch value to the collection
  */
-void TaskAllocationAlgorithms::addBatchValue(uint8_t batchValue) {
+void TaskAllocationAlgorithms::addBatchValue(int8_t batchValue) {
     if (std::find(treebatchvals.begin(), treebatchvals.end(), batchValue) == treebatchvals.end()) {
         treebatchvals.push_back(batchValue);
     }
 }
 
 /**
- * isBatchValueInTree - Check if a batch value is in the tree
- * If not found, adds the absolute value of the batch (only if positive)
+ * GetCorrectSearchAlgorithm - Determine the appropriate search algorithm based on the batch value
+ * Returns US if batch value is 0 or not found in the tree
+ * Returns CS if batch value is found in the tree
+ * Returns ES if the negation of the batch value is found in the tree
  */
-bool TaskAllocationAlgorithms::isBatchValueInTree(int8_t batchValue) {
-    uint8_t absBatchValue = static_cast<uint8_t>(std::abs(batchValue));
-    bool found = std::find(treebatchvals.begin(), treebatchvals.end(), absBatchValue) != treebatchvals.end();
-    if (!found && absBatchValue > 0) {
-        treebatchvals.push_back(absBatchValue);
+TaskAllocationAlgorithms::SearchAlgorithmSelector TaskAllocationAlgorithms::GetCorrectSearchAlgorithm(int8_t batchValue) {
+    bool found = std::find(treebatchvals.begin(), treebatchvals.end(), batchValue) != treebatchvals.end();
+    bool foundNeg = std::find(treebatchvals.begin(), treebatchvals.end(), -batchValue) != treebatchvals.end();
+    if (batchValue == 0 || (!found && !foundNeg)) {
+        addBatchValue(batchValue);  // Add the new batch value to the collection
+        return SearchAlgorithmSelector::US;
+    } else if (found) {
+        return SearchAlgorithmSelector::CS;
+    } else if (foundNeg) {
+        return SearchAlgorithmSelector::ES;
+    } else {
+        return SearchAlgorithmSelector::US;
     }
-    return found;
 }
     
 
 /**
  * getBatchValues - Get the collection of batch values in the tree
  */
-std::vector<uint8_t>& TaskAllocationAlgorithms::getBatchValues() {
+std::vector<int8_t>& TaskAllocationAlgorithms::getBatchValues() {
     return treebatchvals;
 }
 

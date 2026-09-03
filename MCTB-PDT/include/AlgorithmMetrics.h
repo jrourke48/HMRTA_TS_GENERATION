@@ -33,7 +33,7 @@ public:
         double capability_homogeneity = 0.0;       // independent_capabilities / num_robots
         
         // Task characteristics
-        int num_inter_task_constraints = 0;
+        int num_inter_task_constraints = 1;  // Default to unrelated tasks (1 batch)
     };
     
     // ==================== SUBTREE EFFICIENCY METRICS ====================

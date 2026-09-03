@@ -1,4 +1,0 @@
-Test Manager Initialized
-Created: 2026-08-29 16:40:05
-Data Version: 1.0
-Categories: 5

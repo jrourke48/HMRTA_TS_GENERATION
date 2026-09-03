@@ -1,4 +1,0 @@
-Test Manager Initialized
-Category: automaton_states
-Created: 2026-08-31 20:32:10
-Data Version: 1.0

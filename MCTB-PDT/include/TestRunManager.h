@@ -25,6 +25,7 @@ public:
     // ==================== TEST CATEGORIES ====================
     enum class TestCategory {
         AUTOMATON_STATES,           // 5-150 states
+        AUTOMATON_STATES_BATCH,     // 16 automata with 4 batch configurations
         NUM_ROBOTS,                 // 3-20 robots
         TS_REGIONS,                 // 5-40 regions
         AVG_CAPABILITIES,           // 1-5 avg capabilities
@@ -83,7 +84,7 @@ public:
     // ==================== EXPORT FOR ANALYSIS ====================
     
     // Export separate CSV for each input configuration
-    void exportByConfiguration() const;
+    void exportByConfiguration(const std::string& output_dir = "data") const;
     
     // Export aggregated statistics
     void exportStatisticsToCSV(const std::string& output_filename) const;

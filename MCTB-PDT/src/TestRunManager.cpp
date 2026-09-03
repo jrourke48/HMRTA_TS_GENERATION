@@ -156,7 +156,7 @@ std::vector<TestRunManager::RunStatistics> TestRunManager::getStatistics() const
 
 // ==================== EXPORT FOR ANALYSIS ====================
 
-void TestRunManager::exportByConfiguration() const {
+void TestRunManager::exportByConfiguration(const std::string& output_dir) const {
     if (runs_.empty()) {
         std::cerr << "⚠ No runs to export for category: " << getCategoryName() << std::endl;
         return;
@@ -177,7 +177,7 @@ void TestRunManager::exportByConfiguration() const {
         grouped[grouping_params].push_back(run);
     }
     
-    std::string export_dir = getCategoryDirPath() + "/exports";
+    std::string export_dir = output_dir;
     fs::create_directories(export_dir);
     
     // Create a CSV for each secondary parameter combination
@@ -385,11 +385,12 @@ void TestRunManager::printTestProgress() const {
 
 std::string TestRunManager::getCategoryName() const {
     switch (category_) {
-        case TestCategory::AUTOMATON_STATES:   return "automaton_states";
-        case TestCategory::NUM_ROBOTS:         return "num_robots";
-        case TestCategory::TS_REGIONS:         return "ts_regions";
-        case TestCategory::AVG_CAPABILITIES:   return "avg_capabilities";
-        case TestCategory::ROBOT_HOMOGENEITY:  return "robot_homogeneity";
+        case TestCategory::AUTOMATON_STATES:        return "automaton_states";
+        case TestCategory::AUTOMATON_STATES_BATCH:  return "automaton_states_batch";
+        case TestCategory::NUM_ROBOTS:              return "num_robots";
+        case TestCategory::TS_REGIONS:              return "ts_regions";
+        case TestCategory::AVG_CAPABILITIES:        return "avg_capabilities";
+        case TestCategory::ROBOT_HOMOGENEITY:       return "robot_homogeneity";
         default: return "unknown";
     }
 }
